@@ -1,0 +1,3 @@
+* text=auto
+*.po text
+*.svg binary
