@@ -8,7 +8,6 @@ from .utils import get_date_range, parse_user_agent, get_billing_models
 
 from analytics.settings import get_config
 from analytics.models import PageView, AnalyticsEvent
-from billing.models import BillingInvoice, UserBilling
 
 import json
 import csv

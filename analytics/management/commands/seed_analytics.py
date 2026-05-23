@@ -5,9 +5,8 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.db.models import Count
 from analytics.models import PageView, DailySiteStats, AnalyticsEvent
-from billing.models import BillingInvoice, UserBilling, PricingTier
-from django.contrib.auth.models import User
 from analytics.settings import get_config
+from django.contrib.auth.models import User
 
 PAGES = [
     '/', '/blog/', '/blog/test-article/',
@@ -33,29 +32,39 @@ COUNTRY_POOL = [
 COUNTRY_WEIGHTS = [25, 20, 18, 8, 7, 6, 5, 5, 4, 2]   # sum = 100
 
 class Command(BaseCommand):
-    help = 'Generate 30 days of fake analytics, events, and billing data'
+    help = 'Generate 30 days of fake analytics, events, and optional billing data'
 
     def handle(self, *args, **options):
         today = timezone.now().date()
         start = today - timedelta(days=30)
 
-        # ── Ensure at least one plan exists ──
-        plans = list(PricingTier.objects.filter(is_active=True))
-        if not plans:
-            # Create a default free plan if none exist
-            from django.conf import settings
-            plan = PricingTier.objects.create(
-                slug='free',
-                price_amount=0,
-                price_currency='USD',
-            )
-            plan.set_current_language('en')
-            plan.name = 'Free'
-            plan.save()
-            plans = [plan]
+        # ── Optional billing setup ──
+        try:
+            from billing.models import BillingInvoice, UserBilling, PricingTier
 
-        # ── Ensure a user exists for invoices ──
-        user, _ = User.objects.get_or_create(username='analytics-demo', defaults={'email': 'demo@example.com'})
+            plans = list(PricingTier.objects.filter(is_active=True))
+            if not plans:
+                plan = PricingTier.objects.create(
+                    slug='free',
+                    price_amount=0,
+                    price_currency='USD',
+                )
+                plan.set_current_language('en')
+                plan.name = 'Free'
+                plan.save()
+                plans = [plan]
+
+            # demo user for invoices
+            billing_user, _ = User.objects.get_or_create(
+                username='analytics-demo',
+                defaults={'email': 'demo@example.com'}
+            )
+
+            billing_available = True
+        except ImportError:
+            plans = []
+            billing_user = None
+            billing_available = False
 
         # ── Generate daily data ──
         for day_offset in range(30):
@@ -123,28 +132,31 @@ class Command(BaseCommand):
                     created_at=created,
                 )
 
-            # Billing invoices (3-8 per day)
-            num_invoices = random.randint(3, 8)
-            for inv_num in range(num_invoices):
-                BillingInvoice.objects.create(
-                    user=user,
-                    invoice_number=f'INV-{date.strftime("%Y%m%d")}-{inv_num+1:03d}',
-                    date=date,
-                    amount=round(random.uniform(5, 200), 2),
-                    status=random.choice(['paid', 'paid', 'paid', 'pending']),  # mostly paid
-                )
+            # Billing invoices (only if billing is available)
+            if billing_available:
+                num_invoices = random.randint(3, 8)
+                for inv_num in range(num_invoices):
+                    BillingInvoice.objects.create(
+                        user=billing_user,
+                        invoice_number=f'INV-{date.strftime("%Y%m%d")}-{inv_num+1:03d}',
+                        date=date,
+                        amount=round(random.uniform(5, 200), 2),
+                        status=random.choice(['paid', 'paid', 'paid', 'pending']),
+                    )
 
             self.stdout.write(
                 f'  Day {date}: {num_views} views, {num_sessions} sessions, '
-                f'{num_events} events, {num_invoices} invoices'
+                f'{num_events} events'
+                f'{f", {num_invoices} invoices" if billing_available else ""}'
             )
 
-        # ── Create UserBilling subscriptions ──
-        for plan in plans[:3]:
-            UserBilling.objects.get_or_create(
-                user=User.objects.create_user(username=f'demo-{plan.slug}', email=f'{plan.slug}@example.com'),
-                defaults={'current_plan': plan}
-            )
+        # ── Create UserBilling subscriptions (only if billing available) ──
+        if billing_available and plans:
+            for plan in plans[:3]:
+                username = f'demo-{plan.slug}'
+                if not User.objects.filter(username=username).exists():
+                    u = User.objects.create_user(username=username, email=f'{plan.slug}@example.com')
+                    UserBilling.objects.create(user=u, current_plan=plan)
 
         # ── Aggregate daily stats ──
         self.stdout.write('Aggregating daily stats...')
@@ -153,10 +165,12 @@ class Command(BaseCommand):
             views = PageView.objects.filter(created_at__date=date)
             if not views.exists():
                 continue
+
             total = views.count()
             unique_ips = views.values('ip_hash').distinct().count()
             api_prefix = get_config()['API_PATH_PREFIX']
             api_calls = views.filter(path__startswith=api_prefix).count()
+
             sessions_qs = views.exclude(session_id='')
             total_sessions = sessions_qs.values('session_id').distinct().count()
             bounce_sessions = (
@@ -165,12 +179,14 @@ class Command(BaseCommand):
                 .filter(cnt=1)
                 .count()
             )
+
             top = (
                 views.values('path')
                 .annotate(count=Count('id'))
                 .order_by('-count')[:10]
             )
             top_dict = {item['path']: item['count'] for item in top}
+
             DailySiteStats.objects.update_or_create(
                 date=date,
                 defaults={
@@ -183,4 +199,4 @@ class Command(BaseCommand):
                 }
             )
 
-        self.stdout.write(self.style.SUCCESS('Seeded 30 days of analytics + billing data'))
+        self.stdout.write(self.style.SUCCESS('Seeded 30 days of analytics data'))

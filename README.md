@@ -107,31 +107,47 @@ In your project’s root urls.py:
 
 ```python
 from django.urls import path, include
+from django.views.i18n import set_language
 
 urlpatterns = [
     # ...
     path('insights/', include('analytics.urls')),
+    path('i18n/setlang/', set_language, name='set_language'),  # required for language switching
 ]
 ```
 
-### 4. Run migrations
+### 4. Add the analytics middleware
+
+In settings.py, add AnalyticsMiddleware to the bottom of MIDDLEWARE:
+
+```python
+MIDDLEWARE = [
+    # ...
+    'analytics.middleware.AnalyticsMiddleware',
+]
+```
+
+This middleware automatically logs every page visit.
+Without it, no data will appear in the dashboard.
+
+### 5. Run migrations
 
 ```bash
 python manage.py migrate analytics
 ```
 
-### 5. Compile translations (optional)
+### 6. Compile translations (optional)
 
 ```bash
 python manage.py compilemessages -l es -l ar -l zh-hans -l pt-br
 ```
 
-### 6. Download the GeoIP database (required for the geography page)
+### 7. Download the GeoIP database (required for the geography page)
 
 Download GeoLite2‑City.mmdb (free) from MaxMind
 and place it in the directory specified by GEOIP_PATH (default: analytics/geoip/ inside the package).
 
-### 7. Start the server
+### 8. Start the server
 
 ```bash
 python manage.py runserver
@@ -569,6 +585,130 @@ idea.
 Please follow the existing code style: token‑driven CSS, external JavaScript with `window.__analytics_*` data injection,
 and Django's standard patterns.
 
+### Developer conventions
+
+This project follows a small set of conventions to keep code readable, consistent, and easy to maintain. Please follow
+these rules when contributing.
+
+#### Commit message format
+
+Use conventional commits with the form `type(scope): short summary`. Keep bodies short and informative.  
+Common types:
+
+- **feat(scope):** new feature  
+  Example: `feat(auth): add remember-me option for login`
+- **fix(scope):** bug fix  
+  Example: `fix(download): correct checksum copy function`
+- **refactor(scope):** non‑behavioral refactor  
+  Example: `refactor(scripts): move page scripts to components/pages`
+- **style(scope):** visual‑only / CSS changes  
+  Example: `style(home): refine hero spacing`
+- **docs(scope):** README or documentation updates  
+  Example: `docs(readme): add developer conventions`
+- **chore(scope):** tooling, build, or cleanup  
+  Example: `chore(assets): add archive/assets-archive/`
+- **perf(scope):** performance improvements
+- **polish(scope):** UI/UX refinements, empty states, success messages  
+  Example: `polish(analytics): add empty states to all charts`
+
+When a change touches many files, include a short `Added / Modified / Fixed` list in the commit body.
+
+#### Commit body structure
+
+For non‑trivial commits, include a structured body with these sections:
+
+```text
+type(scope): short summary
+
+Scope:
+- file paths (modified/new)
+
+Changes:
+- bullet list of what changed
+
+Behavior:
+- how the system behaves now
+
+Impact:
+- why it matters
+```
+
+example:
+
+```text
+feat(analytics): add world map with drill‑down to cities
+
+Scope:
+- analytics/views/geography.py (modified)
+- analytics/static/analytics/scripts/geography-map.js (new)
+- analytics/templates/analytics/geography.html (new)
+
+Changes:
+- Created a geography page with an offline Datamaps world map
+- Added country‑level visitor counts with quintile‑based coloring
+- Implemented click‑to‑filter on the map to show cities for a selected country
+
+Behavior:
+- Staff can see visitor distribution across countries on a world map
+- Clicking a country filters the cities table to that country
+- The map is fully offline; no external API calls are made
+
+Impact:
+- The dashboard now provides geographic insights comparable to Google Analytics
+while remaining fully privacy‑first and self‑hosted
+```
+
+#### Branching rules
+
+- `main` — protected, always deployable
+- Feature & refactor branches (short‑lived):
+    - `feat/<name>` or `feat/<scope>/<name>`
+    - `refactor/<name>` or `refactor/<scope>/<name>`
+- Docs branches:
+    - `docs/<short‑description>`
+- Hotfixes:
+    - `fix/<issue>` or `hotfix/<issue>`
+- When merging: prefer small focused PRs; squash or keep history tidy.
+
+---
+
+### Ideas for contribution
+
+If you’re looking for a bigger feature to build, here are some ideas that would make the analytics dashboard even
+better.  
+All of them respect the privacy‑first philosophy and fit the existing architecture.
+
+| Feature                                | Description                                                                                                             | Effort |
+|----------------------------------------|-------------------------------------------------------------------------------------------------------------------------|--------|
+| **City bubbles on the world map**      | When a country is clicked, zoom in and show city circles sized by visitor count                                         | Medium |
+| **Session replay / user journey**      | Show the sequence of pages a single anonymous session visited, with timestamps                                          | Medium |
+| **Funnel analysis**                    | Define a series of pages or events and see drop‑off between each step (e.g., landing → signup → checkout)               | Medium |
+| **Goal completions**                   | Let users define a goal (e.g., `/signup/`, event `form:submit`) and track completions over time with conversion rates   | Medium |
+| **Annotations on charts**              | Allow staff to add notes to specific dates (“new feature launched”) visible as markers on every chart                   | Small  |
+| **Scheduled email reports**            | A management command that emails a weekly summary PDF/CSV to configured recipients                                      | Small  |
+| **Page‑load time tracking**            | A tiny JS snippet addition to measure and display average page load times (Performance API)                             | Small  |
+| **Custom dashboards**                  | Let users pin their favourite charts and tables to a custom overview page, drag‑and‑drop layout                         | Large  |
+| **More languages**                     | Contribute a complete `.po` file for a new language (German, French, Japanese, Italian, Korean, etc.)                   | Small  |
+| **Dark/Light theme per section**       | Allow some dashboard sections to be light while others stay dark, or schedule theme changes                             | Medium |
+| **Admin dashboard widgets**            | Show today’s key metrics directly on the Django admin index page as custom admin widgets                                | Small  |
+| **Audience retention / cohort table**  | Show what percentage of visitors return after N days, based on anonymous session IDs                                    | Medium |
+| **Behavior flow diagram**              | A Sankey or flow chart showing how visitors move between pages (e.g., home → pricing → signup)                          | Large  |
+| **Campaign / UTM tracking**            | Automatically extract `utm_source`, `utm_medium`, `utm_campaign` from URLs and show campaign performance                | Medium |
+| **Alerts / thresholds**                | Let staff set thresholds (e.g., “notify me if bounce rate > 80%”) and receive Django signals or email alerts            | Medium |
+| **A/B testing integration**            | Track variants of a page and show which version performs better on a chosen metric                                      | Large  |
+| **Heatmap generation**                 | Record click coordinates (anonymously) and generate a heatmap overlay for any page                                      | Large  |
+| **GDPR / cookie‑less mode**            | Add a fully cookie‑less mode that uses fingerprinting‑free session detection for even stricter privacy                  | Medium |
+| **Custom event schema**                | Let users define a schema for their events (allowed categories, actions, labels) and validate incoming events           | Small  |
+| **Video / audio engagement tracking**  | Pre‑built watchers for `<video>` and `<audio>` elements that automatically send play, pause, complete events            | Small  |
+| **PDF export of the entire dashboard** | Generate a multi‑page PDF report of the current view (charts + tables) with one click                                   | Medium |
+| **Public sharing links**               | Generate a secret, read‑only link to share a dashboard view with external stakeholders                                  | Medium |
+| **Multi‑site / tenant support**        | Track multiple domains or sites in a single analytics installation, with per‑site filtering                             | Large  |
+| **AI‑powered insights**                | Use a local LLM to generate natural‑language summaries of traffic changes (“Traffic spiked 40% on Tuesday, driven by…”) | Large  |
+| **Plugin / extension system**          | Allow developers to register custom charts, tables, or pages that plug into the analytics dashboard                     | Large  |
+
+If you’d like to work on any of these, please open an issue to discuss the approach first — I’ll be happy to help guide
+the implementation.
+
 ---
 
 ## License
@@ -597,7 +737,7 @@ This license also includes an express **grant of patent rights** from contributo
 Built entirely by **Parsa Zaydany** — solo, offline, during difficult circumstances.
 
 The world map database is only 60MB.  
-Downloading it took **over four hours** over an unreliable connection.  
+Downloading it took **over four hours** over an unreliable connection.
 
 Pushing this first release to GitHub required buying a small amount of bandwidth —  
 a purchase that came from savings I had set aside over two years for my main project.  
