@@ -1,0 +1,27 @@
+# MANIFEST.in – include all static assets, templates, and locale files
+
+# Source code
+include analytics/*.py
+include analytics/views/*.py
+include analytics/templatetags/*.py
+include analytics/management/commands/*.py
+recursive-include analytics/migrations *.py
+include analytics/requirements.txt
+
+# Templates
+recursive-include analytics/templates *
+
+# Static files (CSS, JS, icons)
+recursive-include analytics/static *
+
+# Translations (source .po files only – .mo is compiled by the user)
+include analytics/locale/en/LC_MESSAGES/django.po
+include analytics/locale/es/LC_MESSAGES/django.po
+include analytics/locale/ar/LC_MESSAGES/django.po
+include analytics/locale/zh-hans/LC_MESSAGES/django.po
+include analytics/locale/pt-br/LC_MESSAGES/django.po
+
+# Exclude what shouldn't be shipped
+exclude analytics/geoip/*.mmdb
+global-exclude *.pyc *.pyo __pycache__
+global-exclude *.mo
