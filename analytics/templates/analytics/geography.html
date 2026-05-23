@@ -1,0 +1,144 @@
+{% extends 'analytics/base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Geography" %} – Analytics{% endblock %}
+
+{% block page_title %}Geography{% endblock %}
+{% block page_subtitle %}Where your visitors are located{% endblock %}
+
+{% block filter_bar %}
+    {% include 'analytics/includes/filter_bar.html' %}
+{% endblock %}
+
+{% block dashboard_content %}
+    <div class="chart-card">
+        <div class="chart-title-wrapper">
+            <h3 class="chart-title">{% trans "World Map" %}</h3>
+        </div>
+        <div class="world-map-scroll">
+            <div id="world-map"></div>
+        </div>
+    </div>
+
+    <div class="chart-grid analytics-chart-card--spaced">
+        <!-- Countries table -->
+        <div class="table-card">
+            <div class="chart-title-wrapper">
+                <h3 class="chart-title">{% trans "Countries" %}</h3>
+                <div class="export-actions">
+                    <a href="{% url 'analytics:export' 'geography_countries' %}?{{ request.GET.urlencode }}"
+                       class="export-btn" title="{% trans 'Export CSV' %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="currentColor"
+                                      d="M12 15.575q-.2 0-.375-.062a.9.9 0 0 1-.325-.213l-3.6-3.6a.92.92 0 0 1-.288-.7q.012-.4.288-.7.3-.3.713-.312a.93.93 0 0 1 .712.287L11 12.15V5q0-.424.288-.712A.97.97 0 0 1 12 4q.424 0 .713.288A.96.96 0 0 1 13 5v7.15l1.875-1.875q.3-.3.713-.288t.712.313q.275.3.288.7a.91.91 0 0 1-.288.7l-3.6 3.6q-.15.15-.325.213a1.1 1.1 0 0 1-.375.062M6 20q-.824 0-1.412-.587A1.93 1.93 0 0 1 4 18v-2q0-.424.288-.712A.97.97 0 0 1 5 15q.424 0 .713.288A.96.96 0 0 1 6 16v2h12v-2q0-.424.288-.712A.97.97 0 0 1 19 15q.424 0 .713.288A.96.96 0 0 1 20 16v2q0 .825-.587 1.413A1.92 1.92 0 0 1 18 20z"></path>
+                            </svg>
+                        </span>
+                    </a>
+                    <a href="{% url 'analytics:export' 'geography_countries' %}?{{ request.GET.urlencode }}&format=json"
+                       class="export-btn export-btn--json" title="{% trans 'Export JSON' %}">JSON</a>
+                </div>
+            </div>
+            <table class="analytics-table">
+                <thead>
+                <tr>
+                    <th>{% trans "Country" %}</th>
+                    <th>{% trans "Visitors" %}</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for c in countries %}
+                    <tr>
+                        <td>{{ c.name }}</td>
+                        <td>{{ c.count }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="2">{% trans "No geography data yet." %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-card">
+            <div class="chart-title-wrapper">
+                <h3 class="chart-title">
+                    {% trans "Top Cities" %}
+                    {% if selected_country %}
+                        <a href="?
+                                {% for key, value in request.GET.items %}{% if key != 'country' %}{{ key }}={{ value }}&{% endif %}{% endfor %}"
+                           class="analytics-back-link"
+                           style="font-size: var(--font-size-sm); margin-left: var(--margin-sm);">
+                            {% trans "Show all countries" %}
+                        </a>
+                    {% endif %}
+                </h3>
+                <div class="export-actions">
+                    <a href="{% url 'analytics:export' 'geography_cities' %}?{{ request.GET.urlencode }}"
+                       class="export-btn" title="{% trans 'Export CSV' %}">
+                <span class="icon icon--sm" aria-hidden="true">
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                              d="M12 15.575q-.2 0-.375-.062a.9.9 0 0 1-.325-.213l-3.6-3.6a.92.92 0 0 1-.288-.7q.012-.4.288-.7.3-.3.713-.312a.93.93 0 0 1 .712.287L11 12.15V5q0-.424.288-.712A.97.97 0 0 1 12 4q.424 0 .713.288A.96.96 0 0 1 13 5v7.15l1.875-1.875q.3-.3.713-.288t.712.313q.275.3.288.7a.91.91 0 0 1-.288.7l-3.6 3.6q-.15.15-.325.213a1.1 1.1 0 0 1-.375.062M6 20q-.824 0-1.412-.587A1.93 1.93 0 0 1 4 18v-2q0-.424.288-.712A.97.97 0 0 1 5 15q.424 0 .713.288A.96.96 0 0 1 6 16v2h12v-2q0-.424.288-.712A.97.97 0 0 1 19 15q.424 0 .713.288A.96.96 0 0 1 20 16v2q0 .825-.587 1.413A1.92 1.92 0 0 1 18 20z"></path>
+                    </svg>
+                </span>
+                    </a>
+                    <a href="{% url 'analytics:export' 'geography_cities' %}?{{ request.GET.urlencode }}&format=json"
+                       class="export-btn export-btn--json" title="{% trans 'Export JSON' %}">JSON</a>
+                </div>
+            </div>
+            <table class="analytics-table">
+                <thead>
+                <tr>
+                    <th>{% trans "City" %}</th>
+                    <th>{% trans "Country" %}</th>
+                    <th>{% trans "Visitors" %}</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for c in top_cities %}
+                    <tr>
+                        <td>{{ c.city }}</td>
+                        <td>{{ c.country_name }}</td>
+                        <td>{{ c.count }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="3">{% trans "No city data yet." %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script>
+        window.__analytics_filter = {
+            startDate: "{{ start_date|date:'Y-m-d'|default:'' }}",
+            endDate: "{{ end_date|date:'Y-m-d'|default:'' }}",
+            activePreset: "{{ active_preset|default:'last30' }}",
+            showSearch: false
+        };
+        window.__analytics_geography = {
+            countries: [
+                {% for c in countries %}
+                    {
+                        code: "{{ c.code }}",
+                        alpha2: "{{ c.alpha2 }}",
+                        name: "{{ c.name|escapejs }}",
+                        count: {{ c.count }}
+                    }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ]
+        };
+    </script>
+    <script src="{% static 'analytics/scripts/d3.v3.min.js' %}"></script>
+    <script src="{% static 'analytics/scripts/topojson.v1.min.js' %}"></script>
+    <script src="{% static 'analytics/scripts/datamaps.world.min.js' %}"></script>
+    <script src="{% static 'analytics/scripts/geography-map.js' %}"></script>
+    <script src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
+{% endblock %}

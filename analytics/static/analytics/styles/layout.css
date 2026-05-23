@@ -1,0 +1,58 @@
+/* ============================================
+   Analytics Dashboard – Layout
+   ============================================ */
+
+/* ── Full viewport wrapper ── */
+.analytics-dashboard {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--analytics-bg);
+}
+
+/* ── Body: sidebar + main area ── */
+.analytics-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+/* ── Sidebar ── */
+.analytics-sidebar {
+    background: var(--analytics-surface);
+    border-right: 1px solid var(--analytics-border);
+    transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1),
+                margin-left 0.25s ease,
+                width 0.25s ease;
+    z-index: var(--z-index-sidebar);
+}
+
+/* ── Main column ── */
+.analytics-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;                     /* allow content to shrink */
+    background: var(--analytics-bg);  /* same as outer bg for seamless look */
+}
+
+/* ── Content container (below topbar) ── */
+.analytics-container {
+    flex: 1;
+    padding: var(--padding-md);
+}
+
+/* ── Responsive adjustments ── */
+@media (min-width: 768px) {
+    .analytics-body:not(.sidebar-hidden) {
+        gap: var(--gap-lg);
+    }
+
+    .analytics-container {
+        padding: var(--padding-lg);
+    }
+
+    .analytics-body:not(.sidebar-hidden) .analytics-container {
+        padding: var(--padding-lg) var(--padding-lg) var(--padding-lg) 0;
+    }
+}

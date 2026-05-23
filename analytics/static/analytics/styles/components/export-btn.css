@@ -1,0 +1,59 @@
+/* ============================================
+   Analytics Export Button
+   ============================================ */
+
+.export-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    color: var(--analytics-text-dim);
+    padding: var(--padding-xs);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+    width: 32px;
+    height: 32px;
+    box-sizing: border-box;
+}
+
+.export-btn:hover {
+    color: var(--analytics-gold);
+    border-color: var(--analytics-gold);
+    background: var(--analytics-gold-dim);
+}
+
+.export-btn .icon {
+    pointer-events: none;
+}
+
+/* Position alongside chart/table title */
+.chart-title-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-sm);
+    margin-bottom: var(--margin-md);
+}
+
+.chart-title-wrapper .chart-title {
+    margin-bottom: 0;
+}
+
+.export-actions {
+    display: flex;
+    gap: var(--gap-xs);
+    align-items: center;
+}
+
+.export-btn--json {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.04em;
+    padding: var(--padding-xs) var(--padding-sm);
+    width: auto;
+    height: 32px;
+    box-sizing: border-box;
+}

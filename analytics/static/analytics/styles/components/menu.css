@@ -1,0 +1,106 @@
+/* ============================================
+   Analytics Settings – Theme & Language menus
+   ============================================ */
+
+.menu-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+    margin-bottom: var(--margin-lg);
+}
+
+@media (min-width: 576px) {
+    .menu-controls {
+        flex-direction: row;
+    }
+}
+
+.menu-control {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    color: var(--analytics-text);
+    cursor: pointer;
+    padding: var(--padding-xs) var(--padding-sm);
+    border-radius: var(--radius-md);
+    background: var(--analytics-surface);
+    border: 1px solid var(--analytics-border);
+    position: relative;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.menu-control:hover {
+    background: var(--analytics-gold-dim);
+    border-color: var(--analytics-gold);
+}
+
+.menu-control-value {
+    padding: var(--padding-sm);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.menu-control-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--analytics-surface);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    min-width: 200px;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    list-style: none;
+    padding: 0;
+    margin: var(--margin-sm) 0;
+}
+
+.menu-control-menu-item {
+    padding: var(--padding-sm) var(--padding-md);
+    color: var(--analytics-text);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.menu-control-menu-item:first-child {
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+}
+
+.menu-control-menu-item:last-child {
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+}
+
+.menu-control-menu-item:hover {
+    background: var(--analytics-gold-dim);
+    color: var(--analytics-gold);
+}
+
+.menu-control:hover .menu-control-menu,
+.menu-control:focus-within .menu-control-menu {
+    opacity: 1;
+    visibility: visible;
+}
+
+.pref-menu-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: var(--gap-sm);
+}
+
+.pref-menu-section .menu-control {
+    width: 100%;
+}
+
+.pref-menu-section .menu-control-menu {
+    width: 100%;
+    min-width: 0;
+}

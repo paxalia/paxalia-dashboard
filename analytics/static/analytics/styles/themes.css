@@ -1,0 +1,172 @@
+/* ============================================
+   Analytics Themes – 12 full dashboard palettes
+   ============================================ */
+
+/* DARK GOLD (default analytics theme) */
+[data-analytics-theme="dark"] {
+    --analytics-bg: #0d1117;
+    --analytics-surface: #161b22;
+    --analytics-border: #30363d;
+    --analytics-text: #c9d1d9;
+    --analytics-text-dim: #8b949e;
+    --analytics-gold: #f6c84c;
+    --analytics-gold-dim: rgba(246,200,76,0.12);
+    --analytics-gold-hover: #d4af37;
+    --analytics-compare: #58a6ff;
+}
+
+/* SKYBOUND SILK (Light) */
+[data-analytics-theme="default"] {
+    --analytics-bg: #eceef7;
+    --analytics-surface: #ffffff;
+    --analytics-border: #d0d7e7;
+    --analytics-text: #2d2d3a;
+    --analytics-text-dim: #6b6b7a;
+    --analytics-gold: #7286d3;
+    --analytics-gold-dim: rgba(114,134,211,0.10);
+    --analytics-gold-hover: #5b6db8;
+    --analytics-compare: #2563eb;
+}
+
+/* GOLDEN DUSK (Light) */
+[data-analytics-theme="golden"] {
+    --analytics-bg: #faf6e8;
+    --analytics-surface: #ffffff;
+    --analytics-border: #e5d5b0;
+    --analytics-text: #3d3525;
+    --analytics-text-dim: #7a7055;
+    --analytics-gold: #d4a017;
+    --analytics-gold-dim: rgba(212,160,23,0.10);
+    --analytics-gold-hover: #b38817;
+    --analytics-compare: #2563eb;
+}
+
+/* AZURE DRIFT (Light) */
+[data-analytics-theme="azure"] {
+    --analytics-bg: #eaf5ff;
+    --analytics-surface: #ffffff;
+    --analytics-border: #c0e0f8;
+    --analytics-text: #1a3a4a;
+    --analytics-text-dim: #5a7a8a;
+    --analytics-gold: #0088cc;
+    --analytics-gold-dim: rgba(0,136,204,0.10);
+    --analytics-gold-hover: #006699;
+    --analytics-compare: #0284c7;
+}
+
+/* SUNLIT MEADOW (Light) */
+[data-analytics-theme="sunlit"] {
+    --analytics-bg: #f5fae8;
+    --analytics-surface: #ffffff;
+    --analytics-border: #d5e8b0;
+    --analytics-text: #2d3a1a;
+    --analytics-text-dim: #6b7a55;
+    --analytics-gold: #7ea832;
+    --analytics-gold-dim: rgba(126,168,50,0.10);
+    --analytics-gold-hover: #6a8e28;
+    --analytics-compare: #06b6d4;
+}
+
+/* INDIGO SPECTRUM (Dark) */
+[data-analytics-theme="indigo"] {
+    --analytics-bg: #0a0a1a;
+    --analytics-surface: #13132e;
+    --analytics-border: #2a2a50;
+    --analytics-text: #d9d9f0;
+    --analytics-text-dim: #8888b0;
+    --analytics-gold: #9788e5;
+    --analytics-gold-dim: rgba(151,136,229,0.12);
+    --analytics-gold-hover: #7b6ed0;
+    --analytics-compare: #60a5fa;
+}
+
+/* ARCTIC HORIZON (Dark) */
+[data-analytics-theme="arctic"] {
+    --analytics-bg: #0a1218;
+    --analytics-surface: #111d26;
+    --analytics-border: #1f3340;
+    --analytics-text: #d0e0f0;
+    --analytics-text-dim: #7a90a0;
+    --analytics-gold: #6699c2;
+    --analytics-gold-dim: rgba(102,153,194,0.12);
+    --analytics-gold-hover: #4d7da8;
+    --analytics-compare: #60a5fa;
+}
+
+/* OCEAN BREEZE (Dark) */
+[data-analytics-theme="ocean"] {
+    --analytics-bg: #081420;
+    --analytics-surface: #0f2135;
+    --analytics-border: #1c354a;
+    --analytics-text: #c8ddf0;
+    --analytics-text-dim: #7088a0;
+    --analytics-gold: #5c7bb7;
+    --analytics-gold-dim: rgba(92,123,183,0.12);
+    --analytics-gold-hover: #44619c;
+    --analytics-compare: #38bdf8;
+}
+
+/* TWILIGHT REVERIE (Dark) */
+[data-analytics-theme="twilight"] {
+    --analytics-bg: #0c0c22;
+    --analytics-surface: #18183a;
+    --analytics-border: #2d2d5a;
+    --analytics-text: #d0c8f0;
+    --analytics-text-dim: #8880b0;
+    --analytics-gold: #7a83d9;
+    --analytics-gold-dim: rgba(122,131,217,0.12);
+    --analytics-gold-hover: #5f68b8;
+    --analytics-compare: #93c5fd;
+}
+
+/* VELVET NOIR (Dark) */
+[data-analytics-theme="velvet"] {
+    --analytics-bg: #1a0a0d;
+    --analytics-surface: #2a1015;
+    --analytics-border: #3d1c22;
+    --analytics-text: #f0d8dc;
+    --analytics-text-dim: #b08890;
+    --analytics-gold: #c25a6b;
+    --analytics-gold-dim: rgba(194,90,107,0.12);
+    --analytics-gold-hover: #8b2c3a;
+    --analytics-compare: #3498db;
+}
+
+/* CITRINE PRESTIGE (Dark) */
+[data-analytics-theme="citrine"] {
+    --analytics-bg: #1a1808;
+    --analytics-surface: #2a2812;
+    --analytics-border: #3d381c;
+    --analytics-text: #f0ecc0;
+    --analytics-text-dim: #b0a870;
+    --analytics-gold: #e6c34a;
+    --analytics-gold-dim: rgba(230,195,74,0.12);
+    --analytics-gold-hover: #b8960c;
+    --analytics-compare: #2980b9;
+}
+
+/* AMETHYST LUXE (Dark) */
+[data-analytics-theme="amethyst"] {
+    --analytics-bg: #150a1e;
+    --analytics-surface: #221230;
+    --analytics-border: #351e48;
+    --analytics-text: #e8d8f5;
+    --analytics-text-dim: #a088c0;
+    --analytics-gold: #b78ae6;
+    --analytics-gold-dim: rgba(183,138,230,0.12);
+    --analytics-gold-hover: #6c2d9b;
+    --analytics-compare: #5b9bd5;
+}
+
+/* ONYX PEARL (Dark) */
+[data-analytics-theme="onyx"] {
+    --analytics-bg: #181818;
+    --analytics-surface: #222222;
+    --analytics-border: #333333;
+    --analytics-text: #e0e0e0;
+    --analytics-text-dim: #909090;
+    --analytics-gold: #b4b4b4;
+    --analytics-gold-dim: rgba(180,180,180,0.12);
+    --analytics-gold-hover: #808080;
+    --analytics-compare: #5ac8fa;
+}

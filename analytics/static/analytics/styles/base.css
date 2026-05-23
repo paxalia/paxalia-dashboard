@@ -1,0 +1,18 @@
+/* ============================================
+   Analytics Dashboard – Base
+   ============================================ */
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family-sans);
+    background: var(--analytics-bg);
+    color: var(--analytics-text);
+    min-height: 100vh;
+}

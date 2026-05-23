@@ -1,0 +1,54 @@
+/* ============================================
+   Analytics Topbar – Shared topbar inside main content
+   ============================================ */
+
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-md);
+    border-bottom: 1px solid var(--analytics-border);
+    background: transparent;
+}
+
+.topbar__meu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: transparent;
+    border: 1px solid var(--analytics-border);
+    cursor: pointer;
+    color: var(--analytics-text-dim);
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.topbar__meu-toggle:hover {
+    color: var(--analytics-text);
+    border-color: var(--analytics-text-dim);
+}
+
+.dashboard-topbar {
+    padding: var(--padding-md) var(--padding-lg);
+}
+
+.dashboard-topbar__title {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+}
+
+.dashboard-page-title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    color: var(--analytics-gold);
+}
+
+.dashboard-page-subtitle {
+    margin: 0;
+    font-size: var(--font-size-md);
+    color: var(--analytics-text-dim);
+}

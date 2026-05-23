@@ -1,0 +1,57 @@
+{% extends 'analytics/base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Real‑time" %} – Analytics{% endblock %}
+
+{% block page_title %}Real‑time{% endblock %}
+{% block page_subtitle %}Live activity over the last 5 minutes{% endblock %}
+
+{% block dashboard_content %}
+    <div class="stat-grid" id="realtimeStats">
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Active Visitors" %}</span>
+            <span class="stat-value" id="uniqueCount">—</span>
+            <span class="stat-sub">{% trans "last 5 minutes" %}</span>
+        </div>
+        <div class="stat-card stat-card--highlight">
+            <span class="stat-label">{% trans "Page Views" %}</span>
+            <span class="stat-value" id="viewCount">—</span>
+            <span class="stat-sub">{% trans "last 5 minutes" %}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Last Updated" %}</span>
+            <span class="stat-value stat-value--small" id="updateTime">—</span>
+            <span class="stat-sub">{% trans "auto‑refreshing" %}</span>
+        </div>
+    </div>
+
+    <div class="table-card analytics-chart-card--spaced">
+        <h3 class="chart-title">{% trans "Recent Page Views" %}</h3>
+        <table class="analytics-table" id="realtimeTable">
+            <thead>
+                <tr>
+                    <th>{% trans "Path" %}</th>
+                    <th>{% trans "IP" %}</th>
+                    <th>{% trans "Method" %}</th>
+                    <th>{% trans "Status" %}</th>
+                    <th>{% trans "Time" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="5">{% trans "Loading…" %}</td></tr>
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script>
+        window.__analytics_realtime = {
+            refreshSeconds: {{ refresh_seconds|default:30 }},
+            dataUrl: "{% url 'analytics:realtime_data' %}",
+            emptyMessage: "{% trans 'No activity in the last 5 minutes.' %}",
+        };
+    </script>
+    <script src="{% static 'analytics/scripts/realtime.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,349 @@
+# OP Analytics – Chinese (Simplified) translations
+# Copyright (C) 2026 OP Project
+# This file is distributed under the same license as the OP package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OP Analytics 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-22 00:00+0000\n"
+"PO-Revision-Date: 2026-05-22 00:00+0000\n"
+"Last-Translator: OP Team\n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# ── base.html ──
+msgid "Toggle sidebar"
+msgstr "切换侧边栏"
+
+msgid "Overview"
+msgstr "概览"
+
+msgid "Pages"
+msgstr "页面"
+
+msgid "API"
+msgstr "API"
+
+msgid "Traffic"
+msgstr "流量"
+
+msgid "Real‑time"
+msgstr "实时"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Geography"
+msgstr "地理"
+
+# ── dashboard.html ──
+msgid "Today"
+msgstr "今天"
+
+msgid "unique"
+msgstr "独立"
+
+msgid "Yesterday"
+msgstr "昨天"
+
+msgid "API Calls (today)"
+msgstr "API 调用 (今天)"
+
+msgid "Top Page"
+msgstr "最常访问页面"
+
+msgid "most visited"
+msgstr "访问最多"
+
+msgid "Sessions (today)"
+msgstr "会话 (今天)"
+
+msgid "pages/session"
+msgstr "页/会话"
+
+msgid "Bounce Rate (today)"
+msgstr "跳出率 (今天)"
+
+msgid "single‑page visits"
+msgstr "单页访问"
+
+msgid "Sessions (yesterday)"
+msgstr "会话 (昨天)"
+
+msgid "bounce"
+msgstr "跳出"
+
+msgid "Page Views"
+msgstr "页面浏览量"
+
+msgid "Top 10 Pages"
+msgstr "前十页面"
+
+msgid "Top Pages – Detail"
+msgstr "热门页面 – 详情"
+
+msgid "Export CSV"
+msgstr "导出 CSV"
+
+msgid "Export JSON"
+msgstr "导出 JSON"
+
+msgid "No data yet."
+msgstr "暂无数据。"
+
+msgid "Compare to previous period"
+msgstr "与上一周期对比"
+
+# ── pages.html ──
+msgid "Most visited pages and view counts"
+msgstr "访问最多的页面及浏览量"
+
+msgid "All Pages"
+msgstr "所有页面"
+
+msgid "No data for this period."
+msgstr "此时间段无数据。"
+
+msgid "Search pages..."
+msgstr "搜索页面..."
+
+# ── page_detail.html ──
+msgid "Views over 30 days for this specific page"
+msgstr "该页面过去30天的浏览量"
+
+msgid "Back to all pages"
+msgstr "返回所有页面"
+
+msgid "Page Detail"
+msgstr "页面详情"
+
+# ── api.html ──
+msgid "API Analytics"
+msgstr "API 分析"
+
+msgid "Endpoint performance and status codes"
+msgstr "端点性能与状态码"
+
+msgid "API Calls Today"
+msgstr "今日 API 调用"
+
+msgid "API Calls Yesterday"
+msgstr "昨日 API 调用"
+
+msgid "API Calls – Last 30 Days"
+msgstr "API 调用 – 过去30天"
+
+msgid "Top API Endpoints"
+msgstr "热门 API 端点"
+
+msgid "Endpoint"
+msgstr "端点"
+
+msgid "Calls"
+msgstr "调用次数"
+
+msgid "Status Codes"
+msgstr "状态码"
+
+msgid "Code"
+msgstr "状态码"
+
+msgid "Count"
+msgstr "数量"
+
+msgid "No API calls in this period."
+msgstr "此时间段无 API 调用。"
+
+msgid "No data."
+msgstr "无数据。"
+
+# ── traffic.html ──
+msgid "Traffic Sources"
+msgstr "流量来源"
+
+msgid "Where visitors come from and what they use"
+msgstr "访客来源与使用环境"
+
+msgid "Top Referrers"
+msgstr "热门来源"
+
+msgid "Referrer"
+msgstr "来源"
+
+msgid "Views"
+msgstr "浏览量"
+
+msgid "Browsers"
+msgstr "浏览器"
+
+msgid "Browser"
+msgstr "浏览器"
+
+msgid "Operating Systems"
+msgstr "操作系统"
+
+msgid "OS"
+msgstr "操作系统"
+
+msgid "Device Types"
+msgstr "设备类型"
+
+msgid "Device"
+msgstr "设备"
+
+msgid "No referrer data yet."
+msgstr "暂无来源数据。"
+
+msgid "No browser data yet."
+msgstr "暂无浏览器数据。"
+
+msgid "No OS data yet."
+msgstr "暂无操作系统数据。"
+
+msgid "No device data yet."
+msgstr "暂无设备数据。"
+
+# ── realtime.html ──
+msgid "Live visitor activity"
+msgstr "实时访客动态"
+
+msgid "Total views (last 5 min)"
+msgstr "总浏览量 (近5分钟)"
+
+msgid "Unique IPs (last 5 min)"
+msgstr "独立IP数 (近5分钟)"
+
+msgid "Recent Visitors"
+msgstr "最近访客"
+
+msgid "Path"
+msgstr "路径"
+
+msgid "IP"
+msgstr "IP"
+
+msgid "Time"
+msgstr "时间"
+
+# ── settings.html ──
+msgid "IP anonymization, ignored paths, refresh interval"
+msgstr "IP 匿名化、忽略路径、刷新间隔"
+
+msgid "Display settings"
+msgstr "显示设置"
+
+msgid "Theme"
+msgstr "主题"
+
+msgid "Language"
+msgstr "语言"
+
+msgid "Anonymize IP addresses (SHA256 hash)"
+msgstr "匿名化 IP 地址 (SHA256 哈希)"
+
+msgid "Ignored Path Prefixes (one per line)"
+msgstr "忽略的路径前缀 (每行一个)"
+
+msgid "Ignored File Extensions (one per line)"
+msgstr "忽略的文件扩展名 (每行一个)"
+
+msgid "Real‑time refresh interval (seconds)"
+msgstr "实时刷新间隔 (秒)"
+
+msgid "Save Settings"
+msgstr "保存设置"
+
+# ── geography.html ──
+msgid "Where your visitors are located"
+msgstr "访客地理位置"
+
+msgid "World Map"
+msgstr "世界地图"
+
+msgid "Countries"
+msgstr "国家"
+
+msgid "Visitors"
+msgstr "访客数"
+
+msgid "Top Cities"
+msgstr "热门城市"
+
+msgid "City"
+msgstr "城市"
+
+msgid "Country"
+msgstr "国家"
+
+msgid "No geography data yet."
+msgstr "暂无地理数据。"
+
+msgid "No city data yet."
+msgstr "暂无城市数据。"
+
+msgid "Show all countries"
+msgstr "显示所有国家"
+
+# ── filter_bar.html ──
+msgid "Filter data"
+msgstr "筛选数据"
+
+msgid "From"
+msgstr "从"
+
+msgid "To"
+msgstr "至"
+
+msgid "Apply"
+msgstr "应用"
+
+msgid "Last 30 days"
+msgstr "最近30天"
+
+msgid "Last 7 days"
+msgstr "最近7天"
+
+msgid "This month"
+msgstr "本月"
+
+# ── theme/language dropdowns ──
+msgid "Dark Gold"
+msgstr "暗金"
+
+msgid "Skybound Silk"
+msgstr "天境丝绒"
+
+msgid "Golden Dusk"
+msgstr "金色黄昏"
+
+msgid "Azure Drift"
+msgstr "蔚蓝漂流"
+
+msgid "Sunlit Meadow"
+msgstr "阳光草甸"
+
+msgid "Indigo Spectrum"
+msgstr "靛蓝光谱"
+
+msgid "Arctic Horizon"
+msgstr "极地地平线"
+
+msgid "Ocean Breeze"
+msgstr "海洋微风"
+
+msgid "Twilight Reverie"
+msgstr "暮光遐想"
+
+msgid "Velvet Noir"
+msgstr "丝绒黑"
+
+msgid "Citrine Prestige"
+msgstr "黄水晶尊享"
+
+msgid "Onyx Pearl"
+msgstr "缟玛瑙珍珠"

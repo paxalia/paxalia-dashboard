@@ -1,0 +1,237 @@
+{% load static %}
+{% load i18n %}
+{% load analytics_tags %}
+{% get_analytics_config as analytics_config %}
+<!DOCTYPE html>
+{% load i18n %}
+<html lang="{{ LANGUAGE_CODE }}" data-analytics-theme="dark"
+      dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{% block title %}Analytics – OP{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'analytics/styles/themes.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/base.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/layout.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/stat-cards.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/charts.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/tables.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/sidebar.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/settings-form.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/typography.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/icon.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/topbar.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/filter-bar.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/export-btn.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/menu.css' %}">
+    {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="analytics-dashboard">
+    <div class="analytics-body">
+        <aside class="analytics-sidebar" role="region" aria-label="Analytics sections">
+            <div class="sidebar__branding">
+                <a href="{% url 'analytics:dashboard' %}" class="sidebar__logo">
+                    <span class="icon icon--md" aria-hidden="true">
+                        <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                  d="M5 21v-6m7 6V3m7 18V9"></path>
+                        </svg>
+                    </span>
+                    <span class="sidebar__title">Analytics</span>
+                </a>
+                <button class="sidebar-close analytics-sidebar-close-btn" aria-label="Close sidebar">
+                    <span class="icon icon--md" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path fill="currentColor"
+                                  d="M7.94 11.72 17 2.63c.14-.14.14-.38 0-.52a.374.374 0 0 0-.52 0L6.91 11.7c-.14.14-.14.38 0 .52l9.64 9.67c.14.14.38.14.52 0 .14-.15.14-.39 0-.53l-9.13-9.11a.37.37 0 0 1 0-.53Z"></path>
+                        </svg>
+                    </span>
+                </button>
+            </div>
+
+            <nav class="analytics-sidebar-nav">
+                {% if 'overview' in analytics_config.SIDEBAR_SECTIONS %}
+                    <a href="{% url 'analytics:dashboard' %}"
+                       class="analytics-sidebar-link {% if active_page == 'overview' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="currentColor"
+                                  d="m19.675 20.375.7-.7L18.5 17.8V15h-1v3.2zM18 23q-2.075 0-3.537-1.463Q13.001 20.075 13 18q0-2.075 1.463-3.537Q15.927 13 18 13t3.538 1.463T23 18t-1.463 3.538T18 23M7 9h10V7H7zm4.675 12H5q-.824 0-1.412-.587A1.93 1.93 0 0 1 3 19V5q0-.824.588-1.412A1.93 1.93 0 0 1 5 3h14q.825 0 1.413.588T21 5v6.7a7.2 7.2 0 0 0-1.463-.525A6.6 6.6 0 0 0 18 11q-.274 0-.513.012a3 3 0 0 0-.487.063V11H7v2h6.125q-.45.425-.812.925A7 7 0 0 0 11.675 15H7v2h4.075q-.05.25-.062.488-.012.239-.013.512 0 .825.15 1.538T11.675 21"></path>
+                            </svg>
+                        </span>
+                        {% trans "Overview" %}
+                    </a>
+                {% endif %}
+
+                {% if 'pages' in analytics_config.SIDEBAR_SECTIONS %}
+                    <a href="{% url 'analytics:pages' %}"
+                       class="analytics-sidebar-link {% if active_page == 'pages' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="currentColor"
+                                  d="M14.54 1.602a2.4 2.4 0 0 1 1.697.704l3.862 3.862.16.176a2.4 2.4 0 0 1 .544 1.52v12.138a2.4 2.4 0 0 1-2.4 2.4h-12.8a2.4 2.4 0 0 1-2.4-2.4v-16a2.4 2.4 0 0 1 2.4-2.4zm-8.937 1.6a.8.8 0 0 0-.8.8v16a.8.8 0 0 0 .8.8h12.8a.8.8 0 0 0 .8-.8V7.864a.8.8 0 0 0-.134-.443l-.1-.122-3.864-3.864a.8.8 0 0 0-.564-.233zm11.2 12.8a.8.8 0 1 1 0 1.6h-9.6a.8.8 0 1 1 0-1.6zm0-4.8a.8.8 0 1 1 0 1.6h-9.6a.8.8 0 1 1 0-1.6zm-4.8-4.8a.8.8 0 1 1 0 1.6h-4.8a.8.8 0 1 1 0-1.6z"></path>
+                            </svg>
+                        </span>
+                        {% trans "Pages" %}
+                    </a>
+                {% endif %}
+
+                {% if 'pages' in analytics_config.SIDEBAR_SECTIONS %}
+                    <a href="{% url 'analytics:api' %}"
+                       class="analytics-sidebar-link {% if active_page == 'api' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="var(--analytics-gold)"
+                                  d="M20.979 11.802a1 1 0 0 0-.738-.77l-6.86-1.717 2.537-5.92a1 1 0 0 0-1.551-1.169l-11 9a1 1 0 0 0 .39 1.744l6.719 1.681-3.345 5.854A1 1 0 0 0 8.599 21.8l12-9a1 1 0 0 0 .38-.998"></path>
+                            </svg>
+                        </span>
+                        {% trans "API" %}
+                    </a>
+                {% endif %}
+
+                {% if 'traffic' in analytics_config.SIDEBAR_SECTIONS %}
+                    <a href="{% url 'analytics:traffic' %}"
+                       class="analytics-sidebar-link {% if active_page == 'traffic' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path fill="none" stroke="currentColor" stroke-miterlimit="10" d="M22 12.03c0 .13-.06.25-.16.5-.08.18-.17.36-.34.68-.1.18-.2.35-.34.59-.07.11-.44.71-.86 1.26-.92 1.21-1.99 2.1-1.99 2.1-.54.45-1.37 1.13-2.64 1.67a9.7 9.7 0 0 1-3.83.78 9 9 0 0 1-2.39-.35c-1.1-.33-1.84-.8-2.47-1.2-.47-.3-1.53-.99-2.53-2.14-.36-.42-.68-.86-1.31-1.74-.05-.07-.23-.32-.44-.66a9 9 0 0 1-.41-.74c-.19-.38-.28-.57-.29-.73 0-.11.02-.22.26-.73.22-.45.41-.78.42-.8.15-.26.35-.59.61-.98.3-.44.7-.97 1.22-1.54.74-.81 1.39-1.33 1.6-1.49.59-.45 1.38-1.07 2.58-1.53 1.38-.53 2.55-.55 3.15-.56 1.67-.02 2.92.39 3.36.54 0 0 2.14.76 3.86 2.54.42.43.8.92 1.25 1.49.24.31.54.69.84 1.22.08.14.15.26.2.35.15.27.25.47.27.51.06.12.11.22.17.35.14.32.22.48.22.62Z"></path>
+                                <ellipse cx="12" cy="11.99" fill="currentColor" rx="4.13" ry="4.12"></ellipse>
+                            </svg>
+                        </span>
+                        {% trans "Traffic" %}
+                    </a>
+                {% endif %}
+
+                {% if 'geography' in analytics_config.SIDEBAR_SECTIONS %}
+                    <a href="{% url 'analytics:geography' %}"
+                       class="analytics-sidebar-link {% if active_page == 'geography' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <circle fill="var(--analytics-text)" cx="12" cy="12" r="10"></circle>
+                                <circle fill="var(--analytics-surface)" cx="12" cy="12" r="9.46"></circle>
+                                <ellipse fill="var(--analytics-text)" cx="11.93" cy="12" rx="5.04" ry="10"></ellipse>
+                                <ellipse fill="var(--analytics-surface)" cx="11.93" cy="12" rx="4.37" ry="9.46"></ellipse>
+                                <path fill="var(--analytics-text)" d="M3.08 8.94h17.93V8.3H3.08z"></path>
+                                <path fill="var(--analytics-text)" d="M3.01 15.78h17.94v-.64H3.01z"></path>
+                            </svg>
+                        </span>
+                        {% trans "Geography" %}
+                    </a>
+                {% endif %}
+
+                {% if 'realtime' in analytics_config.SIDEBAR_SECTIONS %}
+                    <a href="{% url 'analytics:realtime' %}"
+                       class="analytics-sidebar-link {% if active_page == 'realtime' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <circle fill="var(--analytics-gold)" cx="12" cy="12" r="10"></circle>
+                                <path fill="var(--analytics-surface)"
+                                      d="M11.94 4.8c-.13 0-.24.08-.24.18l-.03 6.93c0 .1.11.18.24.18s.24-.08.24-.18l.03-6.93c0-.1-.11-.18-.24-.18"></path>
+                                <path fill="var(--analytics-surface)"
+                                      d="M11.81 11.69c-.09.09-.13.21-.08.26l3.44 3.49c.05.05.17.02.26-.08.09-.09.13-.21.08-.26l-3.44-3.49c-.05-.05-.17-.02-.26.08"></path>
+                                <path fill="var(--analytics-surface)"
+                                      d="M18.34 15.59v5.95c0 .07.05.12.12.12h.02c.07 0 .12-.05.12-.12v-5.96l-.11-.14-.15.09v.07Z"></path>
+                                <path fill="var(--analytics-surface)"
+                                      d="m18.52 15.55 2.25 2.57s.09.04.13 0 .04-.11 0-.15l-2.37-2.71s-.09-.04-.13 0l-2.39 2.73s-.04.11 0 .15.09.04.13 0l2.25-2.59s.09-.04.13 0"></path>
+                            </svg>
+                        </span>
+                        {% trans "Real‑time" %}
+                    </a>
+                {% endif %}
+
+                {% if 'events' in analytics_config.SIDEBAR_SECTIONS %}
+                    <a href="{% url 'analytics:events' %}"
+                       class="analytics-sidebar-link {% if active_page == 'events' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="var(--analytics-gold)"
+                                      d="M20.979 11.802a1 1 0 0 0-.738-.77l-6.86-1.717 2.537-5.92a1 1 0 0 0-1.551-1.169l-11 9a1 1 0 0 0 .39 1.744l6.719 1.681-3.345 5.854A1 1 0 0 0 8.599 21.8l12-9a1 1 0 0 0 .38-.998"></path>
+                            </svg>
+                        </span>
+                        {% trans "Events" %}
+                    </a>
+                {% endif %}
+
+                {% if 'billing' in analytics_config.SIDEBAR_SECTIONS %}
+                    <a href="{% url 'analytics:billing' %}"
+                       class="analytics-sidebar-link {% if active_page == 'billing' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M19.204 15.474c0-5.115-9.429-4.78-9.429-7.869 0-1.494 1.43-2.224 3.089-2.224 2.789 0 3.286 1.792 4.549 1.792.895 0 1.325-.564 1.325-1.195 0-1.467-2.224-2.578-4.358-2.963V1.6a1.6 1.6 0 0 0-3.198 0v1.466c-2.326.53-4.327 2.143-4.327 4.773 0 4.913 9.428 4.714 9.428 8.165 0 1.195-1.294 2.39-3.42 2.39-3.187 0-4.249-2.157-5.543-2.157-.631 0-1.195.53-1.195 1.33 0 1.271 2.13 2.8 5.059 3.228l-.002.01v1.598a1.6 1.6 0 0 0 3.2 0v-1.598c0-.019-.01-.033-.011-.05 2.635-.492 4.833-2.21 4.833-5.28"></path>
+                            </svg>
+                        </span>
+                        {% trans "Billing" %}
+                    </a>
+                {% endif %}
+
+                {% if 'settings' in analytics_config.SIDEBAR_SECTIONS %}
+                    <a href="{% url 'analytics:settings' %}"
+                       class="analytics-sidebar-link {% if active_page == 'settings' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path fill="var(--analytics-gold)"
+                                      d="m4.7 11.21.57-1.98c.07-.25.04-.51-.1-.73L4.13 6.82a.94.94 0 0 1 .14-1.14l1.39-1.39c.3-.3.77-.37 1.13-.15l1.74 1.05c.21.13.47.16.72.1l1.91-.54c.25-.07.46-.24.59-.48l.91-1.77c.2-.39.65-.59 1.07-.48l1.91.5c.41.11.69.48.67.91l-.1 2.07c-.01.26.08.5.26.68l1.32 1.31c.18.18.43.27.68.26l2.04-.11c.42-.02.8.25.91.65l.53 1.92c.12.42-.08.87-.47 1.07l-1.81.96a.94.94 0 0 0-.47.58l-.54 1.92a.92.92 0 0 0 .11.74l1.04 1.61c.23.36.18.84-.13 1.15l-1.46 1.46c-.31.31-.79.37-1.15.13l-1.64-1.06a.92.92 0 0 0-.76-.1l-1.87.57c-.24.07-.44.24-.56.46l-.94 1.77c-.2.38-.64.58-1.05.48l-1.92-.47c-.42-.1-.7-.48-.68-.91l.1-2.1a.9.9 0 0 0-.26-.68l-1.31-1.31a.9.9 0 0 0-.68-.26l-2.06.09c-.42.02-.8-.26-.91-.66l-.5-1.87c-.11-.41.08-.85.47-1.06l1.75-.95c.22-.12.39-.33.46-.57Z"></path>
+                                <circle fill="var(--analytics-surface)" cx="12" cy="12" r="2.63"></circle>
+                            </svg>
+                        </span>
+                        {% trans "Settings" %}
+                    </a>
+                {% endif %}
+            </nav>
+            <div class="sidebar__footer">
+                <span class="sidebar__credit">
+                    {% trans "Analytics by" %} <a href="https://github.com/parsazaidane" target="_blank" rel="noopener">Parsa Zaydany</a>
+                </span>
+            </div>
+        </aside>
+
+        <div class="sidebar-backdrop" id="sidebarBackdrop" hidden></div>
+
+        <main class="analytics-main">
+            <header class="topbar dashboard-topbar" role="banner">
+                <button class="topbar__meu-toggle sidebar-toggle" aria-controls="analytics-sidebar"
+                        aria-expanded="false" aria-label="{% trans 'Toggle sidebar' %}">
+                    <span class="icon icon--sm" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <rect width="20" height="1.71" x="2" y="20.29" rx=".85" ry=".85" fill="currentColor"></rect>
+                            <rect width="20" height="1.71" x="2" y="11.15" rx=".83" ry=".83" fill="currentColor"></rect>
+                            <rect width="20" height="1.71" x="2" y="2" rx=".83" ry=".83" fill="currentColor"></rect>
+                        </svg>
+                    </span>
+                </button>
+
+                <div class="dashboard-topbar__title" id="analytics-title">
+                    <h1 class="dashboard-page-title">{% block page_title %}{% trans "Overview" %}{% endblock %}</h1>
+                    <p class="dashboard-page-subtitle">{% block page_subtitle %}{% endblock %}</p>
+                </div>
+            </header>
+
+            {% block filter_bar %}{% endblock %}
+
+            {% if messages %}
+                <div class="analytics-messages">
+                    {% for message in messages %}
+                        <div class="analytics-message analytics-message--{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="analytics-container">
+                {% block dashboard_content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+</div>
+{% block extra_js %}
+    <script src="{% static 'analytics/scripts/chart.umd.js' %}"></script>
+    <script src="{% static 'analytics/scripts/sidebar.js' %}"></script>
+    <script src="{% static 'analytics/scripts/theme-manager.js' %}"></script>
+    <script src="{% static 'analytics/scripts/language-manager.js' %}"></script>
+    {% block page_scripts %}{% endblock %}
+{% endblock %}
+</body>
+</html>

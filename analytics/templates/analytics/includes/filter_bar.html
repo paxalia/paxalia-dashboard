@@ -1,0 +1,53 @@
+{% load i18n %}
+<div class="filter-bar" aria-label="{% trans 'Filter and search' %}">
+    <div class="filter-bar__inner">
+        <!-- Preset buttons -->
+        <div class="filter-bar__presets">
+            <button class="filter-bar__preset" data-preset="last30">{% trans "30 days" %}</button>
+            <button class="filter-bar__preset" data-preset="today">{% trans "Today" %}</button>
+            <button class="filter-bar__preset" data-preset="yesterday">{% trans "Yesterday" %}</button>
+            <button class="filter-bar__preset" data-preset="last7">{% trans "7 days" %}</button>
+            <button class="filter-bar__preset" data-preset="this_month">{% trans "Month" %}</button>
+        </div>
+
+        <!-- Date range inputs -->
+        <div class="filter-bar__dates">
+            <span class="icon icon--sm filter-bar__date-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" fill="none" stroke-width="1.5"></rect>
+                    <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.5"></line>
+                    <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line>
+                    <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line>
+                </svg>
+            </span>
+            <label for="start_date" class="sr-only">{% trans "From" %}</label>
+            <input type="date" id="start_date" name="start_date"
+                   value="{{ start_date|date:'Y-m-d'|default:'' }}"
+                   class="filter-bar__date">
+            <span class="filter-bar__date-separator">–</span>
+            <label for="end_date" class="sr-only">{% trans "To" %}</label>
+            <input type="date" id="end_date" name="end_date"
+                   value="{{ end_date|date:'Y-m-d'|default:'' }}"
+                   class="filter-bar__date">
+            <button id="apply-filter" class="filter-bar__btn filter-bar__btn--apply">
+                {% trans "Apply" %}
+            </button>
+        </div>
+
+        <!-- Search input (only on pages that show_search) -->
+        {% if show_search %}
+        <div class="filter-bar__search">
+            <span class="icon icon--sm filter-bar__search-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="10.05" cy="9.87" r="7.87" fill="none" stroke="currentColor" stroke-miterlimit="10"></circle>
+                    <path d="m21.52 21.96-6.12-6.12.26-.27 6.12 6.12" stroke="currentColor"></path>
+                </svg>
+            </span>
+            <input type="text" id="path_search" name="path"
+                   placeholder="{% trans 'Search pages...' %}"
+                   value="{{ search_path|default:'' }}"
+                   class="filter-bar__search-input">
+        </div>
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,352 @@
+# OP Analytics – English translations
+# Copyright (C) 2026 OP Project
+# This file is distributed under the same license as the OP package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OP Analytics 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-22 00:00+0000\n"
+"PO-Revision-Date: 2026-05-22 00:00+0000\n"
+"Last-Translator: OP Team\n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# ── base.html ──
+msgid "Toggle sidebar"
+msgstr "Toggle sidebar"
+
+msgid "Overview"
+msgstr "Overview"
+
+msgid "Pages"
+msgstr "Pages"
+
+msgid "API"
+msgstr "API"
+
+msgid "Traffic"
+msgstr "Traffic"
+
+msgid "Real‑time"
+msgstr "Real‑time"
+
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Geography"
+msgstr "Geography"
+
+# ── dashboard.html ──
+msgid "Today"
+msgstr "Today"
+
+msgid "unique"
+msgstr "unique"
+
+msgid "Yesterday"
+msgstr "Yesterday"
+
+msgid "API Calls (today)"
+msgstr "API Calls (today)"
+
+msgid "Top Page"
+msgstr "Top Page"
+
+msgid "most visited"
+msgstr "most visited"
+
+msgid "Sessions (today)"
+msgstr "Sessions (today)"
+
+msgid "pages/session"
+msgstr "pages/session"
+
+msgid "Bounce Rate (today)"
+msgstr "Bounce Rate (today)"
+
+msgid "single‑page visits"
+msgstr "single‑page visits"
+
+msgid "Sessions (yesterday)"
+msgstr "Sessions (yesterday)"
+
+msgid "bounce"
+msgstr "bounce"
+
+msgid "Page Views"
+msgstr "Page Views"
+
+msgid "Top 10 Pages"
+msgstr "Top 10 Pages"
+
+msgid "Top Pages – Detail"
+msgstr "Top Pages – Detail"
+
+msgid "Export CSV"
+msgstr "Export CSV"
+
+msgid "Export JSON"
+msgstr "Export JSON"
+
+msgid "No data yet."
+msgstr "No data yet."
+
+msgid "Compare to previous period"
+msgstr "Compare to previous period"
+
+# ── pages.html ──
+msgid "Most visited pages and view counts"
+msgstr "Most visited pages and view counts"
+
+msgid "All Pages"
+msgstr "All Pages"
+
+msgid "No data for this period."
+msgstr "No data for this period."
+
+msgid "Search pages..."
+msgstr "Search pages..."
+
+# ── page_detail.html ──
+msgid "Views over 30 days for this specific page"
+msgstr "Views over 30 days for this specific page"
+
+msgid "Back to all pages"
+msgstr "Back to all pages"
+
+msgid "Page Detail"
+msgstr "Page Detail"
+
+# ── api.html ──
+msgid "API Analytics"
+msgstr "API Analytics"
+
+msgid "Endpoint performance and status codes"
+msgstr "Endpoint performance and status codes"
+
+msgid "API Calls Today"
+msgstr "API Calls Today"
+
+msgid "API Calls Yesterday"
+msgstr "API Calls Yesterday"
+
+msgid "API Calls – Last 30 Days"
+msgstr "API Calls – Last 30 Days"
+
+msgid "Top API Endpoints"
+msgstr "Top API Endpoints"
+
+msgid "Endpoint"
+msgstr "Endpoint"
+
+msgid "Calls"
+msgstr "Calls"
+
+msgid "Status Codes"
+msgstr "Status Codes"
+
+msgid "Code"
+msgstr "Code"
+
+msgid "Count"
+msgstr "Count"
+
+msgid "No API calls in this period."
+msgstr "No API calls in this period."
+
+msgid "No data."
+msgstr "No data."
+
+# ── traffic.html ──
+msgid "Traffic Sources"
+msgstr "Traffic Sources"
+
+msgid "Where visitors come from and what they use"
+msgstr "Where visitors come from and what they use"
+
+msgid "Top Referrers"
+msgstr "Top Referrers"
+
+msgid "Referrer"
+msgstr "Referrer"
+
+msgid "Browsers"
+msgstr "Browsers"
+
+msgid "Browser"
+msgstr "Browser"
+
+msgid "Operating Systems"
+msgstr "Operating Systems"
+
+msgid "OS"
+msgstr "OS"
+
+msgid "Device Types"
+msgstr "Device Types"
+
+msgid "Device"
+msgstr "Device"
+
+msgid "No referrer data yet."
+msgstr "No referrer data yet."
+
+msgid "No browser data yet."
+msgstr "No browser data yet."
+
+msgid "No OS data yet."
+msgstr "No OS data yet."
+
+msgid "No device data yet."
+msgstr "No device data yet."
+
+# ── realtime.html ──
+msgid "Live visitor activity"
+msgstr "Live visitor activity"
+
+msgid "Real‑time"
+msgstr "Real‑time"
+
+msgid "Total views (last 5 min)"
+msgstr "Total views (last 5 min)"
+
+msgid "Unique IPs (last 5 min)"
+msgstr "Unique IPs (last 5 min)"
+
+msgid "Recent Visitors"
+msgstr "Recent Visitors"
+
+msgid "Path"
+msgstr "Path"
+
+msgid "IP"
+msgstr "IP"
+
+msgid "Time"
+msgstr "Time"
+
+# ── settings.html ──
+msgid "IP anonymization, ignored paths, refresh interval"
+msgstr "IP anonymization, ignored paths, refresh interval"
+
+msgid "Display settings"
+msgstr "Display settings"
+
+msgid "Theme"
+msgstr "Theme"
+
+msgid "Language"
+msgstr "Language"
+
+msgid "Anonymize IP addresses (SHA256 hash)"
+msgstr "Anonymize IP addresses (SHA256 hash)"
+
+msgid "Ignored Path Prefixes (one per line)"
+msgstr "Ignored Path Prefixes (one per line)"
+
+msgid "Ignored File Extensions (one per line)"
+msgstr "Ignored File Extensions (one per line)"
+
+msgid "Real‑time refresh interval (seconds)"
+msgstr "Real‑time refresh interval (seconds)"
+
+msgid "Save Settings"
+msgstr "Save Settings"
+
+# ── geography.html ──
+msgid "Where your visitors are located"
+msgstr "Where your visitors are located"
+
+msgid "World Map"
+msgstr "World Map"
+
+msgid "Countries"
+msgstr "Countries"
+
+msgid "Visitors"
+msgstr "Visitors"
+
+msgid "Top Cities"
+msgstr "Top Cities"
+
+msgid "City"
+msgstr "City"
+
+msgid "Country"
+msgstr "Country"
+
+msgid "No geography data yet."
+msgstr "No geography data yet."
+
+msgid "No city data yet."
+msgstr "No city data yet."
+
+msgid "Show all countries"
+msgstr "Show all countries"
+
+# ── filter_bar.html ──
+msgid "Filter data"
+msgstr "Filter data"
+
+msgid "From"
+msgstr "From"
+
+msgid "To"
+msgstr "To"
+
+msgid "Apply"
+msgstr "Apply"
+
+msgid "Last 30 days"
+msgstr "Last 30 days"
+
+msgid "Last 7 days"
+msgstr "Last 7 days"
+
+msgid "This month"
+msgstr "This month"
+
+msgid "Search pages..."
+msgstr "Search pages..."
+
+# ── theme/language dropdowns ──
+msgid "Dark Gold"
+msgstr "Dark Gold"
+
+msgid "Skybound Silk"
+msgstr "Skybound Silk"
+
+msgid "Golden Dusk"
+msgstr "Golden Dusk"
+
+msgid "Azure Drift"
+msgstr "Azure Drift"
+
+msgid "Sunlit Meadow"
+msgstr "Sunlit Meadow"
+
+msgid "Indigo Spectrum"
+msgstr "Indigo Spectrum"
+
+msgid "Arctic Horizon"
+msgstr "Arctic Horizon"
+
+msgid "Ocean Breeze"
+msgstr "Ocean Breeze"
+
+msgid "Twilight Reverie"
+msgstr "Twilight Reverie"
+
+msgid "Velvet Noir"
+msgstr "Velvet Noir"
+
+msgid "Citrine Prestige"
+msgstr "Citrine Prestige"
+
+msgid "Onyx Pearl"
+msgstr "Onyx Pearl"

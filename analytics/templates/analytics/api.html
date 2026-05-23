@@ -1,0 +1,157 @@
+{% extends 'analytics/base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "API Analytics" %} – Analytics{% endblock %}
+
+{% block page_title %}API{% endblock %}
+{% block page_subtitle %}Endpoint performance and status codes{% endblock %}
+
+{% block filter_bar %}
+    {% include 'analytics/includes/filter_bar.html' %}
+{% endblock %}
+
+{% block dashboard_content %}
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-label">{% trans "API Calls Today" %}</span>
+            <span class="stat-value">{{ today_api }}</span>
+        </div>
+        <div class="stat-card stat-card--highlight">
+            <span class="stat-label">{% trans "API Calls Yesterday" %}</span>
+            <span class="stat-value">{{ yesterday_api }}</span>
+        </div>
+    </div>
+
+    <div class="chart-card api-calls-cards">
+        <div class="chart-title-wrapper">
+            <h3 class="chart-title">{% trans "API Calls" %} – {{ date_range_label }}</h3>
+            <form class="compare-toggle" method="get" action="">
+                {% for key, value in request.GET.items %}
+                    {% if key != 'compare' %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endif %}
+                {% endfor %}
+                <label class="compare-toggle__label">
+                    <input type="checkbox" name="compare" value="1"
+                           {% if compare_active %}checked{% endif %}
+                           onchange="this.form.submit()">
+                    <span>{% trans "Compare to previous period" %}</span>
+                </label>
+            </form>
+        </div>
+        {% if chart_api %}
+            <div class="chart-wrap">
+                <canvas id="apiChart" role="img" aria-label="API calls over time"></canvas>
+            </div>
+        {% else %}
+            <div class="chart-empty">{% trans "No API call data for this period." %}</div>
+        {% endif %}
+    </div>
+
+    <div class="chart-grid">
+        <div class="table-card">
+            <div class="chart-title-wrapper">
+                <h3 class="chart-title">{% trans "Top API Endpoints" %}</h3>
+                <div class="export-actions">
+                    <a href="{% url 'analytics:export' 'api_endpoints' %}?{{ request.GET.urlencode }}"
+                       class="export-btn" title="{% trans 'Export CSV' %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="currentColor"
+                                      d="M12 15.575q-.2 0-.375-.062a.9.9 0 0 1-.325-.213l-3.6-3.6a.92.92 0 0 1-.288-.7q.012-.4.288-.7.3-.3.713-.312a.93.93 0 0 1 .712.287L11 12.15V5q0-.424.288-.712A.97.97 0 0 1 12 4q.424 0 .713.288A.96.96 0 0 1 13 5v7.15l1.875-1.875q.3-.3.713-.288t.712.313q.275.3.288.7a.91.91 0 0 1-.288.7l-3.6 3.6q-.15.15-.325.213a1.1 1.1 0 0 1-.375.062M6 20q-.824 0-1.412-.587A1.93 1.93 0 0 1 4 18v-2q0-.424.288-.712A.97.97 0 0 1 5 15q.424 0 .713.288A.96.96 0 0 1 6 16v2h12v-2q0-.424.288-.712A.97.97 0 0 1 19 15q.424 0 .713.288A.96.96 0 0 1 20 16v2q0 .825-.587 1.413A1.92 1.92 0 0 1 18 20z"></path>
+                            </svg>
+                        </span>
+                    </a>
+                    <a href="{% url 'analytics:export' 'api_endpoints' %}?{{ request.GET.urlencode }}&format=json"
+                       class="export-btn export-btn--json" title="{% trans 'Export JSON' %}">
+                        JSON
+                    </a>
+                </div>
+            </div>
+            <table class="analytics-table">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>{% trans "Endpoint" %}</th>
+                    <th>{% trans "Calls" %}</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for ep in top_endpoints %}
+                    <tr>
+                        <td>{{ ep.path }}</td>
+                        <td>{{ ep.count }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="2">{% trans "No API calls in this period." %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-card">
+            <div class="chart-title-wrapper">
+                <h3 class="chart-title">{% trans "Status Codes" %}</h3>
+                <div class="export-actions">
+                    <a href="{% url 'analytics:export' 'api_status' %}?{{ request.GET.urlencode }}"
+                       class="export-btn" title="{% trans 'Export CSV' %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="currentColor"
+                                      d="M12 15.575q-.2 0-.375-.062a.9.9 0 0 1-.325-.213l-3.6-3.6a.92.92 0 0 1-.288-.7q.012-.4.288-.7.3-.3.713-.312a.93.93 0 0 1 .712.287L11 12.15V5q0-.424.288-.712A.97.97 0 0 1 12 4q.424 0 .713.288A.96.96 0 0 1 13 5v7.15l1.875-1.875q.3-.3.713-.288t.712.313q.275.3.288.7a.91.91 0 0 1-.288.7l-3.6 3.6q-.15.15-.325.213a1.1 1.1 0 0 1-.375.062M6 20q-.824 0-1.412-.587A1.93 1.93 0 0 1 4 18v-2q0-.424.288-.712A.97.97 0 0 1 5 15q.424 0 .713.288A.96.96 0 0 1 6 16v2h12v-2q0-.424.288-.712A.97.97 0 0 1 19 15q.424 0 .713.288A.96.96 0 0 1 20 16v2q0 .825-.587 1.413A1.92 1.92 0 0 1 18 20z"></path>
+                            </svg>
+                        </span>
+                    </a>
+                    <a href="{% url 'analytics:export' 'api_status' %}?{{ request.GET.urlencode }}&format=json"
+                       class="export-btn export-btn--json" title="{% trans 'Export JSON' %}">
+                        JSON
+                    </a>
+                </div>
+            </div>
+            <table class="analytics-table">
+                <thead>
+                <tr>
+                    <th>{% trans "Code" %}</th>
+                    <th>{% trans "Count" %}</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in status_dist %}
+                    <tr>
+                        <td>{{ item.status_code }}</td>
+                        <td>{{ item.count }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="2">{% trans "No data." %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script>
+        window.__analytics_filter = {
+            startDate: "{{ start_date|date:'Y-m-d'|default:'' }}",
+            endDate: "{{ end_date|date:'Y-m-d'|default:'' }}",
+            activePreset: "{{ active_preset|default:'last30' }}",
+            showSearch: false
+        };
+        window.__analytics_api = {
+            labels: [{% for label in chart_labels %}"{{ label }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+            data: [{% for count in chart_api %}{{ count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            dateRangeLabel: "{{ date_range_label }}",
+            compareActive: {{ compare_active|yesno:'true,false' }},
+            previousLabels: [{% for label in previous_labels %}"{{ label }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+            previousData: [{% for count in previous_api %}{{ count }}{% if not forloop.last %}, {% endif %}{% endfor %}]
+        };
+    </script>
+    <script src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
+    <script src="{% static 'analytics/scripts/api.js' %}"></script>
+{% endblock %}

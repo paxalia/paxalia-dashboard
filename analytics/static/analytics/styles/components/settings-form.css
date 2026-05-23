@@ -1,0 +1,73 @@
+/* ============================================
+   Analytics Dashboard – Settings Form
+   ============================================ */
+
+.analytics-settings-form label {
+    display: block;
+    color: var(--analytics-text);
+    font-size: var(--font-size-md);
+    margin-bottom: var(--margin-xs);
+}
+
+.analytics-settings-form textarea,
+.analytics-settings-form input[type="number"],
+.analytics-settings-form input[type="text"] {
+    width: 100%;
+    background: var(--analytics-bg);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    padding: var(--padding-sm);
+    color: var(--analytics-text);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-md);
+}
+
+.analytics-settings-form input[type="number"] {
+    width: 100px;
+    font-family: var(--font-family-sans);
+}
+
+.analytics-settings-form .form-row {
+    margin-bottom: var(--margin-md);
+}
+
+.analytics-settings-form .form-row-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+}
+
+.analytics-settings-form button[type="submit"] {
+    background: var(--analytics-gold);
+    color: var(--analytics-bg);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: var(--padding-sm) var(--padding-lg);
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+    font-size: var(--font-size-lg);
+}
+
+.analytics-settings-form button[type="submit"]:hover {
+    background: var(--analytics-gold-hover);
+}
+
+/* Success / info messages */
+.analytics-messages {
+    margin-bottom: var(--margin-md);
+    padding: 0 var(--padding-lg);
+}
+
+.analytics-message {
+    padding: var(--padding-sm) var(--padding-md);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    background: var(--analytics-surface);
+    border: 1px solid var(--analytics-border);
+    color: var(--analytics-text);
+}
+
+.analytics-message--success {
+    border-color: var(--analytics-gold);
+    color: var(--analytics-gold);
+}

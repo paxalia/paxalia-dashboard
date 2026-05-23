@@ -1,0 +1,102 @@
+/* ============================================
+   Analytics Dashboard – Design Tokens
+   ============================================ */
+
+
+:root {
+    /* BREAKPOINTS (mobile-first) */
+    --breakpoint-xs: 0;
+    --breakpoint-sm: 576px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 992px;
+    --breakpoint-xl: 1200px;
+    --breakpoint-xxl: 1400px;
+
+    /* GLOBAL DESIGN TOKENS */
+
+    /* Typography */
+    --font-family-sans: 'Roboto', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-family-mono: 'Fira Code', 'Consolas', monospace;
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-bold: 700;
+
+    --font-size-xs: 0.75rem; /* 12px */
+    --font-size-sm: 0.875rem; /* 14px */
+    --font-size-md: 1rem; /* 16px (base) */
+    --font-size-lg: 1.125rem; /* 18px */
+    --font-size-xl: 1.25rem; /* 20px */
+    --font-size-2xl: 1.5rem; /* 24px */
+    --font-size-3xl: 1.875rem; /* 30px */
+    --font-size-4xl: 2.25rem; /* 36px */
+    --font-size-5xl: 3rem; /* 48px */
+
+    --line-height-sm: 1.25;
+    --line-height-md: 1.5;
+    --line-height-lg: 1.75;
+
+    /* Spacing (4px grid system) */
+    --gap-xs: 4px; /* 4px */
+    --gap-sm: 8px; /* 8px */
+    --gap-md: 16px; /* 16px */
+    --gap-lg: 24px; /* 24px */
+    --gap-xl: 32px; /* 32px */
+    --gap-2xl: 48px; /* 48px */
+
+    --margin-xs: 4px;
+    --margin-sm: 8px;
+    --margin-md: 16px;
+    --margin-lg: 24px;
+    --margin-xl: 32px;
+    --margin-2xl: 48px;
+
+    --padding-xs: 4px;
+    --padding-sm: 8px;
+    --padding-md: 16px;
+    --padding-lg: 24px;
+    --padding-xl: 32px;
+    --padding-2xl: 48px;
+
+    /* Radii */
+    --radius-xs: 2px;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 24px;
+    --radius-pill: 9999px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+    /* Input & Button Tokens */
+    --input-height-sm: 24px;
+    --input-height-md: 28px;
+    --input-height-lg: 32px;
+
+    --button-height-sm: 24px;
+    --button-height-md: 28px;
+
+    --input-file-min-width: 140px;
+
+    --z-index-sidebar: 1000;
+    --z-index-backdrop: 999;
+
+    /* Sidebar */
+    --sidebar-width: 240px;
+    --sidebar-collapsed-width: 60px;
+
+    /* Icon sizing (from global icon.css) */
+    --icon-size-xs: 1.125rem; /* 18px */
+    --icon-size-sm: 1.5rem; /* 24px */
+    --icon-size-md: 2rem; /* 32px */
+    --icon-size-lg: 2.5rem; /* 40px */
+    --icon-size-xl: 3rem; /* 48px */
+    --icon-size-xxl: 3.5rem; /* 56px */
+    --icon-size-xxxl: 4.5rem; /* 72px */
+    --icon-stroke-default: 1.25;
+}

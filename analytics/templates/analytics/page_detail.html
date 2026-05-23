@@ -1,0 +1,63 @@
+{% extends 'analytics/base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{{ page_path }} – Analytics{% endblock %}
+
+{% block page_title %}Page Detail{% endblock %}
+{% block page_subtitle %}Views over 30 days for this specific page{% endblock %}
+
+{% block filter_bar %}
+    {% include 'analytics/includes/filter_bar.html' %}
+{% endblock %}
+
+{% block dashboard_content %}
+    <a href="{% url 'analytics:pages' %}" class="analytics-back-link">← {% trans "All Pages" %}</a>
+
+    <div class="chart-card analytics-chart-card--spaced">
+        <div class="chart-title-wrapper">
+            <h3 class="chart-title">{% trans "Views" %} – {{ date_range_label }}</h3>
+            <form class="compare-toggle" method="get" action="">
+                {% for key, value in request.GET.items %}
+                    {% if key != 'compare' %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endif %}
+                {% endfor %}
+                <label class="compare-toggle__label">
+                    <input type="checkbox" name="compare" value="1"
+                           {% if compare_active %}checked{% endif %}
+                           onchange="this.form.submit()">
+                    <span>{% trans "Compare to previous period" %}</span>
+                </label>
+            </form>
+        </div>
+        {% if chart_views %}
+            <div class="chart-wrap">
+                <canvas id="pageViewsChart" role="img" aria-label="Page views over time"></canvas>
+            </div>
+        {% else %}
+            <div class="chart-empty">{% trans "No page views for this period." %}</div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script>
+        window.__analytics_filter = {
+            startDate: "{{ start_date|date:'Y-m-d'|default:'' }}",
+            endDate: "{{ end_date|date:'Y-m-d'|default:'' }}",
+            activePreset: "{{ active_preset|default:'last30' }}",
+            showSearch: false
+        };
+        window.__analytics_page_detail = {
+            labels: [{% for label in chart_labels %}"{{ label }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+            data: [{% for count in chart_views %}{{ count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            dateRangeLabel: "{{ date_range_label }}",
+            compareActive: {{ compare_active|yesno:'true,false' }},
+            previousLabels: [{% for label in previous_labels %}"{{ label }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+            previousData: [{% for count in previous_views %}{{ count }}{% if not forloop.last %}, {% endif %}{% endfor %}]
+        };
+    </script>
+    <script src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
+    <script src="{% static 'analytics/scripts/page-detail.js' %}"></script>
+{% endblock %}

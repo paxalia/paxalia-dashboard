@@ -1,0 +1,194 @@
+/* ============================================
+   Analytics Sidebar – Fully Hidable (mobile + desktop)
+   ============================================ */
+
+/* ── Sidebar Container ── */
+.analytics-sidebar {
+    background: var(--analytics-surface);
+    border-right: 1px solid var(--analytics-border);
+    transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1),
+    width 0.25s ease,
+    margin-left 0.25s ease,
+    padding 0.25s ease;
+    overflow-y: auto;
+    z-index: var(--z-index-sidebar);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Branding ── */
+.sidebar__branding {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-md);
+    padding: var(--padding-md);
+    border-bottom: 1px solid var(--analytics-border);
+}
+
+.sidebar__logo {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    text-decoration: none;
+    color: var(--analytics-gold);
+}
+
+.sidebar__logo img {
+    width: 40px;
+    height: 40px;
+    display: block;
+    object-fit: contain;
+}
+
+.sidebar__title {
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-md);
+    color: var(--analytics-gold);
+}
+
+/* ── Navigation ── */
+.analytics-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--padding-md) 0;
+}
+
+.analytics-sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-md);
+    padding: var(--padding-sm) var(--padding-lg);
+    color: var(--analytics-text-dim);
+    text-decoration: none;
+    font-size: var(--font-size-md);
+    transition: all 0.15s;
+}
+
+.analytics-sidebar-link:hover,
+.analytics-sidebar-link.active {
+    color: var(--analytics-text);
+    background: rgba(255, 255, 255, 0.04);
+    border-right: 3px solid var(--analytics-gold);
+}
+
+.analytics-sidebar-icon {
+    font-size: 1.1rem;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* ── Buttons ── */
+.analytics-sidebar-toggle-btn,
+.analytics-sidebar-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--analytics-text-dim);
+    cursor: pointer;
+    padding: var(--padding-xs);
+    border-radius: var(--radius-sm);
+    transition: color 0.15s;
+}
+
+.analytics-sidebar-toggle-btn:hover,
+.analytics-sidebar-close-btn:hover {
+    color: var(--analytics-text);
+}
+
+/* ── Backdrop (mobile only) ── */
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: var(--z-index-backdrop);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s;
+    pointer-events: none;
+}
+
+.sidebar-backdrop.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* ════════════════════════════════════════════
+   Mobile (default): off‑canvas overlay
+   ════════════════════════════════════════════ */
+.analytics-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--sidebar-width);
+    max-width: 85vw;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
+    padding: 0;
+}
+
+/* Show sidebar when not hidden */
+.analytics-body:not(.sidebar-hidden) .analytics-sidebar {
+    transform: translateX(0);
+}
+
+/* ════════════════════════════════════════════
+   Desktop (≥768px): static sidebar that slides out
+   ════════════════════════════════════════════ */
+@media (min-width: 768px) {
+    .analytics-sidebar {
+        position: static;
+        transform: none;
+        width: var(--sidebar-width);
+        max-width: none;
+        box-shadow: none;
+        margin-left: 0;
+        transition: margin-left 0.25s ease, width 0.25s ease;
+    }
+
+    /* Hidden state: slide left, main content expands */
+    .analytics-body.sidebar-hidden .analytics-sidebar {
+        margin-left: calc(-1 * var(--sidebar-width));
+        overflow: hidden;
+    }
+
+    .sidebar-backdrop {
+        display: none;
+    }
+
+    /* Main content transition */
+    .analytics-main {
+        transition: flex 0.25s ease;
+    }
+}
+
+/* ── Sidebar footer / credit ── */
+.sidebar__footer {
+    margin-top: auto;
+    padding: var(--padding-md) var(--padding-lg);
+    border-top: 1px solid var(--analytics-border);
+    text-align: center;
+}
+
+.sidebar__credit {
+    font-size: var(--font-size-xs);
+    color: var(--analytics-text-dim);
+    line-height: var(--line-height-md);
+}
+
+.sidebar__credit a {
+    color: var(--analytics-gold);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.sidebar__credit a:hover {
+    text-decoration: underline;
+    color: var(--analytics-gold-hover);
+}

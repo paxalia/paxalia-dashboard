@@ -1,0 +1,349 @@
+# OP Analytics – Spanish translations
+# Copyright (C) 2026 OP Project
+# This file is distributed under the same license as the OP package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OP Analytics 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-22 00:00+0000\n"
+"PO-Revision-Date: 2026-05-22 00:00+0000\n"
+"Last-Translator: OP Team\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# ── base.html ──
+msgid "Toggle sidebar"
+msgstr "Alternar barra lateral"
+
+msgid "Overview"
+msgstr "Resumen"
+
+msgid "Pages"
+msgstr "Páginas"
+
+msgid "API"
+msgstr "API"
+
+msgid "Traffic"
+msgstr "Tráfico"
+
+msgid "Real‑time"
+msgstr "En tiempo real"
+
+msgid "Settings"
+msgstr "Configuración"
+
+msgid "Geography"
+msgstr "Geografía"
+
+# ── dashboard.html ──
+msgid "Today"
+msgstr "Hoy"
+
+msgid "unique"
+msgstr "únicos"
+
+msgid "Yesterday"
+msgstr "Ayer"
+
+msgid "API Calls (today)"
+msgstr "Llamadas API (hoy)"
+
+msgid "Top Page"
+msgstr "Página principal"
+
+msgid "most visited"
+msgstr "más visitada"
+
+msgid "Sessions (today)"
+msgstr "Sesiones (hoy)"
+
+msgid "pages/session"
+msgstr "páginas/sesión"
+
+msgid "Bounce Rate (today)"
+msgstr "Tasa de rebote (hoy)"
+
+msgid "single‑page visits"
+msgstr "visitas de una sola página"
+
+msgid "Sessions (yesterday)"
+msgstr "Sesiones (ayer)"
+
+msgid "bounce"
+msgstr "rebote"
+
+msgid "Page Views"
+msgstr "Vistas de página"
+
+msgid "Top 10 Pages"
+msgstr "Las 10 páginas principales"
+
+msgid "Top Pages – Detail"
+msgstr "Páginas principales – Detalle"
+
+msgid "Export CSV"
+msgstr "Exportar CSV"
+
+msgid "Export JSON"
+msgstr "Exportar JSON"
+
+msgid "No data yet."
+msgstr "Sin datos aún."
+
+msgid "Compare to previous period"
+msgstr "Comparar con el período anterior"
+
+# ── pages.html ──
+msgid "Most visited pages and view counts"
+msgstr "Páginas más visitadas y conteo de vistas"
+
+msgid "All Pages"
+msgstr "Todas las páginas"
+
+msgid "No data for this period."
+msgstr "Sin datos para este período."
+
+msgid "Search pages..."
+msgstr "Buscar páginas..."
+
+# ── page_detail.html ──
+msgid "Views over 30 days for this specific page"
+msgstr "Vistas durante 30 días para esta página específica"
+
+msgid "Back to all pages"
+msgstr "Volver a todas las páginas"
+
+msgid "Page Detail"
+msgstr "Detalle de página"
+
+# ── api.html ──
+msgid "API Analytics"
+msgstr "Analíticas de API"
+
+msgid "Endpoint performance and status codes"
+msgstr "Rendimiento de puntos finales y códigos de estado"
+
+msgid "API Calls Today"
+msgstr "Llamadas API hoy"
+
+msgid "API Calls Yesterday"
+msgstr "Llamadas API ayer"
+
+msgid "API Calls – Last 30 Days"
+msgstr "Llamadas API – Últimos 30 días"
+
+msgid "Top API Endpoints"
+msgstr "Puntos finales de API principales"
+
+msgid "Endpoint"
+msgstr "Punto final"
+
+msgid "Calls"
+msgstr "Llamadas"
+
+msgid "Status Codes"
+msgstr "Códigos de estado"
+
+msgid "Code"
+msgstr "Código"
+
+msgid "Count"
+msgstr "Conteo"
+
+msgid "No API calls in this period."
+msgstr "Sin llamadas API en este período."
+
+msgid "No data."
+msgstr "Sin datos."
+
+# ── traffic.html ──
+msgid "Traffic Sources"
+msgstr "Fuentes de tráfico"
+
+msgid "Where visitors come from and what they use"
+msgstr "De dónde vienen los visitantes y qué usan"
+
+msgid "Top Referrers"
+msgstr "Principales referentes"
+
+msgid "Referrer"
+msgstr "Referente"
+
+msgid "Views"
+msgstr "Vistas"
+
+msgid "Browsers"
+msgstr "Navegadores"
+
+msgid "Browser"
+msgstr "Navegador"
+
+msgid "Operating Systems"
+msgstr "Sistemas operativos"
+
+msgid "OS"
+msgstr "SO"
+
+msgid "Device Types"
+msgstr "Tipos de dispositivo"
+
+msgid "Device"
+msgstr "Dispositivo"
+
+msgid "No referrer data yet."
+msgstr "Sin datos de referentes aún."
+
+msgid "No browser data yet."
+msgstr "Sin datos de navegadores aún."
+
+msgid "No OS data yet."
+msgstr "Sin datos de SO aún."
+
+msgid "No device data yet."
+msgstr "Sin datos de dispositivos aún."
+
+# ── realtime.html ──
+msgid "Live visitor activity"
+msgstr "Actividad de visitantes en vivo"
+
+msgid "Total views (last 5 min)"
+msgstr "Vistas totales (últimos 5 min)"
+
+msgid "Unique IPs (last 5 min)"
+msgstr "IPs únicos (últimos 5 min)"
+
+msgid "Recent Visitors"
+msgstr "Visitantes recientes"
+
+msgid "Path"
+msgstr "Ruta"
+
+msgid "IP"
+msgstr "IP"
+
+msgid "Time"
+msgstr "Hora"
+
+# ── settings.html ──
+msgid "IP anonymization, ignored paths, refresh interval"
+msgstr "Anonimización de IP, rutas ignoradas, intervalo de actualización"
+
+msgid "Display settings"
+msgstr "Configuración de pantalla"
+
+msgid "Theme"
+msgstr "Tema"
+
+msgid "Language"
+msgstr "Idioma"
+
+msgid "Anonymize IP addresses (SHA256 hash)"
+msgstr "Anonimizar direcciones IP (hash SHA256)"
+
+msgid "Ignored Path Prefixes (one per line)"
+msgstr "Prefijos de ruta ignorados (uno por línea)"
+
+msgid "Ignored File Extensions (one per line)"
+msgstr "Extensiones de archivo ignoradas (uno por línea)"
+
+msgid "Real‑time refresh interval (seconds)"
+msgstr "Intervalo de actualización en tiempo real (segundos)"
+
+msgid "Save Settings"
+msgstr "Guardar configuración"
+
+# ── geography.html ──
+msgid "Where your visitors are located"
+msgstr "Dónde se encuentran sus visitantes"
+
+msgid "World Map"
+msgstr "Mapa mundial"
+
+msgid "Countries"
+msgstr "Países"
+
+msgid "Visitors"
+msgstr "Visitantes"
+
+msgid "Top Cities"
+msgstr "Ciudades principales"
+
+msgid "City"
+msgstr "Ciudad"
+
+msgid "Country"
+msgstr "País"
+
+msgid "No geography data yet."
+msgstr "Sin datos geográficos aún."
+
+msgid "No city data yet."
+msgstr "Sin datos de ciudades aún."
+
+msgid "Show all countries"
+msgstr "Mostrar todos los países"
+
+# ── filter_bar.html ──
+msgid "Filter data"
+msgstr "Filtrar datos"
+
+msgid "From"
+msgstr "Desde"
+
+msgid "To"
+msgstr "Hasta"
+
+msgid "Apply"
+msgstr "Aplicar"
+
+msgid "Last 30 days"
+msgstr "Últimos 30 días"
+
+msgid "Last 7 days"
+msgstr "Últimos 7 días"
+
+msgid "This month"
+msgstr "Este mes"
+
+# ── theme/language dropdowns ──
+msgid "Dark Gold"
+msgstr "Oro oscuro"
+
+msgid "Skybound Silk"
+msgstr "Seda celeste"
+
+msgid "Golden Dusk"
+msgstr "Atardecer dorado"
+
+msgid "Azure Drift"
+msgstr "Deriva azulada"
+
+msgid "Sunlit Meadow"
+msgstr "Prado soleado"
+
+msgid "Indigo Spectrum"
+msgstr "Espectro índigo"
+
+msgid "Arctic Horizon"
+msgstr "Horizonte ártico"
+
+msgid "Ocean Breeze"
+msgstr "Brisa oceánica"
+
+msgid "Twilight Reverie"
+msgstr "Ensueño crepuscular"
+
+msgid "Velvet Noir"
+msgstr "Terciopelo negro"
+
+msgid "Citrine Prestige"
+msgstr "Prestigio citrino"
+
+msgid "Onyx Pearl"
+msgstr "Perla de ónix"

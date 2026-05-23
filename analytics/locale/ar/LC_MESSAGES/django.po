@@ -1,0 +1,352 @@
+# OP Analytics – Arabic translations
+# Copyright (C) 2026 OP Project
+# This file is distributed under the same license as the OP package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OP Analytics 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-22 00:00+0000\n"
+"PO-Revision-Date: 2026-05-22 00:00+0000\n"
+"Last-Translator: OP Team\n"
+"Language-Team: Arabic\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+# ── base.html ──
+msgid "Toggle sidebar"
+msgstr "إظهار/إخفاء القائمة الجانبية"
+
+msgid "Overview"
+msgstr "نظرة عامة"
+
+msgid "Pages"
+msgstr "الصفحات"
+
+msgid "API"
+msgstr "واجهة برمجة التطبيقات"
+
+msgid "Traffic"
+msgstr "حركة الزوار"
+
+msgid "Real‑time"
+msgstr "مباشر"
+
+msgid "Settings"
+msgstr "الإعدادات"
+
+msgid "Geography"
+msgstr "الجغرافيا"
+
+# ── dashboard.html ──
+msgid "Today"
+msgstr "اليوم"
+
+msgid "unique"
+msgstr "فريد"
+
+msgid "Yesterday"
+msgstr "أمس"
+
+msgid "API Calls (today)"
+msgstr "استدعاءات API (اليوم)"
+
+msgid "Top Page"
+msgstr "أكثر صفحة"
+
+msgid "most visited"
+msgstr "الأكثر زيارة"
+
+msgid "Sessions (today)"
+msgstr "الجلسات (اليوم)"
+
+msgid "pages/session"
+msgstr "صفحة/جلسة"
+
+msgid "Bounce Rate (today)"
+msgstr "معدل الارتداد (اليوم)"
+
+msgid "single‑page visits"
+msgstr "زيارات بصفحة واحدة"
+
+msgid "Sessions (yesterday)"
+msgstr "الجلسات (أمس)"
+
+msgid "bounce"
+msgstr "ارتداد"
+
+msgid "Page Views"
+msgstr "مشاهدات الصفحات"
+
+msgid "Top 10 Pages"
+msgstr "أفضل 10 صفحات"
+
+msgid "Top Pages – Detail"
+msgstr "أفضل الصفحات – تفصيل"
+
+msgid "Export CSV"
+msgstr "تصدير CSV"
+
+msgid "Export JSON"
+msgstr "تصدير JSON"
+
+msgid "No data yet."
+msgstr "لا توجد بيانات بعد."
+
+msgid "Compare to previous period"
+msgstr "مقارنة بالفترة السابقة"
+
+# ── pages.html ──
+msgid "Most visited pages and view counts"
+msgstr "أكثر الصفحات زيارة وعدد المشاهدات"
+
+msgid "All Pages"
+msgstr "جميع الصفحات"
+
+msgid "No data for this period."
+msgstr "لا توجد بيانات لهذه الفترة."
+
+msgid "Search pages..."
+msgstr "البحث في الصفحات..."
+
+# ── page_detail.html ──
+msgid "Views over 30 days for this specific page"
+msgstr "المشاهدات خلال 30 يوماً لهذه الصفحة"
+
+msgid "Back to all pages"
+msgstr "العودة إلى جميع الصفحات"
+
+msgid "Page Detail"
+msgstr "تفاصيل الصفحة"
+
+# ── api.html ──
+msgid "API Analytics"
+msgstr "تحليلات API"
+
+msgid "Endpoint performance and status codes"
+msgstr "أداء نقاط النهاية ورموز الحالة"
+
+msgid "API Calls Today"
+msgstr "استدعاءات API اليوم"
+
+msgid "API Calls Yesterday"
+msgstr "استدعاءات API أمس"
+
+msgid "API Calls – Last 30 Days"
+msgstr "استدعاءات API – آخر 30 يوماً"
+
+msgid "Top API Endpoints"
+msgstr "أكثر نقاط النهاية استخداماً"
+
+msgid "Endpoint"
+msgstr "نقطة النهاية"
+
+msgid "Calls"
+msgstr "الاستدعاءات"
+
+msgid "Status Codes"
+msgstr "رموز الحالة"
+
+msgid "Code"
+msgstr "الرمز"
+
+msgid "Count"
+msgstr "العدد"
+
+msgid "No API calls in this period."
+msgstr "لا توجد استدعاءات API في هذه الفترة."
+
+msgid "No data."
+msgstr "لا توجد بيانات."
+
+# ── traffic.html ──
+msgid "Traffic Sources"
+msgstr "مصادر الزوار"
+
+msgid "Where visitors come from and what they use"
+msgstr "من أين يأتي الزوار وماذا يستخدمون"
+
+msgid "Top Referrers"
+msgstr "أكثر المواقع إحالة"
+
+msgid "Referrer"
+msgstr "المُحيل"
+
+msgid "Views"
+msgstr "المشاهدات"
+
+msgid "Browsers"
+msgstr "المتصفحات"
+
+msgid "Browser"
+msgstr "المتصفح"
+
+msgid "Operating Systems"
+msgstr "أنظمة التشغيل"
+
+msgid "OS"
+msgstr "النظام"
+
+msgid "Device Types"
+msgstr "أنواع الأجهزة"
+
+msgid "Device"
+msgstr "الجهاز"
+
+msgid "No referrer data yet."
+msgstr "لا توجد بيانات إحالة بعد."
+
+msgid "No browser data yet."
+msgstr "لا توجد بيانات متصفح بعد."
+
+msgid "No OS data yet."
+msgstr "لا توجد بيانات نظام تشغيل بعد."
+
+msgid "No device data yet."
+msgstr "لا توجد بيانات جهاز بعد."
+
+# ── realtime.html ──
+msgid "Live visitor activity"
+msgstr "نشاط الزوار المباشر"
+
+msgid "Total views (last 5 min)"
+msgstr "إجمالي المشاهدات (آخر 5 دقائق)"
+
+msgid "Unique IPs (last 5 min)"
+msgstr "عناوين IP الفريدة (آخر 5 دقائق)"
+
+msgid "Recent Visitors"
+msgstr "آخر الزوار"
+
+msgid "Path"
+msgstr "المسار"
+
+msgid "IP"
+msgstr "IP"
+
+msgid "Time"
+msgstr "الوقت"
+
+# ── settings.html ──
+msgid "IP anonymization, ignored paths, refresh interval"
+msgstr "إخفاء عنوان IP، المسارات المتجاهلة، فترة التحديث"
+
+msgid "Display settings"
+msgstr "إعدادات العرض"
+
+msgid "Theme"
+msgstr "السمة"
+
+msgid "Language"
+msgstr "اللغة"
+
+msgid "Anonymize IP addresses (SHA256 hash)"
+msgstr "إخفاء عناوين IP (تجزئة SHA256)"
+
+msgid "Ignored Path Prefixes (one per line)"
+msgstr "بادئات المسارات المتجاهلة (واحد في كل سطر)"
+
+msgid "Ignored File Extensions (one per line)"
+msgstr "امتدادات الملفات المتجاهلة (واحد في كل سطر)"
+
+msgid "Real‑time refresh interval (seconds)"
+msgstr "فترة تحديث البيانات المباشرة (ثوانٍ)"
+
+msgid "Save Settings"
+msgstr "حفظ الإعدادات"
+
+# ── geography.html ──
+msgid "Where your visitors are located"
+msgstr "أماكن تواجد زوارك"
+
+msgid "World Map"
+msgstr "خريطة العالم"
+
+msgid "Countries"
+msgstr "الدول"
+
+msgid "Visitors"
+msgstr "الزوار"
+
+msgid "Top Cities"
+msgstr "أكثر المدن"
+
+msgid "City"
+msgstr "المدينة"
+
+msgid "Country"
+msgstr "الدولة"
+
+msgid "No geography data yet."
+msgstr "لا توجد بيانات جغرافية بعد."
+
+msgid "No city data yet."
+msgstr "لا توجد بيانات مدن بعد."
+
+msgid "Show all countries"
+msgstr "إظهار كل الدول"
+
+# ── filter_bar.html (presets) – these strings are shared with dashboard,
+# so we only keep them once. The presets are already defined above.
+# "Today", "Yesterday" are already translated; "Last 30 days" etc. are unique.
+
+msgid "Filter data"
+msgstr "تصفية البيانات"
+
+msgid "From"
+msgstr "من"
+
+msgid "To"
+msgstr "إلى"
+
+msgid "Apply"
+msgstr "تطبيق"
+
+msgid "Last 30 days"
+msgstr "آخر 30 يوماً"
+
+msgid "Last 7 days"
+msgstr "آخر 7 أيام"
+
+msgid "This month"
+msgstr "هذا الشهر"
+
+# ── theme/language dropdowns ──
+msgid "Dark Gold"
+msgstr "ذهبي داكن"
+
+msgid "Skybound Silk"
+msgstr "حرير السماء"
+
+msgid "Golden Dusk"
+msgstr "غسق ذهبي"
+
+msgid "Azure Drift"
+msgstr "انجراف أزرق"
+
+msgid "Sunlit Meadow"
+msgstr "مرج مشمس"
+
+msgid "Indigo Spectrum"
+msgstr "طيف نيلي"
+
+msgid "Arctic Horizon"
+msgstr "أفق قطبي"
+
+msgid "Ocean Breeze"
+msgstr "نسيم المحيط"
+
+msgid "Twilight Reverie"
+msgstr "أحلام الغسق"
+
+msgid "Velvet Noir"
+msgstr "مخمل أسود"
+
+msgid "Citrine Prestige"
+msgstr "هيبة الستيرين"
+
+msgid "Onyx Pearl"
+msgstr "لؤلؤة العقيق"

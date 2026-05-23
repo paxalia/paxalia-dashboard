@@ -1,0 +1,174 @@
+/* ============================================
+   Analytics Filter Bar – Pill design
+   ============================================ */
+
+.filter-bar {
+    padding: var(--padding-sm) var(--padding-lg);
+    border-bottom: 1px solid var(--analytics-border);
+}
+
+/* ── Inner pill container ── */
+.filter-bar__inner {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-md);
+    background: var(--analytics-surface);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    padding: var(--padding-xs) var(--padding-md);
+    flex-wrap: wrap;
+    box-shadow: var(--shadow-sm);
+}
+
+/* ── Preset buttons ── */
+.filter-bar__presets {
+    display: flex;
+    gap: var(--gap-xs);
+    flex-wrap: wrap;
+}
+
+.filter-bar__preset {
+    background: transparent;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    color: var(--analytics-text-dim);
+    padding: var(--padding-xs) var(--padding-sm);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    font-family: var(--font-family-sans);
+}
+
+.filter-bar__preset:hover,
+.filter-bar__preset.active {
+    background: var(--analytics-gold-dim);
+    color: var(--analytics-gold);
+    border-color: var(--analytics-gold);
+}
+
+/* ── Date range section ── */
+.filter-bar__dates {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.filter-bar__date-icon {
+    color: var(--analytics-text-dim);
+    flex-shrink: 0;
+}
+
+.filter-bar__date {
+    background: var(--analytics-bg);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    color: var(--analytics-text);
+    padding: var(--padding-xs) var(--padding-sm);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family-sans);
+    color-scheme: dark;
+    min-width: 0;
+    flex: 0 1 140px;
+}
+
+.filter-bar__date:focus {
+    outline: none;
+    border-color: var(--analytics-gold);
+}
+
+.filter-bar__date-separator {
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-sm);
+    flex-shrink: 0;
+}
+
+/* Apply button */
+.filter-bar__btn {
+    background: var(--analytics-gold);
+    color: var(--analytics-bg);
+    border: 1px solid var(--analytics-gold);
+    border-radius: var(--radius-sm);
+    padding: var(--padding-xs) var(--padding-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.filter-bar__btn:hover {
+    background: var(--analytics-gold-hover);
+}
+
+/* ── Search section ── */
+.filter-bar__search {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-xs);
+    flex: 1;
+}
+
+.filter-bar__search-icon {
+    color: var(--analytics-text-dim);
+    flex-shrink: 0;
+}
+
+.filter-bar__search-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--analytics-bg);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    color: var(--analytics-text);
+    padding: var(--padding-xs) var(--padding-sm);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family-sans);
+}
+
+.filter-bar__search-input:focus {
+    outline: none;
+    border-color: var(--analytics-gold);
+}
+
+.filter-bar__search-input::placeholder {
+    color: var(--analytics-text-dim);
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .filter-bar__inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--gap-sm);
+    }
+
+    .filter-bar__dates {
+        flex-wrap: wrap;
+    }
+
+    .filter-bar__search {
+        margin-left: 0;
+        max-width: none;
+    }
+
+    .filter-bar__search-input {
+        width: 100%;
+    }
+}
+
+/* SR-only utility (if not already present in your global styles) */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}

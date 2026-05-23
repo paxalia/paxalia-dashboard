@@ -1,0 +1,97 @@
+/* /styles/components/icon/icon.css
+   Icon controller — expanded size scale (18px → 56px+, plus optional xxxl)
+   Sizes: xs, sm, md, lg, xl, xxl, xxxl (optional)
+   - Designed so xs starts at 18px and xxl reaches 56px
+   - All sizing controlled by CSS variables for easy tuning
+
+   DESIGN SYSTEM INTEGRATION:
+   - Filled icons: 0px stroke (default)
+   - Outline icons: 1.25px stroke (via .icon--stroke class)
+   - Matches Google/Microsoft/Figma exactly
+*/
+
+/* Reset & inheritance (SVG and wrapper) */
+.icon, .icon svg {
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 0;                         /* remove baseline gap */
+    color: var(--analytics-text);           /* default icon color (token-driven) */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Base icon sizing */
+.icon {
+    width: var(--icon-size-sm);    /* default baseline (24px) */
+    height: var(--icon-size-sm);
+    flex-shrink: 0;                /* prevent shrinking in flex containers */
+    box-sizing: content-box;
+}
+
+/* Size modifiers (explicit classes to choose per usage) */
+.icon--xs   { width: var(--icon-size-xs);   height: var(--icon-size-xs);   } /* 18px */
+.icon--sm   { width: var(--icon-size-sm);   height: var(--icon-size-sm);   } /* 24px */
+.icon--md   { width: var(--icon-size-md);   height: var(--icon-size-md);   } /* 32px */
+.icon--lg   { width: var(--icon-size-lg);   height: var(--icon-size-lg);   } /* 40px */
+.icon--xl   { width: var(--icon-size-xl);   height: var(--icon-size-xl);   } /* 48px */
+.icon--xxl  { width: var(--icon-size-xxl);  height: var(--icon-size-xxl);  } /* 56px */
+.icon--xxxl { width: var(--icon-size-xxxl); height: var(--icon-size-xxxl); } /* 72px */
+
+/* Inline variant (scales with surrounding text) */
+.icon--inline { width: auto; height: 1em; }
+
+/* Stroke-first icons helper (for outline icons) */
+.icon--stroke svg, .icon--stroke path, .icon--stroke line, .icon--stroke circle, .icon--stroke rect {
+    fill: none;
+    stroke: currentColor;
+}
+
+/* Stroke handling for outline icons */
+.icon--stroke {
+    stroke-width: var(--icon-stroke-default);
+}
+
+/* Multi-tone parts: preserve per-path fills using tokens (no override here) */
+
+/* Semantic / state color helpers */
+.icon--muted   { color: var(--color-surface-muted); }
+.icon--success { color: var(--color-success); }
+.icon--warning { color: var(--color-warning); }
+.icon--error   { color: var(--color-error); }
+.icon--info    { color: var(--color-info); }
+
+/* Interaction helpers for animated/interactive icons */
+.icon--interactive {
+    transition: color 160ms ease, transform 180ms ease;
+    will-change: color, transform;
+}
+.icon--interactive:active { transform: translateY(1px); }
+
+/* Ensure the inline SVG fills its wrapper and renders crisply */
+.icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Accessibility helpers */
+.icon[aria-hidden="true"] { pointer-events: none; }
+.icon[role="img"] { /* author should provide accessible label/title */ }
+
+/* Stroke rendering defaults (0px for filled icons) */
+.icon svg [stroke] {
+    stroke-width: calc(var(--icon-stroke-default) * 1px);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Fine-grain stroke helpers (manual overrides) */
+.icon--thin  svg [stroke] { stroke-width: 0.75px !important; }
+.icon--thick svg [stroke] { stroke-width: 2.4px  !important; }
+
+/* Override accidental inline width/height attributes */
+.icon svg[width], .icon svg[height] {
+    width: 100% !important;
+    height: 100% !important;
+}

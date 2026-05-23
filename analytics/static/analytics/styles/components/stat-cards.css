@@ -1,0 +1,51 @@
+/* ============================================
+   Analytics Dashboard – Stat Cards
+   ============================================ */
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--gap-md);
+    margin-bottom: var(--margin-lg);
+}
+
+.stat-card {
+    background: var(--analytics-surface);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    padding: var(--padding-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.stat-card--highlight {
+    border-color: var(--analytics-gold);
+}
+
+.stat-label {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--analytics-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--margin-xs);
+}
+
+.stat-value {
+    display: block;
+    font-size: var(--font-size-4xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--analytics-gold);
+    line-height: var(--line-height-sm);
+}
+
+.stat-value--small {
+    font-size: var(--font-size-lg);
+    word-break: break-all;
+}
+
+.stat-sub {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--analytics-text-dim);
+    margin-top: var(--margin-xs);
+}

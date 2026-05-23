@@ -1,0 +1,14 @@
+/* ============================================
+   Analytics Dashboard – Typography Helpers
+   ============================================ */
+
+.analytics-back-link {
+    color: var(--analytics-gold);
+    text-decoration: none;
+    margin-bottom: var(--margin-md);
+    display: inline-block;
+}
+
+.analytics-back-link:hover {
+    text-decoration: underline;
+}

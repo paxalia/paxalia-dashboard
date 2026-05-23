@@ -1,0 +1,81 @@
+/* ============================================
+   Analytics Dashboard – Tables
+   ============================================ */
+
+.table-card {
+    background: var(--analytics-surface);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    padding: var(--padding-lg);
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
+}
+
+.setting-flow-table {
+    overflow: visible;
+}
+
+.analytics-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--margin-md);
+}
+
+.analytics-table th,
+.analytics-table td {
+    text-align: left;
+    padding: var(--margin-sm) var(--margin-md);
+    font-size: var(--font-size-sm);
+    border-bottom: 1px solid var(--analytics-border);
+}
+
+.analytics-table th {
+    color: var(--analytics-gold);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.04em;
+}
+
+.analytics-table td {
+    color: var(--analytics-text);
+}
+
+.analytics-table tr:last-child td {
+    border-bottom: none;
+}
+
+.analytics-table-link {
+    color: var(--analytics-gold);
+    text-decoration: none;
+}
+
+.analytics-table-link:hover {
+    text-decoration: underline;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--gap-md);
+    margin-top: var(--margin-md);
+    font-size: var(--font-size-sm);
+    color: var(--analytics-text-dim);
+}
+
+.pagination a {
+    color: var(--analytics-gold);
+    text-decoration: none;
+}
+
+.pagination a:hover {
+    text-decoration: underline;
+}
+
+.setting-table-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}

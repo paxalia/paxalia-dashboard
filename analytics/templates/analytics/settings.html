@@ -1,0 +1,97 @@
+{% extends 'analytics/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Settings" %} – Analytics{% endblock %}
+
+{% block page_title %}Settings{% endblock %}
+{% block page_subtitle %}IP anonymization, ignored paths, refresh interval{% endblock %}
+
+{% block dashboard_content %}
+    <div class="setting-table-grid">
+        <div class="table-card setting-flow-table">
+            <div class="menu-controls" aria-label="{% trans 'Display settings' %}">
+                <div class="pref-menu-section">
+                    <label class="form-label">{% trans "Theme" %}</label>
+                    <div class="menu-control" id="theme-selector">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path fill="currentColor"
+                                      d="M21.99 11.72c.16 3.95-2.3 7.56-5.5 9.16-2.14 1.07-5.81 1.84-8.05.07-.36-.29-1.38-1.09-1.48-2.27-.16-1.93 2.29-3.04 1.82-4.46-.22-.66-.98-1.09-1.55-1.2-1.37-.28-2.15 1.11-3.39.86-1.09-.22-1.65-1.55-1.68-1.61C1.05 9.49 5.55 2.01 12.1 2c5.14 0 9.69 4.59 9.9 9.72Z"></path>
+                                <ellipse cx="5.98" cy="9.85" fill="var(--analytics-bg)" rx="1.64" ry="1.61"></ellipse>
+                                <ellipse cx="9.86" cy="5.59" fill="var(--analytics-bg)" rx="1.64" ry="1.61"></ellipse>
+                                <ellipse cx="18.48" cy="10.49" fill="var(--analytics-bg)" rx="1.64" ry="1.61"></ellipse>
+                                <ellipse cx="16.96" cy="15.65" fill="var(--analytics-bg)" rx="1.64" ry="1.61"></ellipse>
+                                <ellipse cx="12.42" cy="18.68" fill="var(--analytics-bg)" rx="1.64" ry="1.61"></ellipse>
+                                <ellipse cx="15.32" cy="5.97" fill="var(--analytics-bg)" rx="1.64" ry="1.61"></ellipse>
+                            </svg>
+                        </span>
+                        <span class="menu-control-value" id="theme-selector-value">Dark Gold</span>
+                        <ul class="menu-control-menu" id="theme-selector-menu" role="menu">
+                            {% for theme in themes %}
+                                <li class="menu-control-menu-item" data-theme="{{ theme.slug }}" role="menuitem">
+                                    {{ theme.label }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="pref-menu-section">
+                    <label class="form-label">{% trans "Language" %}</label>
+                    <div class="menu-control" id="language-selector">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <circle fill="var(--analytics-text)" cx="12" cy="12" r="10"></circle>
+                                <circle fill="var(--analytics-surface)" cx="12" cy="12" r="9.46"></circle>
+                                <ellipse fill="var(--analytics-text)" cx="11.93" cy="12" rx="5.04" ry="10"></ellipse>
+                                <ellipse fill="var(--analytics-surface)" cx="11.93" cy="12" rx="4.37" ry="9.46"></ellipse>
+                                <path fill="var(--analytics-text)" d="M3.08 8.94h17.93V8.3H3.08z"></path>
+                                <path fill="var(--analytics-text)" d="M3.01 15.78h17.94v-.64H3.01z"></path>
+                            </svg>
+                        </span>
+                        <span class="menu-control-value" id="lang-selector-value">English</span>
+                        <ul class="menu-control-menu" id="lang-selector-menu" role="menu">
+                            {% for lang in languages %}
+                                <li class="menu-control-menu-item" data-lang="{{ lang.code }}" role="menuitem"
+                                    lang="{{ lang.code }}" dir="{% if lang.code == 'ar' %}rtl{% else %}ltr{% endif %}">
+                                    {{ lang.name }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-card">
+            <form method="post" class="analytics-settings-form">
+                {% csrf_token %}
+                <div class="form-row form-row-checkbox">
+                    <input type="checkbox" name="anonymize_ip" id="anonymize_ip"
+                           {% if settings.anonymize_ip %}checked{% endif %}>
+                    <label for="anonymize_ip">{% trans "Anonymize IP addresses (SHA256 hash)" %}</label>
+                </div>
+
+                <div class="form-row">
+                    <label for="ignored_prefixes">{% trans "Ignored Path Prefixes (one per line)" %}</label>
+                    <textarea name="ignored_prefixes" id="ignored_prefixes"
+                              rows="4">{{ settings.ignored_prefixes }}</textarea>
+                </div>
+
+                <div class="form-row">
+                    <label for="ignored_extensions">{% trans "Ignored File Extensions (one per line)" %}</label>
+                    <textarea name="ignored_extensions" id="ignored_extensions"
+                              rows="4">{{ settings.ignored_extensions }}</textarea>
+                </div>
+
+                <div class="form-row">
+                    <label for="realtime_refresh_seconds">{% trans "Real‑time refresh interval (seconds)" %}</label>
+                    <input type="number" name="realtime_refresh_seconds" id="realtime_refresh_seconds"
+                           value="{{ settings.realtime_refresh_seconds|default:30 }}" min="5" max="300">
+                </div>
+
+                <button type="submit">{% trans "Save Settings" %}</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}

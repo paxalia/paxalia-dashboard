@@ -1,0 +1,105 @@
+/* ============================================
+   Analytics Dashboard – Charts
+   ============================================ */
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap-md);
+    margin-bottom: var(--margin-lg);
+}
+
+@media (max-width: 992px) {
+    .chart-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.chart-card {
+    background: var(--analytics-surface);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    padding: var(--padding-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.chart-title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+    color: var(--analytics-text);
+    margin-bottom: var(--margin-md);
+}
+
+.chart-wrap {
+    position: relative;
+    height: 280px;
+}
+
+.chart-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.analytics-chart-card--spaced {
+    margin-top: var(--margin-lg);
+}
+
+/* Used on the API analytics page */
+.api-calls-cards {
+    margin-bottom: var(--margin-lg);
+}
+
+/* Compare period toggle */
+.compare-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-xs);
+}
+
+.compare-toggle__label {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-xs);
+    font-size: var(--font-size-sm);
+    color: var(--analytics-text-dim);
+    cursor: pointer;
+    user-select: none;
+}
+
+.compare-toggle__label input[type="checkbox"] {
+    accent-color: var(--analytics-gold);
+    cursor: pointer;
+}
+
+/* Scrollable container for the map (hidden scrollbars) */
+.world-map-scroll {
+    width: 100%;
+    height: 460px;
+    overflow: auto;
+    position: relative;
+    scrollbar-width: none;          /* Firefox */
+    -ms-overflow-style: none;       /* IE / Edge */
+}
+
+.world-map-scroll::-webkit-scrollbar {
+    display: none;                  /* Chrome / Safari */
+}
+
+/* Fixed large canvas – scroll to explore */
+#world-map {
+    width: 900px;
+    height: 600px;
+    position: relative;
+    margin: 0 auto;
+}
+
+/* Empty chart placeholder */
+.chart-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 280px;
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family-sans);
+}
