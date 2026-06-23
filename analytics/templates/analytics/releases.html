@@ -1,0 +1,46 @@
+{% extends "analytics/base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Releases" %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'analytics/styles/components/upload.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="page-header">
+    <h1>{% trans "File Uploads" %}</h1>
+    <p class="page-subtitle">{% trans "Upload large build artifacts over HTTPS in chunks. Works even when SSH/rsync is blocked." %}</p>
+</div>
+
+<div class="upload-dropzone-card">
+    <div id="upload-dropzone"
+         class="upload-dropzone"
+         data-init-url="{% url 'analytics:upload_init' %}"
+         data-chunk-url-template="/insights/releases/upload/chunk/PLACEHOLDER/"
+         data-complete-url-template="/insights/releases/upload/complete/PLACEHOLDER/"
+         data-delete-url-template="/insights/releases/upload/delete/PLACEHOLDER/"
+         data-list-url="{% url 'analytics:upload_list' %}">
+        <input type="file" id="upload-file-input" multiple />
+        <div class="upload-dropzone-text">
+            <strong>{% trans "Drop files here" %}</strong>
+            <span>{% trans "or click to browse" %}</span>
+        </div>
+    </div>
+</div>
+
+<div class="uploads-card">
+    <h2>{% trans "Recent Uploads" %}</h2>
+    <div id="upload-list"></div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{% static 'analytics/scripts/upload-widget.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        initUploadWidget('#upload-dropzone', '#upload-list');
+    });
+</script>
+{% endblock %}

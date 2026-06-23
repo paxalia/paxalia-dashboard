@@ -4,7 +4,7 @@ from django.conf import settings
 DEFAULTS = {
     'SIDEBAR_SECTIONS': [
         'overview', 'pages', 'api', 'traffic', 'realtime',
-        'geography', 'events', 'billing', 'settings'
+        'geography', 'events', 'billing', 'releases', 'settings'
     ],
     'API_PATH_PREFIX': '/api/',
     'GEOIP_PATH': None,  # None → use analytics/geoip/ inside the package
@@ -15,6 +15,9 @@ DEFAULTS = {
     'DEFAULT_IGNORED_PREFIXES': ['/admin/', '/static/', '/media/'],
     'DEFAULT_IGNORED_EXTENSIONS': ['.css', '.js', '.png', '.jpg', '.svg', '.ico', '.woff2'],
     'DEFAULT_REALTIME_REFRESH': 30,
+    'UPLOADS_INCOMING_ROOT': None,
+    'UPLOAD_CHUNK_SIZE_MB': 5,                                # optional, default 5
+    'UPLOAD_MAX_FILE_SIZE_MB': 2048,                          # optional, default 2048 (2GB)
 }
 
 

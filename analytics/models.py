@@ -1,8 +1,11 @@
 import uuid
 import hashlib
+import uuid
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.db import models
+from django.contrib.auth.models import User
 
 
 # Create your models here.
@@ -119,3 +122,46 @@ class AnalyticsEvent(models.Model):
 
     def __str__(self):
         return f"{self.category}:{self.action}"
+
+
+class FileUpload(models.Model):
+    """
+    Tracks a single chunked upload session. The actual bytes are written
+    directly to disk as chunks arrive (see views/uploads.py) — this model
+    only stores metadata, never file content, to keep the DB small.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),  # session created, no chunks yet
+        ('uploading', 'Uploading'),  # at least one chunk received
+        ('completed', 'Completed'),  # all chunks received & verified
+        ('failed', 'Failed'),  # size/checksum mismatch or error
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='file_uploads')
+    original_filename = models.CharField(max_length=255)
+    total_size = models.BigIntegerField(help_text="Expected total size in bytes, sent by client at init")
+    bytes_received = models.BigIntegerField(default=0)
+    chunk_size = models.IntegerField(help_text="Size of each chunk in bytes, as used by the client")
+    total_chunks = models.IntegerField()
+    chunks_received = models.IntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    storage_path = models.CharField(max_length=500, help_text="Absolute path to the file on disk once completed")
+    error_message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "File Upload"
+        verbose_name_plural = "File Uploads"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.original_filename} ({self.status})"
+
+    @property
+    def progress_percent(self):
+        if self.total_size == 0:
+            return 0
+        return round((self.bytes_received / self.total_size) * 100, 1)

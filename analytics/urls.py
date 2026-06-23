@@ -3,7 +3,7 @@ from .views import (
     analytics_dashboard, analytics_pages, analytics_page_detail, analytics_api,
     analytics_traffic, analytics_realtime, analytics_realtime_data, analytics_settings,
     analytics_export, analytics_geography, analytics_event_api, analytics_events,
-    analytics_billing
+    analytics_billing, uploads, releases_page
 )
 
 app_name = 'analytics'
@@ -25,4 +25,11 @@ urlpatterns = [
     path('geography/', analytics_geography, name='geography'),
     path('events/', analytics_events, name='events'),
     path('billing/', analytics_billing, name='billing'),
+
+    path('releases/', releases_page, name='releases'),
+    path('releases/upload/init/', uploads.upload_init, name='upload_init'),
+    path('releases/upload/chunk/<uuid:upload_id>/', uploads.upload_chunk, name='upload_chunk'),
+    path('releases/upload/complete/<uuid:upload_id>/', uploads.upload_complete, name='upload_complete'),
+    path('releases/upload/list/', uploads.upload_list, name='upload_list'),
+    path('releases/upload/delete/<uuid:upload_id>/', uploads.upload_delete, name='upload_delete'),
 ]

@@ -1,0 +1,135 @@
+.page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+    margin-bottom: var(--margin-md);
+}
+
+.page-header h1,
+.uploads-card h2 {
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-xl);
+}
+
+.upload-dropzone-card {
+    margin-top: var(--margin-md);
+    margin-bottom: var(--margin-md);
+}
+
+.upload-dropzone {
+    position: relative;
+    border: 2px dashed var(--analytics-border);
+    border-radius: 10px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.dragover {
+    border-color: var(--analytics-gold);
+    background: var(--analytics-gold-dim);
+}
+
+.upload-dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.upload-dropzone-text strong {
+    display: block;
+    color: var(--analytics-text);
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+.upload-dropzone-text span {
+    color: var(--analytics-text-dim);
+    font-size: 13px;
+}
+
+.upload-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--analytics-border);
+}
+
+.upload-row:last-child {
+    border-bottom: none;
+}
+
+.upload-row-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.upload-row-name {
+    color: var(--analytics-text);
+    font-weight: 500;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.upload-row-status {
+    color: var(--analytics-text-dim);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.upload-row-bar-track {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--analytics-surface);
+    overflow: hidden;
+}
+
+.upload-row-bar-fill {
+    height: 100%;
+    background: var(--analytics-gold);
+    transition: width 0.2s ease;
+}
+
+.upload-row-completed .upload-row-bar-fill {
+    background: #16A34A;
+}
+
+.upload-row-completed .upload-row-status {
+    color: #16A34A;
+}
+
+.upload-row-failed .upload-row-bar-fill {
+    background: #DC2626;
+}
+
+.upload-row-failed .upload-row-status {
+    color: #DC2626;
+}
+
+.upload-delete-btn {
+    background: none;
+    border: none;
+    color: var(--analytics-text-dim);
+    cursor: pointer;
+    font-size: 12px;
+    text-decoration: underline;
+    padding: 0 4px;
+}
+
+.upload-delete-btn:hover {
+    color: #DC2626;
+}
+
+.upload-empty, .upload-error {
+    color: var(--analytics-text-dim);
+    font-size: 14px;
+    padding: 12px 0;
+}

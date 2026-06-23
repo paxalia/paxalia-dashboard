@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import PageView, DailySiteStats, AnalyticsSettings
+from .models import PageView, DailySiteStats, AnalyticsSettings, FileUpload
 
 
 # Register your models here.
@@ -28,3 +28,11 @@ class AnalyticsSettingsAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(FileUpload)
+class FileUploadAdmin(admin.ModelAdmin):
+    list_display = ('original_filename', 'status', 'progress_percent', 'total_size', 'uploaded_by', 'created_at')
+    list_filter = ('status',)
+    search_fields = ('original_filename', 'uploaded_by__username')
+    readonly_fields = ('id', 'bytes_received', 'chunks_received', 'storage_path', 'created_at', 'updated_at', 'completed_at')
