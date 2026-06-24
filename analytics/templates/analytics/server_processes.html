@@ -1,0 +1,41 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Processes" %}{% endblock %}
+{% block page_subtitle %}{% trans "Active process list" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/server.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="server-processes">
+    <div class="table-card">
+        <div class="chart-title-wrapper">
+            <h2 class="chart-title">{% trans "Top Processes by CPU" %}</h2>
+        </div>
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>PID</th>
+                    <th>{% trans "Name" %}</th>
+                    <th>{% trans "CPU %" %}</th>
+                    <th>{% trans "Memory %" %}</th>
+                    <th>{% trans "Status" %}</th>
+                </tr>
+            </thead>
+            <tbody id="processes-list">
+                <tr><td colspan="5">{% trans "Loading processes..." %}</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    window.SERVER_API_METRICS_URL = "{% url 'analytics:api_server_metrics' %}";
+    window.SERVER_API_HISTORY_URL = "{% url 'analytics:api_server_history' %}";
+</script>
+<script src="{% static 'analytics/scripts/server/processes.js' %}"></script>
+{% endblock %}

@@ -5,6 +5,7 @@ from .views import (
     analytics_export, analytics_geography, analytics_event_api, analytics_events,
     analytics_billing, uploads, releases_page
 )
+from .views import server as server_views
 
 app_name = 'analytics'
 
@@ -25,6 +26,18 @@ urlpatterns = [
     path('geography/', analytics_geography, name='geography'),
     path('events/', analytics_events, name='events'),
     path('billing/', analytics_billing, name='billing'),
+
+    path('server/overview/', server_views.server_overview, name='server_overview'),
+    path('server/cpu/', server_views.server_cpu, name='server_cpu'),
+    path('server/memory/', server_views.server_memory, name='server_memory'),
+    path('server/disk/', server_views.server_disk, name='server_disk'),
+    path('server/network/', server_views.server_network, name='server_network'),
+    path('server/services/', server_views.server_services, name='server_services'),
+    path('server/processes/', server_views.server_processes, name='server_processes'),
+
+    # Server API endpoints
+    path('api/server/metrics/', server_views.api_server_metrics, name='api_server_metrics'),
+    path('api/server/history/', server_views.api_server_history, name='api_server_history'),
 
     path('releases/', releases_page, name='releases'),
     path('releases/upload/init/', uploads.upload_init, name='upload_init'),

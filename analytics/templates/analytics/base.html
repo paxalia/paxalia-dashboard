@@ -240,28 +240,41 @@
                     >
                         <span class="sidebar-group__title">{% trans "Server" %}</span>
                         <span class="sidebar-group__chevron" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="18" height="18">
-                        <path fill="currentColor" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"></path>
-                    </svg>
-                </span>
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"></path>
+                            </svg>
+                        </span>
                     </button>
 
                     <div class="sidebar-group__panel" id="sidebar-group-server" hidden>
-                        <span class="sidebar-group__hint">{% trans "Coming next" %}</span>
-                        <a href="#" class="analytics-sidebar-link analytics-sidebar-link--disabled"
-                           aria-disabled="true">{% trans "Overview" %}</a>
-                        <a href="#" class="analytics-sidebar-link analytics-sidebar-link--disabled"
-                           aria-disabled="true">{% trans "CPU" %}</a>
-                        <a href="#" class="analytics-sidebar-link analytics-sidebar-link--disabled"
-                           aria-disabled="true">{% trans "Memory" %}</a>
-                        <a href="#" class="analytics-sidebar-link analytics-sidebar-link--disabled"
-                           aria-disabled="true">{% trans "Disk" %}</a>
-                        <a href="#" class="analytics-sidebar-link analytics-sidebar-link--disabled"
-                           aria-disabled="true">{% trans "Network" %}</a>
-                        <a href="#" class="analytics-sidebar-link analytics-sidebar-link--disabled"
-                           aria-disabled="true">{% trans "Services" %}</a>
-                        <a href="#" class="analytics-sidebar-link analytics-sidebar-link--disabled"
-                           aria-disabled="true">{% trans "Processes" %}</a>
+                        <a href="{% url 'analytics:server_overview' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_overview' %}active{% endif %}">
+                            {% trans "Overview" %}
+                        </a>
+                        <a href="{% url 'analytics:server_cpu' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_cpu' %}active{% endif %}">
+                            {% trans "CPU" %}
+                        </a>
+                        <a href="{% url 'analytics:server_memory' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_memory' %}active{% endif %}">
+                            {% trans "Memory" %}
+                        </a>
+                        <a href="{% url 'analytics:server_disk' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_disk' %}active{% endif %}">
+                            {% trans "Disk" %}
+                        </a>
+                        <a href="{% url 'analytics:server_network' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_network' %}active{% endif %}">
+                            {% trans "Network" %}
+                        </a>
+                        <a href="{% url 'analytics:server_services' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_services' %}active{% endif %}">
+                            {% trans "Services" %}
+                        </a>
+                        <a href="{% url 'analytics:server_processes' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_processes' %}active{% endif %}">
+                            {% trans "Processes" %}
+                        </a>
                     </div>
                 </section>
 

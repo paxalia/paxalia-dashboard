@@ -1,0 +1,48 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Disk" %}{% endblock %}
+{% block page_subtitle %}{% trans "Partition usage and I/O" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/server.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="server-disk">
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Total Reads" %}</span>
+            <span class="stat-value" id="disk-reads">--</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Total Writes" %}</span>
+            <span class="stat-value" id="disk-writes">--</span>
+        </div>
+    </div>
+    <div class="chart-grid">
+        <div class="chart-card">
+            <div class="chart-title-wrapper">
+                <h2 class="chart-title">{% trans "Partition Usage" %}</h2>
+            </div>
+            <div id="disk-partitions"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title-wrapper">
+                <h2 class="chart-title">{% trans "Disk I/O History" %}</h2>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="diskIOChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    window.SERVER_API_METRICS_URL = "{% url 'analytics:api_server_metrics' %}";
+    window.SERVER_API_HISTORY_URL = "{% url 'analytics:api_server_history' %}";
+</script>
+<script src="{% static 'analytics/scripts/server/disk.js' %}"></script>
+{% endblock %}

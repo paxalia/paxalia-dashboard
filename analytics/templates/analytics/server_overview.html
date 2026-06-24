@@ -1,0 +1,79 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Server Overview" %}{% endblock %}
+{% block page_subtitle %}{% trans "Real‑time system health and resource usage" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/server.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="server-overview">
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-label">{% trans "CPU Usage" %}</span>
+            <span class="stat-value" id="cpu-percent">--%</span>
+            <span class="stat-sub">{% trans "Load" %}: <span id="load-avg">--</span></span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Memory Usage" %}</span>
+            <span class="stat-value" id="mem-percent">--%</span>
+            <span class="stat-sub">{% trans "Available" %}: <span id="mem-available">--</span></span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Disk Usage" %}</span>
+            <span class="stat-value" id="disk-percent">--%</span>
+            <span class="stat-sub">{% trans "Used" %}: <span id="disk-used">--</span></span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Network I/O" %}</span>
+            <span class="stat-value" id="net-speed">-- MB</span>
+            <span class="stat-sub">{% trans "In / Out" %}</span>
+        </div>
+    </div>
+
+    <div class="chart-grid">
+        <div class="chart-card">
+            <div class="chart-title-wrapper">
+                <h2 class="chart-title">{% trans "CPU Usage (per core)" %}</h2>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="cpuCoreChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title-wrapper">
+                <h2 class="chart-title">{% trans "Memory Usage" %}</h2>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="memoryChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title-wrapper">
+                <h2 class="chart-title">{% trans "Disk I/O" %}</h2>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="diskIOChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title-wrapper">
+                <h2 class="chart-title">{% trans "Network Traffic" %}</h2>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="networkChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    window.SERVER_API_METRICS_URL = "{% url 'analytics:api_server_metrics' %}";
+    window.SERVER_API_HISTORY_URL = "{% url 'analytics:api_server_history' %}";
+</script>
+<script src="{% static 'analytics/scripts/server/overview.js' %}"></script>
+{% endblock %}
