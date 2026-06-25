@@ -1,0 +1,51 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Bot Traffic" %}{% endblock %}
+{% block page_subtitle %}{% trans "Analysis of scanner and bot requests" %}{% endblock %}
+
+{% block dashboard_content %}
+<div class="bots-dashboard">
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Total Bot Requests" %}</span>
+            <span class="stat-value">{{ total_bot_views }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Today" %}</span>
+            <span class="stat-value">{{ bot_views_today }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Unique Bot IPs" %}</span>
+            <span class="stat-value">{{ unique_bot_ips }}</span>
+        </div>
+    </div>
+
+    <div class="chart-grid">
+        <div class="chart-card">
+            <h2 class="chart-title">{% trans "Bot Requests per Day (last 30 days)" %}</h2>
+            <div class="chart-wrap">
+                <canvas id="botDayChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h2 class="chart-title">{% trans "Top Bot Paths" %}</h2>
+            <div class="chart-wrap">
+                <canvas id="topPathsChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h2 class="chart-title">{% trans "Bot Requests by Country" %}</h2>
+            <div class="chart-wrap">
+                <canvas id="countryChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    {{ bot_data|json_script:"bot-chart-data" }}
+    <script src="{% static 'analytics/scripts/chart.umd.js' %}"></script>
+    <script src="{% static 'analytics/scripts/bots.js' %}"></script>
+{% endblock %}

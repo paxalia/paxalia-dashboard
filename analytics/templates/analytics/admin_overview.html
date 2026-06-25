@@ -1,0 +1,61 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Admin Overview" %}{% endblock %}
+{% block page_subtitle %}{% trans "Site and user activity at a glance" %}{% endblock %}
+
+{% block dashboard_content %}
+<div class="admin-overview">
+    <!-- Stats Cards -->
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Total Users" %}</span>
+            <span class="stat-value">{{ total_users }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "New Today" %}</span>
+            <span class="stat-value">{{ new_users_today }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "New This Week" %}</span>
+            <span class="stat-value">{{ new_users_week }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Active (7 days)" %}</span>
+            <span class="stat-value">{{ active_users }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Total Content" %}</span>
+            <span class="stat-value">{{ content_total }}</span>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-grid">
+        <div class="chart-card">
+            <h2 class="chart-title">{% trans "User Registrations (last 30 days)" %}</h2>
+            <div class="chart-wrap">
+                <canvas id="registrationChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h2 class="chart-title">{% trans "Content Created (last 30 days)" %}</h2>
+            <div class="chart-wrap">
+                <canvas id="contentChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h2 class="chart-title">{% trans "User Logins (last 30 days)" %}</h2>
+            <div class="chart-wrap">
+                <canvas id="loginChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    {{ chart_data|json_script:"admin-chart-data" }}
+    <script src="{% static 'analytics/scripts/chart.umd.js' %}"></script>
+    <script src="{% static 'analytics/scripts/admin-overview.js' %}"></script>
+{% endblock %}

@@ -12,16 +12,16 @@ class Command(BaseCommand):
         today = timezone.now().date()
         yesterday = today - timedelta(days=1)
 
-        pageviews = PageView.objects.filter(created_at__date=yesterday)
+        pageviews = PageView.objects.filter(created_at__date=yesterday, is_bot=False)
 
         total_views = pageviews.count()
         unique_ips = pageviews.values('ip_hash').distinct().count()
-        unique_users = pageviews.exclude(user=None).values('user').distinct().count()
+        unique_users = pageviews.exclude(user=None, is_bot=False).values('user').distinct().count()
         api_prefix = get_config()['API_PATH_PREFIX']
-        api_calls = pageviews.filter(path__startswith=api_prefix).count()
+        api_calls = pageviews.filter(path__startswith=api_prefix, is_bot=False).count()
 
         # Session stats
-        sessions = pageviews.exclude(session_id='').values('session_id')
+        sessions = pageviews.exclude(session_id='', is_bot=False).values('session_id')
         total_sessions = sessions.distinct().count()
 
         # Bounces: sessions with only 1 page view
@@ -36,6 +36,7 @@ class Command(BaseCommand):
         # Top pages
         top = (
             pageviews
+            .filter(is_bot=False)
             .values('path')
             .annotate(count=Count('id'))
             .order_by('-count')[:10]

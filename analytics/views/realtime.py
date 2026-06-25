@@ -34,13 +34,13 @@ def analytics_realtime_data(request):
     five_min_ago = now - timedelta(minutes=5)
 
     # Total page views in last 5 minutes
-    total_views = PageView.objects.filter(created_at__gte=five_min_ago).count()
+    total_views = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False).count()
 
     # Unique IPs in last 5 minutes
-    unique_ips = PageView.objects.filter(created_at__gte=five_min_ago).values('ip_hash').distinct().count()
+    unique_ips = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False).values('ip_hash').distinct().count()
 
     # Recent page views (last 20)
-    recent = PageView.objects.filter(created_at__gte=five_min_ago).order_by('-created_at')[:20]
+    recent = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False).order_by('-created_at')[:20]
     recent_data = [
         {
             'path': r.path,

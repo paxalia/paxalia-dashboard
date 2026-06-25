@@ -1,0 +1,123 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Backups" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/backup.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="backup-page">
+    <div class="page-header">
+        <h1>{% trans "Backups" %}</h1>
+        <p class="page-subtitle">{% trans "Configure backup settings and manage archives." %}</p>
+    </div>
+
+    <!-- Configuration card – full width, on top -->
+    <div class="backup-config-card">
+        <h2 class="card-title">{% trans "Settings" %}</h2>
+        <form method="post" class="analytics-settings-form">
+            {% csrf_token %}
+            <input type="hidden" name="save_config" value="1">
+
+            <div class="form-row">
+                <label for="backup_paths">{% trans "Paths to backup (one per line)" %}</label>
+                <div class="form-hint">{% trans "Absolute paths or paths relative to project root." %}</div>
+                <textarea name="backup_paths" id="backup_paths" rows="4">{{ config.backup_paths }}</textarea>
+            </div>
+
+            <div class="form-row">
+                <label for="storage_path">{% trans "Storage directory (absolute path)" %}</label>
+                <div class="form-hint">{% trans "Must be writable by the web server." %}</div>
+                <input type="text" name="storage_path" id="storage_path" value="{{ config.storage_path }}" placeholder="/var/backups/analytics" />
+            </div>
+
+            <div class="form-row form-row-checkbox">
+                <input type="checkbox" name="enabled" id="enabled" {% if config.enabled %}checked{% endif %}>
+                <label for="enabled">{% trans "Enable automatic backups (scheduled via cron)" %}</label>
+            </div>
+
+            <div class="form-row">
+                <label for="schedule">{% trans "Schedule" %}</label>
+                <select name="schedule" id="schedule">
+                    {% for value, label in schedule_choices %}
+                        <option value="{{ value }}" {% if config.schedule == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label for="retention_count">{% trans "Retention (number of backups to keep)" %}</label>
+                <input type="number" name="retention_count" id="retention_count" value="{{ config.retention_count|default:5 }}" min="1" max="100" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">{% trans "Save Settings" %}</button>
+        </form>
+    </div>
+
+    <!-- Archive list card – full width, below -->
+    <div class="backup-list-card">
+        <div class="backup-toolbar">
+            <h2 class="card-title" style="margin:0;">{% trans "Archives" %}</h2>
+            <form method="post" action="{% url 'analytics:backup_trigger' %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary" {% if not config or not config.enabled %}disabled{% endif %}>
+                    <span class="icon">+</span> {% trans "Create Backup" %}
+                </button>
+            </form>
+        </div>
+
+        {% if backups %}
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>{% trans "Filename" %}</th>
+                        <th>{% trans "Size" %}</th>
+                        <th>{% trans "Created" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for backup in backups %}
+                        <tr>
+                            <td>{{ backup.filename }}</td>
+                            <td>{{ backup.size|filesizeformat }}</td>
+                            <td>{{ backup.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <span class="backup-status-badge backup-status-{{ backup.status }}">
+                                    {{ backup.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="backup-actions">
+                                    {% if backup.status == 'completed' %}
+                                        <a href="{% url 'analytics:backup_download_single' backup.id %}" class="btn btn-sm btn-primary" download>
+                                            {% trans "Download" %}
+                                        </a>
+                                        <form method="post" action="{% url 'analytics:backup_delete' backup.id %}" style="display:inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this backup?')">{% trans "Delete" %}</button>
+                                        </form>
+                                    {% elif backup.status == 'creating' %}
+                                        <span class="status-creating">{% trans "Creating…" %}</span>
+                                    {% else %}
+                                        <span class="status-dim">{% trans "N/A" %}</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="backup-empty">{% trans "No backups found. Click 'Create Backup' to start." %}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script src="{% static 'analytics/scripts/backups.js' %}"></script>
+{% endblock %}

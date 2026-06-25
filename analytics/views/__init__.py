@@ -10,3 +10,6 @@ from .events import analytics_events, analytics_event_api
 from .billing import analytics_billing
 from .export import analytics_export
 from .releases import releases_page
+from .admin_overview import admin_overview
+from .bots import bots_overview
+from .about import about

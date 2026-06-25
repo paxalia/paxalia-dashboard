@@ -1,0 +1,48 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Network" %}{% endblock %}
+{% block page_subtitle %}{% trans "Interface statistics" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/server.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="server-network">
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Total Incoming" %}</span>
+            <span class="stat-value" id="net-in">--</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Total Outgoing" %}</span>
+            <span class="stat-value" id="net-out">--</span>
+        </div>
+    </div>
+    <div class="chart-grid">
+        <div class="chart-card">
+            <div class="chart-title-wrapper">
+                <h2 class="chart-title">{% trans "Network Traffic (per interface)" %}</h2>
+            </div>
+            <div id="network-interfaces"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title-wrapper">
+                <h2 class="chart-title">{% trans "Network I/O History" %}</h2>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="networkChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    window.SERVER_API_METRICS_URL = "{% url 'analytics:api_server_metrics' %}";
+    window.SERVER_API_HISTORY_URL = "{% url 'analytics:api_server_history' %}";
+</script>
+<script src="{% static 'analytics/scripts/server/network.js' %}"></script>
+{% endblock %}

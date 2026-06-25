@@ -1,4 +1,4 @@
-/* sidebar.js – handles sidebar toggle (open/close) on all screens */
+/* sidebar.js – handles sidebar toggle (open/close) and collapsible groups */
 
 (function () {
     const body = document.querySelector('.analytics-body');
@@ -8,26 +8,47 @@
     const closeBtn = document.querySelector('.analytics-sidebar-close-btn');
     const STORAGE_KEY = 'analytics_sidebar_hidden';
 
-    // Check if currently hidden
+    if (!body || !sidebar) return;
+
+    // ----------------------------
+    // Sidebar open / close
+    // ----------------------------
     function isHidden() {
         return body.classList.contains('sidebar-hidden');
     }
 
-    // Update UI based on state
+    function openBackdrop() {
+        if (!backdrop) return;
+        backdrop.hidden = false;
+        backdrop.classList.add('is-visible');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeBackdrop() {
+        if (!backdrop) return;
+        backdrop.classList.remove('is-visible');
+        backdrop.hidden = true;
+        document.body.style.overflow = '';
+    }
+
     function applyState(hidden) {
         if (hidden) {
             body.classList.add('sidebar-hidden');
             closeBackdrop();
         } else {
             body.classList.remove('sidebar-hidden');
-            // On mobile, show backdrop when opening
             if (window.innerWidth < 768) {
-                backdrop.hidden = false;
-                backdrop.classList.add('is-visible');
-                document.body.style.overflow = 'hidden';
+                openBackdrop();
+            } else {
+                closeBackdrop();
             }
         }
-        localStorage.setItem(STORAGE_KEY, hidden);
+
+        try {
+            localStorage.setItem(STORAGE_KEY, hidden ? 'true' : 'false');
+        } catch (err) {
+            // localStorage may be unavailable in some contexts
+        }
     }
 
     function showSidebar() {
@@ -38,13 +59,6 @@
         applyState(true);
     }
 
-    function closeBackdrop() {
-        backdrop.classList.remove('is-visible');
-        backdrop.hidden = true;
-        document.body.style.overflow = '';
-    }
-
-    // Toggle button (header)
     if (toggleBtn) {
         toggleBtn.addEventListener('click', function (e) {
             e.preventDefault();
@@ -56,7 +70,6 @@
         });
     }
 
-    // Close button inside sidebar
     if (closeBtn) {
         closeBtn.addEventListener('click', function (e) {
             e.preventDefault();
@@ -64,33 +77,79 @@
         });
     }
 
-    // Backdrop click closes sidebar on mobile
     if (backdrop) {
         backdrop.addEventListener('click', hideSidebar);
     }
 
-    // Escape key closes sidebar
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && !isHidden()) {
             hideSidebar();
         }
     });
 
-    // When resizing to desktop, ensure backdrop is hidden and body overflow reset
     window.addEventListener('resize', function () {
         if (window.innerWidth >= 768) {
             closeBackdrop();
         } else if (!isHidden()) {
-            // Re-open overlay if we were showing it before resize
-            backdrop.hidden = false;
-            backdrop.classList.add('is-visible');
-            document.body.style.overflow = 'hidden';
+            openBackdrop();
         }
     });
 
     // Restore saved state (default: sidebar visible)
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === 'true') {
-        applyState(true);
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved === 'true') {
+            applyState(true);
+        } else {
+            applyState(false);
+        }
+    } catch (err) {
+        applyState(false);
     }
+
+    // ----------------------------
+    // Collapsible sidebar groups
+    // ----------------------------
+    const groupButtons = document.querySelectorAll('[data-sidebar-group-toggle]');
+
+    function setGroupState(button, open) {
+        const panelId = button.getAttribute('aria-controls');
+        const panel = panelId ? document.getElementById(panelId) : null;
+        const group = button.closest('[data-sidebar-group]');
+
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+        if (panel) {
+            panel.hidden = !open;
+        }
+
+        if (group) {
+            group.classList.toggle('is-open', open);
+        }
+    }
+
+    function openGroupIfActive(button) {
+        const panelId = button.getAttribute('aria-controls');
+        const panel = panelId ? document.getElementById(panelId) : null;
+        if (!panel) return;
+
+        const activeLink = panel.querySelector('.active');
+        if (activeLink) {
+            setGroupState(button, true);
+        }
+    }
+
+    groupButtons.forEach((button) => {
+        const panelId = button.getAttribute('aria-controls');
+        const panel = panelId ? document.getElementById(panelId) : null;
+
+        if (!panel) return;
+
+        button.addEventListener('click', function () {
+            const isOpen = button.getAttribute('aria-expanded') === 'true';
+            setGroupState(button, !isOpen);
+        });
+
+        openGroupIfActive(button);
+    });
 })();

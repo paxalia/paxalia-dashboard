@@ -1,4 +1,3 @@
-# analytics/views/settings.py
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import Http404
 from django.shortcuts import render, redirect
@@ -7,9 +6,6 @@ from django.utils.translation import gettext as _
 
 from analytics.models import AnalyticsSettings
 from analytics.views.utils import section_enabled
-
-
-# Create your views here.
 
 
 @staff_member_required
@@ -23,6 +19,9 @@ def analytics_settings(request):
             'ignored_prefixes': request.POST.get('ignored_prefixes', ''),
             'ignored_extensions': request.POST.get('ignored_extensions', ''),
             'realtime_refresh_seconds': int(request.POST.get('realtime_refresh_seconds', 30)),
+            # New fields
+            'tracked_paths': request.POST.get('tracked_paths', ''),
+            'bot_paths': request.POST.get('bot_paths', ''),
         }
         if instance:
             for key, val in data.items():
