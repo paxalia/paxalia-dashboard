@@ -4,9 +4,12 @@
 include analytics/*.py
 include analytics/views/*.py
 include analytics/templatetags/*.py
-include analytics/management/commands/*.py
+recursive-include analytics/management *.py
 recursive-include analytics/migrations *.py
 include analytics/requirements.txt
+
+# Additional data file
+include analytics/bots_paths.txt
 
 # Templates
 recursive-include analytics/templates *
