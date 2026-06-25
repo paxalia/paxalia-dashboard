@@ -4,7 +4,7 @@ from django.conf import settings
 DEFAULTS = {
     'SIDEBAR_SECTIONS': [
         'overview', 'pages', 'api', 'traffic', 'realtime', 'bots',
-        'geography', 'events', 'billing', 'releases', 'settings'
+        'geography', 'events', 'billing', 'releases', 'backups', 'settings'
     ],
     'API_PATH_PREFIX': '/api/',
     'GEOIP_PATH': None,  # None → use analytics/geoip/ inside the package

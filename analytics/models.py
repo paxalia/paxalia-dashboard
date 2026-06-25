@@ -132,6 +132,94 @@ class AnalyticsEvent(models.Model):
         return f"{self.category}:{self.action}"
 
 
+class BackupConfiguration(models.Model):
+    """
+    Singleton model that stores backup settings.
+    """
+    backup_paths = models.TextField(
+        blank=True,
+        help_text="One path per line (absolute or relative to the project root). Directories and files to include."
+    )
+    storage_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Absolute path where backup archives will be stored. Must be writable by the web server."
+    )
+    enabled = models.BooleanField(
+        default=False,
+        help_text="Enable automatic backups (scheduled via cron)."
+    )
+    schedule = models.CharField(
+        max_length=20,
+        choices=[
+            ('manual', 'Manual only'),
+            ('daily', 'Daily'),
+            ('weekly', 'Weekly'),
+            ('monthly', 'Monthly'),
+        ],
+        default='manual',
+        help_text="How often to create backups (requires cron to run the management command)."
+    )
+    retention_count = models.PositiveIntegerField(
+        default=5,
+        help_text="Number of most recent backups to keep. Older backups are automatically deleted."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Backup Configuration"
+        verbose_name_plural = "Backup Configurations"
+
+    def save(self, *args, **kwargs):
+        if BackupConfiguration.objects.exists() and not self.pk:
+            existing = BackupConfiguration.objects.first()
+            for field in self._meta.fields:
+                if field.name != 'id':
+                    setattr(existing, field.name, getattr(self, field.name))
+            existing.save()
+            return
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return "Backup Configuration"
+
+    def get_backup_paths_list(self):
+        """Return non‑empty lines as a list."""
+        return [p.strip() for p in self.backup_paths.splitlines() if p.strip()]
+
+
+class BackupArchive(models.Model):
+    """
+    Metadata for a created backup archive.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    filename = models.CharField(max_length=255, help_text="Name of the backup file (e.g., backup_20250320_123456.tar.gz)")
+    size = models.BigIntegerField(default=0, help_text="File size in bytes")
+    created_at = models.DateTimeField(auto_now_add=True)
+    storage_path = models.CharField(max_length=500, help_text="Absolute path to the backup file on disk")
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('creating', 'Creating'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+        ],
+        default='pending'
+    )
+    error_message = models.TextField(blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Backup Archive"
+        verbose_name_plural = "Backup Archives"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.filename
+
+
 class FileUpload(models.Model):
     """
     Tracks a single chunked upload session. The actual bytes are written

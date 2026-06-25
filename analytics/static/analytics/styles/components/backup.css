@@ -1,0 +1,244 @@
+/* backup.css */
+
+/* ---- Page header ---- */
+.backup-page .page-header {
+    margin-bottom: var(--margin-md);
+    padding-bottom: var(--padding-sm);
+}
+
+.backup-page .page-header h1 {
+    font-size: var(--font-size-2xl);
+    margin-bottom: var(--margin-xs);
+}
+
+.backup-page .page-header .page-subtitle {
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-md);
+}
+
+/* ---- Cards (stacked full-width) ---- */
+.backup-config-card,
+.backup-list-card {
+    background: var(--analytics-surface);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    padding: var(--padding-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--margin-lg);
+}
+
+.backup-config-card:last-child,
+.backup-list-card:last-child {
+    margin-bottom: 0;
+}
+
+/* ---- Make the backup list card scrollable ---- */
+.backup-list-card {
+    max-height: 600px;   /* adjust as needed */
+    overflow-y: auto;
+}
+
+/* For screens with little height, reduce max-height */
+@media (max-height: 700px) {
+    .backup-list-card {
+        max-height: 400px;
+    }
+}
+
+/* Optionally, style the scrollbar to match the theme */
+.backup-list-card::-webkit-scrollbar {
+    width: 8px;
+}
+.backup-list-card::-webkit-scrollbar-track {
+    background: var(--analytics-border);
+    border-radius: 4px;
+}
+.backup-list-card::-webkit-scrollbar-thumb {
+    background: var(--analytics-text-dim);
+    border-radius: 4px;
+}
+.backup-list-card::-webkit-scrollbar-thumb:hover {
+    background: var(--analytics-text);
+}
+
+.card-title {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
+    color: var(--analytics-text);
+    margin-bottom: var(--margin-md);
+}
+
+/* ---- Toolbar ---- */
+.backup-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+    margin-bottom: var(--margin-md);
+}
+
+/* ---- Buttons ---- */
+.btn {
+    padding: var(--padding-xs) var(--padding-md);
+    background: var(--analytics-surface);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    color: var(--analytics-text);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-xs);
+    transition: background 0.2s;
+}
+
+.btn:hover {
+    background: var(--analytics-border);
+}
+
+.btn-primary {
+    background: var(--analytics-gold);
+    color: #000;
+    border-color: var(--analytics-gold);
+}
+
+.btn-primary:hover {
+    background: var(--analytics-gold-hover);
+}
+
+.btn-danger {
+    background: #ff6384;
+    color: #fff;
+    border-color: #ff6384;
+}
+
+.btn-danger:hover {
+    background: #e05272;
+}
+
+.btn-sm {
+    font-size: var(--font-size-xs);
+    padding: var(--padding-xs) var(--padding-sm);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ---- Status badges ---- */
+.backup-status-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: var(--radius-pill);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+}
+
+.backup-status-completed {
+    background: #36a2eb;
+    color: #fff;
+}
+
+.backup-status-pending {
+    background: #ffcd56;
+    color: #000;
+}
+
+.backup-status-failed {
+    background: #ff6384;
+    color: #fff;
+}
+
+.backup-status-creating {
+    background: #ff9f40;
+    color: #fff;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.status-creating {
+    color: var(--analytics-text-dim);
+    font-style: italic;
+}
+
+.status-dim {
+    color: var(--analytics-text-dim);
+}
+
+/* ---- Empty state ---- */
+.backup-empty {
+    color: var(--analytics-text-dim);
+    padding: var(--padding-lg);
+    text-align: center;
+}
+
+/* ---- Form styling ---- */
+.analytics-settings-form .form-row {
+    margin-bottom: var(--margin-md);
+}
+
+.analytics-settings-form .form-row-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+}
+
+.analytics-settings-form input[type="text"],
+.analytics-settings-form input[type="number"],
+.analytics-settings-form select,
+.analytics-settings-form textarea {
+    width: 100%;
+    padding: var(--padding-sm);
+    background: var(--analytics-bg);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    color: var(--analytics-text);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family-sans);
+}
+
+.analytics-settings-form textarea {
+    font-family: var(--font-family-mono);
+    resize: vertical;
+}
+
+.analytics-settings-form button[type="submit"] {
+    background: var(--analytics-gold);
+    color: #000;
+    border: none;
+    padding: var(--padding-md) var(--padding-lg);
+    border-radius: var(--radius-sm);
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+}
+
+.analytics-settings-form button[type="submit"]:hover {
+    background: var(--analytics-gold-hover);
+}
+
+.form-hint {
+    font-size: var(--font-size-xs);
+    color: var(--analytics-text-dim);
+    margin-top: var(--gap-xs);
+}
+
+.backup-actions {
+    display: flex;
+    flex-direction: row;
+    gap: var(--gap-sm);
+}
+
+/* ---- Responsive tweaks ---- */
+@media (max-width: 768px) {
+    .backup-config-card,
+    .backup-list-card {
+        padding: var(--padding-md);
+    }
+}

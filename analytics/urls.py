@@ -6,6 +6,7 @@ from .views import (
     analytics_billing, uploads, releases_page, admin_overview, bots_overview
 )
 from .views import server as server_views
+from .views import backup as backup_views
 
 app_name = 'analytics'
 
@@ -41,6 +42,13 @@ urlpatterns = [
     # Server API endpoints
     path('api/server/metrics/', server_views.api_server_metrics, name='api_server_metrics'),
     path('api/server/history/', server_views.api_server_history, name='api_server_history'),
+
+    path('backups/', backup_views.backup_management, name='backups'),
+    path('backups/trigger/', backup_views.backup_trigger, name='backup_trigger'),
+    path('backups/delete/<uuid:backup_id>/', backup_views.backup_delete, name='backup_delete'),
+    path('backups/download/<uuid:backup_id>/', backup_views.backup_download_single, name='backup_download_single'),
+    path('backups/download/init/<uuid:backup_id>/', backup_views.backup_download_init, name='backup_download_init'),
+    path('backups/download/chunk/<uuid:backup_id>/<int:chunk_index>/', backup_views.backup_download_chunk, name='backup_download_chunk'),
 
     path('releases/', releases_page, name='releases'),
     path('releases/upload/init/', uploads.upload_init, name='upload_init'),
