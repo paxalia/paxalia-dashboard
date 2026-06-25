@@ -1,0 +1,111 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "About" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/about.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="about-page">
+    <div class="about-card">
+        <div class="about-logo">
+            <img src="{% static 'analytics/icons/brand/icon-brand.svg' %}" alt="Paxalia" width="80" height="80" />
+        </div>
+
+        <h1>{% trans "Analytics Dashboard" %}</h1>
+        <p class="about-subtitle">
+            {% trans "Built with ❤️ by" %}
+            <a href="https://paxalia.com" target="_blank" rel="noopener" class="about-link"><strong>Paxalia</strong></a>
+        </p>
+
+        <div class="about-divider"></div>
+
+        <div class="about-section">
+            <h2>{% trans "About Paxalia" %}</h2>
+            <p>
+                <a href="https://paxalia.com" target="_blank" rel="noopener" class="about-link">Paxalia</a>
+                {% trans "is not a typical tech company — it's a collection of thoughtfully crafted digital tools. From a planning app that helps you organise your day, to an SVG tool, to this very analytics dashboard, Paxalia is a growing ecosystem built by a single developer with a passion for clean, privacy‑first software." %}
+            </p>
+            <p>
+                {% trans "This dashboard is one of Paxalia's flagship projects — and it exists because the current analytics landscape is broken." %}
+            </p>
+        </div>
+
+        <div class="about-section">
+            <h2>{% trans "Why This Dashboard?" %}</h2>
+            <p>
+                {% trans "Most analytics tools track your users, expose their IPs, and send data to third‑party servers. They're insecure by design, and they don't respect privacy." %}
+            </p>
+            <p>
+                <strong>{% trans "This dashboard is different." %}</strong>
+                {% trans "It's completely open source, runs entirely on your own server, and never calls home. No external services, no tracking pixels, no data leaks. Your users' privacy is protected by default." %}
+            </p>
+            <p>
+                {% trans "And unlike bloated SaaS products, this dashboard gives you real control:" %}
+            </p>
+            <ul style="text-align:left; color: var(--analytics-text-dim); padding-left: var(--padding-lg); margin: var(--margin-sm) 0 var(--margin-md) 0;">
+                <li>{% trans "Full server monitoring (CPU, memory, disk, network, processes)" %}</li>
+                <li>{% trans "Bot traffic detection and separation" %}</li>
+                <li>{% trans "IP anonymization and path filtering" %}</li>
+                <li>{% trans "Chunked file uploads & auto‑backups" %}</li>
+                <li>{% trans "12 themes, RTL support, and full i18n" %}</li>
+                <li>{% trans "Everything is self‑contained and secure" %}</li>
+            </ul>
+            <p>
+                {% trans "No other analytics tool gives you this much flexibility without compromising your security." %}
+            </p>
+        </div>
+
+        <div class="about-section">
+            <h2>{% trans "The Developer" %}</h2>
+            <p>
+                {% trans "This entire ecosystem — Paxalia, the planning app, the SVG tool, and this dashboard — was built by" %}
+                <a href="https://github.com/parsazaidane" target="_blank" rel="noopener" class="about-link">
+                    <strong>Parsa Zaydany</strong>
+                </a>
+                , {% trans "a solo developer who believes that great software should be both powerful and ethical." %}
+            </p>
+            <p>
+                {% trans "Working from a country with internet blockouts, sanctions, and constant censorship, Parsa built this dashboard without reliable access to documentation or package repositories — a testament to the fact that determination matters more than circumstances." %}
+            </p>
+            <p>
+                {% trans "This dashboard is proof that you don't need a team or a corporate budget to build tools that respect people." %}
+            </p>
+        </div>
+
+        <div class="about-section">
+            <h2>{% trans "Support the Project" %}</h2>
+            <p>
+                {% trans "If this dashboard has helped you, please consider supporting its continued development. Every contribution — no matter how small — helps keep the project alive, funds the infrastructure, and supports a solo developer who believes in building tools that matter." %}
+            </p>
+            <div class="about-support-buttons">
+                <a href="https://paxalia.com/donate/" target="_blank" rel="noopener" class="btn btn-primary">
+                    <span>💖</span> {% trans "Donate" %}
+                </a>
+                <a href="https://paxalia.com/sponsorship/" target="_blank" rel="noopener" class="btn btn-secondary">
+                    <span>⭐</span> {% trans "Sponsor" %}
+                </a>
+                <a href="https://paxalia.com/contact/" target="_blank" rel="noopener" class="btn btn-secondary">
+                    <span>✉️</span> {% trans "Contact" %}
+                </a>
+            </div>
+        </div>
+
+        <div class="about-divider"></div>
+
+        <div class="about-footer">
+            <p>
+                {% trans "Made with passion by" %}
+                <a href="https://github.com/parsazaidane" target="_blank" rel="noopener" class="about-link">
+                    Parsa Zaydany
+                </a>
+                &amp;
+                <a href="https://paxalia.com" target="_blank" rel="noopener" class="about-link">Paxalia</a>
+            </p>
+            <p class="about-version">{% trans "Version" %} 2.0.0</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

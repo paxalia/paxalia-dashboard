@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  
+  <circle cx="12" cy="12" r="10" fill="#7286d3"/>
+  <rect x="6" y="6.66" width="10.83" height="9.96" rx="1" ry="1" fill="#8ea7e9"/>
+  <path d="M7,6.66h8.83c.55,0,1,.45,1,1v1.09H6v-1.09c0-.55.45-1,1-1Z" fill="#b4c6f2"/>
+  <rect x="7.43" y="9.99" width="1.35" height="1.36" rx=".64" ry=".64" fill="#1c0c5b"/>
+  <rect data-name="date-shape" x="7.43" y="11.93" width="1.35" height="1.36" rx=".64" ry=".64"/>
+  <rect data-name="date-shape" x="7.43" y="13.83" width="1.35" height="1.36" rx=".64" ry=".64" fill="#e8c872"/>
+  <rect data-name="date-shape" x="9.64" y="13.83" width="1.35" height="1.36" rx=".64" ry=".64"/>
+  <rect data-name="date-shape" x="11.84" y="13.83" width="1.35" height="1.36" rx=".64" ry=".64" fill="#7286d3"/>
+  <rect x="9.6" y="11.89" width="1.35" height="1.36" rx=".64" ry=".64" fill="#0b2447"/>
+  <rect data-name="date-shape" x="9.6" y="9.99" width="1.35" height="1.36" rx=".68" ry=".68" fill="#00a9ff"/>
+  <rect data-name="date-shape" x="11.88" y="9.99" width="1.35" height="1.36" rx=".64" ry=".64" fill="#1b262c"/>
+  <rect data-name="date-shape" x="14.04" y="9.99" width="1.35" height="1.36" rx=".64" ry=".64"/>
+  <rect data-name="date-shape" x="11.84" y="11.89" width="1.35" height="1.36" rx=".64" ry=".64" fill="#fff67e"/>
+  <rect data-name="date-shape" x="14.04" y="11.89" width="1.35" height="1.36" rx=".64" ry=".64" fill="#0c134f"/>
+  <rect x="14.35" y="6" width=".35" height="1.55" rx=".17" ry=".17"/>
+  <rect data-name="clip" x="12.26" y="6.04" width=".35" height="1.55" rx=".17" ry=".17"/>
+  <rect data-name="clip" x="10.18" y="6.04" width=".35" height="1.55" rx=".17" ry=".17"/>
+  <rect data-name="clip" x="8.13" y="6.04" width=".35" height="1.55" rx=".17" ry=".17"/>
+  <circle cx="14.57" cy="7.41" r=".45"/>
+  <circle data-name="clip-hole" cx="12.44" cy="7.41" r=".45"/>
+  <circle data-name="clip-hole" cx="10.35" cy="7.41" r=".45"/>
+  <circle data-name="clip-hole" cx="8.3" cy="7.41" r=".45"/>
+  <ellipse cx="15.31" cy="15.31" rx="2.69" ry="2.69" fill="#b4c6f2"/>
+  <path d="M15.31,13.41h0s-.06.02-.06.05v1.78s.02.05.05.05h0s.06-.02.06-.05v-1.78s-.02-.05-.05-.05Z"/>
+  <path d="M15.26,15.22h0s-.03.06-.02.07l.92.94s.04,0,.07-.02h0s.03-.06.02-.07l-.92-.94s-.04,0-.07.02Z"/>
+</svg>

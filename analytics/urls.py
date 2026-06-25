@@ -3,7 +3,7 @@ from .views import (
     analytics_dashboard, analytics_pages, analytics_page_detail, analytics_api,
     analytics_traffic, analytics_realtime, analytics_realtime_data, analytics_settings,
     analytics_export, analytics_geography, analytics_event_api, analytics_events,
-    analytics_billing, uploads, releases_page, admin_overview, bots_overview
+    analytics_billing, uploads, releases_page, admin_overview, bots_overview, about
 )
 from .views import server as server_views
 from .views import backup as backup_views
@@ -56,4 +56,6 @@ urlpatterns = [
     path('releases/upload/complete/<uuid:upload_id>/', uploads.upload_complete, name='upload_complete'),
     path('releases/upload/list/', uploads.upload_list, name='upload_list'),
     path('releases/upload/delete/<uuid:upload_id>/', uploads.upload_delete, name='upload_delete'),
+
+    path('about/', about, name='about'),
 ]
