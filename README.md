@@ -17,6 +17,10 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Dashboard Pages](#dashboard-pages)
+- [Server Monitoring](#server-monitoring)
+- [Bot Traffic](#bot-traffic)
+- [Backup Management](#backup-management)
+- [Admin Overview](#admin-overview)
 - [Custom Event Tracking](#custom-event-tracking)
 - [Internationalization](#internationalization)
 - [Themes](#themes)
@@ -39,6 +43,9 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 | World map            | ✅                | ❌                     | ✅                            |
 | Event tracking       | ✅                | ❌                     | ✅                            |
 | Billing dashboard    | ❌                | ❌                     | ✅                            |
+| Server monitoring    | ❌                | ❌                     | ✅                            |
+| Bot detection        | ❌                | ❌                     | ✅                            |
+| Backup management    | ❌                | ❌                     | ✅                            |
 | Themes               | ❌                | ❌                     | ✅ (12 luxury themes)         |
 | Multi‑language + RTL | ❌                | ❌                     | ✅ (5 languages, RTL support) |
 | Offline map          | ❌                | ❌                     | ✅ (no CDN calls)             |
@@ -56,6 +63,15 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 - **Billing Dashboard** – (optional) plug into your billing app to see daily revenue, top plans, and recent
   transactions.
 - **Real‑time Monitoring** – watch visitors arrive live with a configurable refresh interval.
+- **Server Monitoring** – real‑time system metrics: CPU, memory, disk, network, services, processes – all directly from
+  your server, no external agents.
+- **Bot Traffic Detection** – automatically identify and separate scanner and bot requests; view them in a dedicated
+  Bots page with its own analytics.
+- **Backup Management** – configure paths to back up, set a schedule, and create/restore backups from the dashboard.
+  Chunked download for large archives.
+- **Admin Overview** – a dedicated dashboard for administrators showing user registrations, content creation, and login
+  activity.
+- **About Page** – learn the story behind the project and support its development.
 - **Date Range Filter** – any chart or table can be filtered by a custom date range with one‑click presets.
 - **Compare to Previous Period** – overlay the previous period on any line chart with a single checkbox.
 - **CSV / JSON Export** – every table has a download button; data respects the current date filter.
@@ -67,6 +83,7 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
   `ZAYDANY_ANALYTICS` dict.
 - **Privacy‑First** – IP addresses are hashed; no cookies required (anonymous session cookie is optional and carries no
   personal data); all data stays on your server.
+- **Self‑Contained** – no external CDN calls for maps, charts, or fonts – everything is bundled.
 
 ---
 
@@ -81,6 +98,7 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 | GeoIP              | MaxMind GeoLite2‑City (offline database) + geoip2  |
 | User‑Agent Parsing | user‑agents (optional, bundled fallback)           |
 | Country Codes      | pycountry                                          |
+| Server Metrics     | psutil                                             |
 
 ---
 
@@ -155,6 +173,23 @@ python manage.py runserver
 
 Visit http://127.0.0.1:8000/insights/ – your analytics dashboard is live.
 
+### Additional management commands
+
+The package includes several management commands to help with daily operations:
+
+```bash
+# Aggregate yesterday's stats (run daily via cron)
+python manage.py aggregate_daily_stats
+
+# Seed the database with dummy data for testing
+python manage.py seed_analytics
+
+# Import a list of bot paths from a text file
+python manage.py import_bot_paths /path/to/bot_paths.txt
+
+# Create a backup (called by the backup system or cron)
+python manage.py create_backup
+```
 
 ---
 
@@ -167,7 +202,8 @@ ZAYDANY_ANALYTICS = {
     # Sidebar sections to show (order matters)
     'SIDEBAR_SECTIONS': [
         'overview', 'pages', 'api', 'traffic', 'realtime',
-        'geography', 'events', 'billing', 'settings'
+        'geography', 'events', 'billing', 'releases', 'settings',
+        'bots', 'backups'
     ],
 
     # Prefix used to identify API calls (used in stats)
@@ -186,6 +222,10 @@ ZAYDANY_ANALYTICS = {
     'DEFAULT_IGNORED_PREFIXES': ['/admin/', '/static/', '/media/'],
     'DEFAULT_IGNORED_EXTENSIONS': ['.css', '.js', '.png', '.jpg', '.svg', '.ico', '.woff2'],
     'DEFAULT_REALTIME_REFRESH': 30,
+
+    'UPLOADS_INCOMING_ROOT': None,
+    'UPLOAD_CHUNK_SIZE_MB': 5,  # optional, default 5
+    'UPLOAD_MAX_FILE_SIZE_MB': 2048,  # optional, default 2048 (2GB)
 }
 ```
 
@@ -195,18 +235,29 @@ Important: If you enable the 'billing' section, the corresponding models must ex
 
 ## Dashboard Pages
 
-| Page        | URL                    | What it shows                                                                                                                                            |
-|-------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Overview    | `/insights/`           | Today/yesterday views, unique visitors, sessions, bounce rate, pages/session, API calls, top page, 30‑day trend chart, top‑10 bar chart, top pages table |
-| Pages       | `/insights/pages/`     | All tracked pages with view counts, search by path, pagination, links to per‑page detail                                                                 |
-| Page Detail | `/insights/pages/…/`   | 30‑day view chart for a single page with compare toggle                                                                                                  |
-| API         | `/insights/api/`       | API call counts today/yesterday, 30‑day API chart, top endpoints, status‑code distribution                                                               |
-| Traffic     | `/insights/traffic/`   | Top referrers, browsers, operating systems, device types                                                                                                 |
-| Geography   | `/insights/geography/` | Offline world map with drill‑down, country table, top cities (click a country to filter cities)                                                          |
-| Events      | `/insights/events/`    | Custom events: today/yesterday counts, daily chart, top categories, top actions, top labels, events by page, recent events feed                          |
-| Billing     | `/insights/billing/`   | (optional) Total revenue, today/month revenue, active subscriptions, donations, daily income chart, top plans, recent transactions                       |
-| Real‑time   | `/insights/realtime/`  | Live visitor count (last 5 min), unique IPs, recent page views table with configurable refresh                                                           |
-| Settings    | `/insights/settings/`  | IP anonymisation, ignored paths/extensions, refresh interval, theme selector, language selector                                                          |
+| Page             | URL                  | What it shows                                                                                                                                            |
+|------------------|----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Overview         | `/`                  | Today/yesterday views, unique visitors, sessions, bounce rate, pages/session, API calls, top page, 30‑day trend chart, top‑10 bar chart, top pages table |
+| Pages            | `/pages/`            | All tracked pages with view counts, search by path, pagination, links to per‑page detail                                                                 |
+| Page Detail      | `/pages/…/`          | 30‑day view chart for a single page with compare toggle                                                                                                  |
+| API              | `/api/`              | API call counts today/yesterday, 30‑day API chart, top endpoints, status‑code distribution                                                               |
+| Traffic          | `/traffic/`          | Top referrers, browsers, operating systems, device types                                                                                                 |
+| Geography        | `/geography/`        | Offline world map with drill‑down, country table, top cities (click a country to filter cities)                                                          |
+| Events           | `/events/`           | Custom events: today/yesterday counts, daily chart, top categories, top actions, top labels, events by page, recent events feed                          |
+| Billing          | `/billing/`          | (optional) Total revenue, today/month revenue, active subscriptions, donations, daily income chart, top plans, recent transactions                       |
+| Real‑time        | `/realtime/`         | Live visitor count (last 5 min), unique IPs, recent page views table with configurable refresh                                                           |
+| Server Overview  | `/server/overview/`  | System health snapshot: CPU, memory, disk, network usage with live charts                                                                                |
+| Server CPU       | `/server/cpu/`       | Detailed CPU usage per core, historical chart, load average                                                                                              |
+| Server Memory    | `/server/memory/`    | RAM and swap usage with doughnut chart                                                                                                                   |
+| Server Disk      | `/server/disk/`      | Partition usage bars and I/O history                                                                                                                     |
+| Server Network   | `/server/network/`   | Interface statistics and network traffic chart                                                                                                           |
+| Server Services  | `/server/services/`  | List of running systemd services                                                                                                                         |
+| Server Processes | `/server/processes/` | Active process list sorted by CPU usage                                                                                                                  |
+| Settings         | `/settings/`         | IP anonymisation, ignored paths/extensions, refresh interval, theme selector, language selector                                                          |
+| Admin Overview   | `/admin-overview/`   | User registrations, content creation, and login activity charts                                                                                          |
+| Bot Traffic      | `/bots/`             | Total bot requests, daily bot charts, top bot paths, bot requests by country                                                                             |
+| Backups          | `/backups/`          | Configure backup paths, storage, schedule, and retention; create, download, and delete backups                                                           |
+| About            | `/about/`            | The story behind the project, the developer, and support options                                                                                         |
 
 All pages support date‑range filtering with one‑click presets (Today, Yesterday, Last 7 days, Last 30 days, This
 month).  
@@ -221,14 +272,53 @@ Track any user interaction — button clicks, form submissions, video plays, dow
 
 ### Quick start
 
-1. Include the snippet on every page you want to track:
+The package includes a lightweight event tracking script. You can either include it via Django's static tag, or copy the
+code directly into your project.
+
+**Option 1: Using Django's static tag (recommended for Django projects)**
 
 ```html
 
 <script src="{% static 'analytics/scripts/analytics-events.js' %}"></script>
 ```
 
-2. Add `data-analytics-*` attributes to any HTML element:
+**Option 2: Copy the script directly (for non‑Django projects or custom setups)**
+
+The script is just a few lines. Place it in your site's JavaScript and adjust the URL prefix if you changed the
+default (`/insights/`):
+
+```javascript
+(function () {
+    if (typeof window.opAnalytics !== 'undefined') return;
+
+    window.opAnalytics = function (category, action, label, value) {
+        var payload = {
+            category: category,
+            action: action,
+            path: window.location.pathname
+        };
+        if (label !== undefined) payload.label = label;
+        if (value !== undefined) payload.value = value;
+
+        // Replace YOUR_PREFIX with your actual URL prefix (e.g., /insights/ or /analytics/)
+        fetch('YOUR_PREFIX/api/event/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        }).catch(function () {
+        });
+    };
+})();
+```
+
+**Note:** The default prefix is `/insights/`. If you changed it in your `urls.py`, replace `YOUR_PREFIX` in the script
+above.
+
+### Tracking events
+
+Once the script is loaded, you can track events in two ways:
+
+**Using data attributes (no JavaScript required):**
 
 ```html
 
@@ -241,7 +331,7 @@ Track any user interaction — button clicks, form submissions, video plays, dow
 </form>
 ```
 
-3. Or call the function directly from JavaScript:
+**Using JavaScript directly:**
 
 ```javascript
 window.opAnalytics('video', 'play', 'intro-tutorial', 1);
@@ -258,6 +348,129 @@ All events appear in the Events dashboard with full date‑range filtering, comp
 | label    | No       | Extra detail, e.g. `signup-hero`, `linux-download`      |
 | value    | No       | Numeric value (optional)                                |
 | path     | No       | Page path – auto‑filled from `window.location.pathname` |
+
+---
+
+## Admin Overview
+
+The **Admin Overview** page provides a high‑level summary of site activity for administrators. It shows:
+
+- **User statistics** – total users, new users today, new users this week, active users (last 7 days).
+- **Content statistics** – total content items (articles, pages, etc.), configurable via `CONTENT_MODELS` in the view.
+- **Charts** – user registrations over the last 30 days, content creation, and user logins.
+- **Recent activity** – a table of recent actions from `django-auditlog` (if installed) or recent user logins.
+
+This page is designed to give you a quick glance at the health of your site without diving into the Django admin or raw
+database tables.
+
+---
+
+## Server Monitoring
+
+The dashboard includes a full server monitoring suite that reads metrics directly from your system using the `psutil`
+library. No agents, no external services – all data is collected locally.
+
+### Available Pages
+
+- **Overview** – a real‑time dashboard showing CPU, memory, disk, and network usage with live‑updating charts.
+- **CPU** – per‑core usage, historical chart, and load average.
+- **Memory** – RAM and swap usage with a doughnut chart.
+- **Disk** – partition usage bars and I/O history.
+- **Network** – interface statistics and traffic history.
+- **Services** – list of running systemd services (Linux) with status.
+- **Processes** – active process list sorted by CPU usage, updated every 5 seconds.
+
+### Privacy and Security
+
+All metrics are read locally; no data is sent to any third‑party service. The server views are protected by the same
+`@staff_member_required` decorator as the rest of the admin pages, so only logged‑in staff can access them.
+
+### Configuration
+
+No additional configuration is required for the server section – it works out of the box on Linux, macOS, and Windows.
+The only dependency is `psutil`, which is automatically installed with the package.
+
+---
+
+## Bot Traffic
+
+The dashboard can automatically detect and separate bot/scanner traffic from real user visits. This keeps your main
+analytics clean and provides a dedicated view for security monitoring.
+
+### How it works
+
+- You define a list of **bot paths** (one per line) in the Settings page, e.g.:
+
+```text
+/robots.txt
+/.env
+/wp-admin/
+/xmlrpc.php
+```
+
+- The middleware checks each incoming request: if the path matches any bot path, it:
+    - Marks the `PageView` with `is_bot=True`
+    - Increments `DailySiteStats.bot_views` (not `total_views`)
+- Bot requests are **excluded** from all main analytics (overview, pages, geography, traffic, real‑time, events, API).
+- They are **only** visible on the dedicated **Bot Traffic** page, which shows:
+    - Total bot requests, today's bot requests, unique bot IPs
+    - Daily bot requests chart (last 30 days)
+    - Top 20 bot paths (horizontal bar chart)
+    - Bot requests by country (doughnut chart)
+
+### Importing a large bot path list
+
+If you have a large file of known bot paths (e.g., from server logs), you can import it using the management command:
+
+```bash
+python manage.py import_bot_paths /path/to/bot_paths.txt
+```
+
+The file should contain one path per line. The command automatically merges new paths with existing ones and supports
+--replace to overwrite.
+
+This is useful for blocking common scanners (e.g., WordPress exploit attempts, .env file probes, wlwmanifest.xml scans).
+A pre‑populated bots_paths.txt file is included in the package with over 3,400 known malicious paths.
+
+--- 
+
+## Backup Management
+
+The dashboard includes a full backup management system that lets you create, download, and delete server backups
+directly from the web interface.
+
+### Features
+
+- **Configurable paths** – specify which directories or files to back up (one per line).
+- **Storage location** – choose an absolute path on your server where backups are stored.
+- **Scheduled backups** – set a schedule (manual, daily, weekly, monthly) and run via cron.
+- **Retention** – keep the last N backups; older ones are automatically deleted.
+- **On‑demand backup creation** – click a button to create a backup immediately (runs in the background so the page
+  doesn't block).
+- **Chunked download** – large backup files are downloaded in 5 MB chunks for reliability.
+- **Status tracking** – see if a backup is pending, creating, completed, or failed.
+
+### Configuration
+
+1. Go to `/insights/backups/` (the Settings card is at the top of the page).
+2. Fill in:
+    - **Paths to backup** – one per line (absolute or relative to project root).
+    - **Storage directory** – absolute path (must be writable by the web server).
+    - **Enable automatic backups** – check to allow scheduled backups.
+    - **Schedule** – how often to run.
+    - **Retention** – number of backups to keep.
+3. Click **Save Settings**.
+4. To create a backup, click **Create Backup** in the Archives card.
+
+### Management command for scheduled backups
+
+Add a cron job to run the backup command at your chosen schedule. For daily backups at 2 AM:
+
+```bash
+0 2 * * * cd /path/to/project && python manage.py create_backup >> /var/log/backup.log 2>&1
+```
+
+The command reads the configuration from the database and prunes old backups automatically.
 
 ---
 
@@ -431,6 +644,8 @@ If the models don't exist or aren't configured, the billing section simply doesn
 ├── analytics
 │   ├── admin.py
 │   ├── apps.py
+│   ├── bots_paths.txt
+│   ├── conf_uploads.py
 │   ├── context_processors.py
 │   ├── geoip
 │   │   ├── GeoLite2-ASN.mmdb
@@ -460,6 +675,8 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   ├── management
 │   │   └── commands
 │   │       ├── aggregate_daily_stats.py
+│   │       ├── create_backup.py
+│   │       ├── import_bot_paths.py
 │   │       └── seed_analytics.py
 │   ├── middleware.py
 │   ├── migrations
@@ -468,6 +685,10 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   │   ├── 0003_dailysitestats_bounces_dailysitestats_total_sessions_and_more.py
 │   │   ├── 0004_pageview_city_pageview_country_code_and_more.py
 │   │   ├── 0005_analyticsevent.py
+│   │   ├── 0006_fileupload.py
+│   │   ├── 0007_analyticssettings_bot_paths_and_more.py
+│   │   ├── 0008_backuparchive_backupconfiguration.py
+│   │   ├── 0009_alter_backuparchive_id.py
 │   │   └── __init__.py
 │   ├── models.py
 │   ├── requirements.txt
@@ -479,17 +700,33 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   │       │   │   ├── icon-file-text.svg
 │   │       │   │   ├── icon-global.svg
 │   │       │   │   └── icon-time-spendin.svg
+│   │       │   ├── brand
+│   │       │   │   ├── icon-brand.png
+│   │       │   │   ├── icon-brand.svg
+│   │       │   │   ├── icon-brand-transparent.png
+│   │       │   │   └── icon-brand-transparent.svg
 │   │       │   ├── ui
 │   │       │   │   ├── icon-bar-chart.svg
+│   │       │   │   ├── icon-bot.svg
 │   │       │   │   ├── icon-cpu.svg
 │   │       │   │   ├── icon-download.svg
-│   │       │   │   └── icon-overview.svg
+│   │       │   │   ├── icon-harddisk.svg
+│   │       │   │   ├── icon-key.svg
+│   │       │   │   ├── icon-layers.svg
+│   │       │   │   ├── icon-memory.svg
+│   │       │   │   ├── icon-network.svg
+│   │       │   │   ├── icon-overview.svg
+│   │       │   │   └── icon-server.svg
 │   │       │   └── ui-multi
+│   │       │       ├── icon-cloud-uploading.svg
 │   │       │       └── icon-setting.svg
 │   │       ├── scripts
+│   │       │   ├── admin-overview.js
 │   │       │   ├── analytics-events.js
 │   │       │   ├── api.js
+│   │       │   ├── backups.js
 │   │       │   ├── billing-chart.js
+│   │       │   ├── bots.js
 │   │       │   ├── chart.umd.js
 │   │       │   ├── d3.v3.min.js
 │   │       │   ├── datamaps.world.min.js
@@ -500,31 +737,48 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   │       │   ├── overview.js
 │   │       │   ├── page-detail.js
 │   │       │   ├── realtime.js
+│   │       │   ├── server
+│   │       │   │   ├── cpu.js
+│   │       │   │   ├── disk.js
+│   │       │   │   ├── memory.js
+│   │       │   │   ├── network.js
+│   │       │   │   ├── overview.js
+│   │       │   │   ├── processes.js
+│   │       │   │   └── services.js
 │   │       │   ├── sidebar.js
 │   │       │   ├── theme-manager.js
-│   │       │   └── topojson.v1.min.js
+│   │       │   ├── topojson.v1.min.js
+│   │       │   └── upload-widget.js
 │   │       └── styles
 │   │           ├── base.css
 │   │           ├── components
+│   │           │   ├── about.css
+│   │           │   ├── backup.css
 │   │           │   ├── charts.css
 │   │           │   ├── export-btn.css
 │   │           │   ├── filter-bar.css
 │   │           │   ├── icon.css
 │   │           │   ├── menu.css
+│   │           │   ├── server.css
 │   │           │   ├── settings-form.css
 │   │           │   ├── sidebar.css
 │   │           │   ├── stat-cards.css
 │   │           │   ├── tables.css
 │   │           │   ├── topbar.css
-│   │           │   └── typography.css
+│   │           │   ├── typography.css
+│   │           │   └── upload.css
 │   │           ├── layout.css
 │   │           ├── themes.css
 │   │           └── tokens.css
 │   ├── templates
 │   │   └── analytics
+│   │       ├── about.html
+│   │       ├── admin_overview.html
 │   │       ├── api.html
+│   │       ├── backups.html
 │   │       ├── base.html
 │   │       ├── billing.html
+│   │       ├── bots.html
 │   │       ├── dashboard.html
 │   │       ├── events.html
 │   │       ├── geography.html
@@ -533,6 +787,14 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   │       ├── page_detail.html
 │   │       ├── pages.html
 │   │       ├── realtime.html
+│   │       ├── releases.html
+│   │       ├── server_cpu.html
+│   │       ├── server_disk.html
+│   │       ├── server_memory.html
+│   │       ├── server_network.html
+│   │       ├── server_overview.html
+│   │       ├── server_processes.html
+│   │       ├── server_services.html
 │   │       ├── settings.html
 │   │       └── traffic.html
 │   ├── templatetags
@@ -541,8 +803,12 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   ├── tests.py
 │   ├── urls.py
 │   └── views
+│       ├── about.py
+│       ├── admin_overview.py
 │       ├── api.py
+│       ├── backup.py
 │       ├── billing.py
+│       ├── bots.py
 │       ├── dashboard.py
 │       ├── events.py
 │       ├── export.py
@@ -551,12 +817,39 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │       ├── page_detail.py
 │       ├── pages.py
 │       ├── realtime.py
+│       ├── releases.py
+│       ├── server.py
 │       ├── settings.py
 │       ├── traffic.py
+│       ├── uploads.py
 │       └── utils.py
+├── screenshots
+│   ├── api-gold.png
+│   ├── billing-gold.png
+│   ├── events-arctic.png
+│   ├── events-arctic-three.png
+│   ├── events-arctic-two.png
+│   ├── events-gold.png
+│   ├── geography-gold.png
+│   ├── geography-indigo.png
+│   ├── geography-skybound.png
+│   ├── overview-gold.png
+│   ├── overview-gold-two.png
+│   ├── overview-onyx.png
+│   ├── pages-detail-gold.png
+│   ├── pages-gold.png
+│   ├── realtime-gold.png
+│   ├── settings-arctic.png
+│   ├── settings-arctic-two.png
+│   ├── settings-gold.png
+│   ├── settings-sunlit.png
+│   └── traffic-gold.png
+├── package-lock.json
+├── pyproject.toml
 ├── .gitignore
 ├── .gitattributes
 ├── setup.cfg
+├── setup.py
 ├── MANIFEST.in
 ├── README.md
 └── LICENSE
@@ -734,25 +1027,45 @@ This license also includes an express **grant of patent rights** from contributo
 
 ## Credits
 
-Built entirely by **Parsa Zaydany** — solo, offline, during difficult circumstances.
+Built entirely by **Parsa Zaydany** — solo, offline, during difficult circumstances – and published under the **Paxalia
+** brand.
 
-The world map database is only 60MB.  
-Downloading it took **over four hours** over an unreliable connection.
+### The Story
 
-Pushing this first release to GitHub required buying a small amount of bandwidth —  
-a purchase that came from savings I had set aside over two years for my main project.  
-For someone in my situation, even this single push was expensive.
+This dashboard exists because the analytics landscape is broken. Most tools track your users, expose their IPs, and send
+data to third‑party servers. They're insecure by design, and they don't respect privacy.
 
-But developers exist because we help each other.  
-Every language we use, every framework, every open‑source package —  
+**django‑zaydany‑analytics** is different:
+
+- It's completely open source.
+- It runs entirely on your own server – no external calls, no tracking pixels.
+- Your users' privacy is protected by default.
+
+The world map database is only 60MB. Downloading it took **over four hours** over an unreliable connection. Pushing this
+first release to GitHub required buying a small amount of bandwidth — a purchase that came from savings I had set aside
+over two years for my main project. For someone in my situation, even this single push was expensive.
+
+But developers exist because we help each other. Every language we use, every framework, every open‑source package —
 someone built it and shared it. This is my contribution back.
 
-When my situation improves in the coming months, big things are on the road.
+### About Paxalia
+
+[Paxalia](https://paxalia.com) is a collection of thoughtfully crafted digital tools – a planning app, an SVG design
+tool, and this analytics dashboard – all built by a solo developer who believes that great software should be both
+powerful and ethical.
+
+### Full Story
+
+To learn more about the project, the developer, and how to support its continued development, visit the **About** page
+inside the dashboard at `/insights/about/`.
+
+### Support
 
 If this package helps your project, consider:
 
 - Giving it a star on GitHub
 - Sharing it with the Django community
 - Contributing a translation or feature
+- Supporting via [Paxalia](https://paxalia.com/donation/)
 
 Thank you for using **django‑zaydany‑analytics**.
