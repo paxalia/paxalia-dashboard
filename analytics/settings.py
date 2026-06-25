@@ -3,7 +3,7 @@ from django.conf import settings
 
 DEFAULTS = {
     'SIDEBAR_SECTIONS': [
-        'overview', 'pages', 'api', 'traffic', 'realtime',
+        'overview', 'pages', 'api', 'traffic', 'realtime', 'bots',
         'geography', 'events', 'billing', 'releases', 'settings'
     ],
     'API_PATH_PREFIX': '/api/',

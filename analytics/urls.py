@@ -3,7 +3,7 @@ from .views import (
     analytics_dashboard, analytics_pages, analytics_page_detail, analytics_api,
     analytics_traffic, analytics_realtime, analytics_realtime_data, analytics_settings,
     analytics_export, analytics_geography, analytics_event_api, analytics_events,
-    analytics_billing, uploads, releases_page, admin_overview
+    analytics_billing, uploads, releases_page, admin_overview, bots_overview
 )
 from .views import server as server_views
 
@@ -26,6 +26,7 @@ urlpatterns = [
     path('geography/', analytics_geography, name='geography'),
     path('events/', analytics_events, name='events'),
     path('billing/', analytics_billing, name='billing'),
+    path('bots/', bots_overview, name='bots'),
 
     path('server/overview/', server_views.server_overview, name='server_overview'),
     path('server/cpu/', server_views.server_cpu, name='server_cpu'),

@@ -1,10 +1,8 @@
 import uuid
 import hashlib
-import uuid
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from django.db import models
 from django.contrib.auth.models import User
 
 
@@ -16,6 +14,7 @@ class PageView(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     url = models.CharField(max_length=2048)
     path = models.CharField(max_length=255, db_index=True)
+    is_bot = models.BooleanField(default=False, help_text="True if the request path matches a bot path.")
     method = models.CharField(max_length=10, default='GET')
     status_code = models.PositiveIntegerField(default=200)
     ip_hash = models.CharField(max_length=64, blank=True, db_index=True)
@@ -51,6 +50,7 @@ class DailySiteStats(models.Model):
     top_pages = models.JSONField(default=dict, blank=True)
     total_sessions = models.PositiveIntegerField(default=0)
     bounces = models.PositiveIntegerField(default=0)
+    bot_views = models.PositiveIntegerField(default=0, help_text="Requests to paths marked as bot/scanner traffic")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -80,6 +80,15 @@ class AnalyticsSettings(models.Model):
         default=30,
         help_text="How often (in seconds) the real‑time dashboard refreshes"
     )
+    # New fields for bot/tracked paths
+    tracked_paths = models.TextField(
+        blank=True,
+        help_text="One path prefix per line. If non‑empty, ONLY these paths will be logged (ignored_paths still apply)."
+    )
+    bot_paths = models.TextField(
+        blank=True,
+        help_text="One path prefix per line. Requests to these paths are counted as bot traffic (shown separately)."
+    )
 
     class Meta:
         verbose_name = "Analytics Settings"
@@ -88,7 +97,6 @@ class AnalyticsSettings(models.Model):
     def save(self, *args, **kwargs):
         # Enforce singleton
         if AnalyticsSettings.objects.exists() and not self.pk:
-            # Update the existing instance instead
             existing = AnalyticsSettings.objects.first()
             for field in self._meta.fields:
                 if field.name != 'id':

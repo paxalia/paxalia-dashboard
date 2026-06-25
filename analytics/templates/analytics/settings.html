@@ -4,7 +4,7 @@
 {% block title %}{% trans "Settings" %} – Analytics{% endblock %}
 
 {% block page_title %}Settings{% endblock %}
-{% block page_subtitle %}IP anonymization, ignored paths, refresh interval{% endblock %}
+{% block page_subtitle %}IP anonymization, path filtering, refresh interval{% endblock %}
 
 {% block dashboard_content %}
     <div class="setting-table-grid">
@@ -73,13 +73,29 @@
                 </div>
 
                 <div class="form-row">
+                    <label for="tracked_paths">{% trans "Tracked Path Prefixes (one per line)" %}</label>
+                    <div class="form-hint">{% trans "Leave empty to track all (except ignored). If set, only these paths will be logged." %}</div>
+                    <textarea name="tracked_paths" id="tracked_paths"
+                              rows="4">{{ settings.tracked_paths }}</textarea>
+                </div>
+
+                <div class="form-row">
                     <label for="ignored_prefixes">{% trans "Ignored Path Prefixes (one per line)" %}</label>
+                    <div class="form-hint">{% trans "Requests starting with these will be completely ignored." %}</div>
                     <textarea name="ignored_prefixes" id="ignored_prefixes"
                               rows="4">{{ settings.ignored_prefixes }}</textarea>
                 </div>
 
                 <div class="form-row">
+                    <label for="bot_paths">{% trans "Bot/Scanner Path Prefixes (one per line)" %}</label>
+                    <div class="form-hint">{% trans "Requests to these paths will be counted separately as bot traffic." %}</div>
+                    <textarea name="bot_paths" id="bot_paths"
+                              rows="4">{{ settings.bot_paths }}</textarea>
+                </div>
+
+                <div class="form-row">
                     <label for="ignored_extensions">{% trans "Ignored File Extensions (one per line)" %}</label>
+                    <div class="form-hint">{% trans "Requests to these file types will be ignored." %}</div>
                     <textarea name="ignored_extensions" id="ignored_extensions"
                               rows="4">{{ settings.ignored_extensions }}</textarea>
                 </div>

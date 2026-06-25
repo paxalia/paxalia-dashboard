@@ -180,6 +180,19 @@
                         </a>
                         {% endif %}
 
+                        {% if 'bots' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:bots' %}"
+                           class="analytics-sidebar-link {% if active_page == 'bots' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v6l5.25 3.15L17 12.23l-4-2.37V7z"/>
+                                </svg>
+                            </span>
+                            {% trans "Bot Traffic" %}
+                        </a>
+                        {% endif %}
+
                         {% if 'billing' in analytics_config.SIDEBAR_SECTIONS %}
                         <a href="{% url 'analytics:billing' %}"
                            class="analytics-sidebar-link {% if active_page == 'billing' %}active{% endif %}">
