@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from .views import (
     analytics_dashboard, analytics_pages, analytics_page_detail, analytics_api,
     analytics_traffic, analytics_realtime, analytics_realtime_data, analytics_settings,
@@ -10,11 +10,21 @@ from .views import backup as backup_views
 
 app_name = 'analytics'
 
-urlpatterns = [
-    # API endpoints (must come first)
-    path('api/event/', analytics_event_api, name='event_api'),
+# ─── Public API endpoints (no hardcoded path prefix) ──────────────
+api_urlpatterns = [
+    path('event/', analytics_event_api, name='event_api'),
     path('realtime/data/', analytics_realtime_data, name='realtime_data'),
+    path('server/metrics/', server_views.api_server_metrics, name='api_server_metrics'),
+    path('server/history/', server_views.api_server_history, name='api_server_history'),
+    path('uploads/init/', uploads.upload_init, name='upload_init'),
+    path('uploads/chunk/<uuid:upload_id>/', uploads.upload_chunk, name='upload_chunk'),
+    path('uploads/complete/<uuid:upload_id>/', uploads.upload_complete, name='upload_complete'),
+    path('uploads/delete/<uuid:upload_id>/', uploads.upload_delete, name='upload_delete'),
+    path('uploads/list/', uploads.upload_list, name='upload_list'),
+]
 
+# ─── Dashboard pages ──────────────────────────────────────────────
+dashboard_urlpatterns = [
     # Dashboard pages
     path('', analytics_dashboard, name='dashboard'),
     path('pages/', analytics_pages, name='pages'),
@@ -39,10 +49,6 @@ urlpatterns = [
 
     path('admin-overview/', admin_overview, name='admin_overview'),
 
-    # Server API endpoints
-    path('api/server/metrics/', server_views.api_server_metrics, name='api_server_metrics'),
-    path('api/server/history/', server_views.api_server_history, name='api_server_history'),
-
     path('backups/', backup_views.backup_management, name='backups'),
     path('backups/trigger/', backup_views.backup_trigger, name='backup_trigger'),
     path('backups/delete/<uuid:backup_id>/', backup_views.backup_delete, name='backup_delete'),
@@ -51,11 +57,11 @@ urlpatterns = [
     path('backups/download/chunk/<uuid:backup_id>/<int:chunk_index>/', backup_views.backup_download_chunk, name='backup_download_chunk'),
 
     path('releases/', releases_page, name='releases'),
-    path('releases/upload/init/', uploads.upload_init, name='upload_init'),
-    path('releases/upload/chunk/<uuid:upload_id>/', uploads.upload_chunk, name='upload_chunk'),
-    path('releases/upload/complete/<uuid:upload_id>/', uploads.upload_complete, name='upload_complete'),
-    path('releases/upload/list/', uploads.upload_list, name='upload_list'),
-    path('releases/upload/delete/<uuid:upload_id>/', uploads.upload_delete, name='upload_delete'),
 
     path('about/', about, name='about'),
+]
+
+# ─── Combined for backward compatibility ────────────────────────────
+urlpatterns = dashboard_urlpatterns + [
+    path('api/', include(api_urlpatterns)),
 ]

@@ -24,9 +24,7 @@
                     {% endif %}
                 {% endfor %}
                 <label class="compare-toggle__label">
-                    <input type="checkbox" name="compare" value="1"
-                           {% if compare_active %}checked{% endif %}
-                           onchange="this.form.submit()">
+                    <input type="checkbox" name="compare" value="1" id="compare-toggle" {% if compare_active %}checked{% endif %}>
                     <span>{% trans "Compare to previous period" %}</span>
                 </label>
             </form>
@@ -42,7 +40,14 @@
 {% endblock %}
 
 {% block page_scripts %}
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('compare-toggle')?.addEventListener('change', function() {
+                this.form.submit();
+            });
+        });
+    </script>
+    <script nonce="{{ request.csp_nonce }}">
         window.__analytics_filter = {
             startDate: "{{ start_date|date:'Y-m-d'|default:'' }}",
             endDate: "{{ end_date|date:'Y-m-d'|default:'' }}",
@@ -58,6 +63,6 @@
             previousData: [{% for count in previous_views %}{{ count }}{% if not forloop.last %}, {% endif %}{% endfor %}]
         };
     </script>
-    <script src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
-    <script src="{% static 'analytics/scripts/page-detail.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/page-detail.js' %}"></script>
 {% endblock %}

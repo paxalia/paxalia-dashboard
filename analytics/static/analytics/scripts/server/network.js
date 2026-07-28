@@ -1,7 +1,15 @@
 // analytics/static/analytics/scripts/server/network.js
+
 (function() {
-    const API_URL = window.SERVER_API_METRICS_URL || '/analytics/api/server/metrics/';
-    const HISTORY_URL = window.SERVER_API_HISTORY_URL || '/analytics/api/server/history/';
+    // ─── Use the dynamic URLs provided by the template ────────────
+    const API_URL = window.SERVER_API_METRICS_URL;
+    const HISTORY_URL = window.SERVER_API_HISTORY_URL;
+
+    // If the URLs are not defined, log a warning and exit.
+    if (!API_URL || !HISTORY_URL) {
+        console.warn('[Analytics] Server API URLs not defined. Network charts will not work.');
+        return;
+    }
 
     function formatBytes(bytes) {
         if (bytes === 0) return '0 B';
@@ -37,8 +45,8 @@
                     .then(res => res.json())
                     .then(history => {
                         const labels = history.map(item => new Date(item.time).toLocaleTimeString());
-                        const inData = history.map(item => item.network_in / (1024*1024));
-                        const outData = history.map(item => item.network_out / (1024*1024));
+                        const inData = history.map(item => item.network_in / (1024 * 1024));
+                        const outData = history.map(item => item.network_out / (1024 * 1024));
                         networkChart.data.labels = labels;
                         networkChart.data.datasets[0].data = inData;
                         networkChart.data.datasets[1].data = outData;
@@ -57,8 +65,24 @@
             data: {
                 labels: [],
                 datasets: [
-                    { label: 'In (MB)', data: [], borderColor: '#36a2eb', backgroundColor: 'rgba(54,162,235,0.1)', fill: true, tension: 0.3, pointRadius: 1 },
-                    { label: 'Out (MB)', data: [], borderColor: '#ff6384', backgroundColor: 'rgba(255,99,132,0.1)', fill: true, tension: 0.3, pointRadius: 1 }
+                    {
+                        label: 'In (MB)',
+                        data: [],
+                        borderColor: '#36a2eb',
+                        backgroundColor: 'rgba(54,162,235,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 1
+                    },
+                    {
+                        label: 'Out (MB)',
+                        data: [],
+                        borderColor: '#ff6384',
+                        backgroundColor: 'rgba(255,99,132,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 1
+                    }
                 ]
             },
             options: {

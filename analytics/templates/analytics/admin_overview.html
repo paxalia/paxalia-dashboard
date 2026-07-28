@@ -56,6 +56,6 @@
 
 {% block page_scripts %}
     {{ chart_data|json_script:"admin-chart-data" }}
-    <script src="{% static 'analytics/scripts/chart.umd.js' %}"></script>
-    <script src="{% static 'analytics/scripts/admin-overview.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/chart.umd.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/admin-overview.js' %}"></script>
 {% endblock %}

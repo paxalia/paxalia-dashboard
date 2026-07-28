@@ -46,12 +46,12 @@
 {% endblock %}
 
 {% block page_scripts %}
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         window.__analytics_realtime = {
             refreshSeconds: {{ refresh_seconds|default:30 }},
             dataUrl: "{% url 'analytics:realtime_data' %}",
             emptyMessage: "{% trans 'No activity in the last 5 minutes.' %}",
         };
     </script>
-    <script src="{% static 'analytics/scripts/realtime.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/realtime.js' %}"></script>
 {% endblock %}

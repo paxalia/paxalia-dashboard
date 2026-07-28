@@ -46,6 +46,6 @@
 
 {% block page_scripts %}
     {{ bot_data|json_script:"bot-chart-data" }}
-    <script src="{% static 'analytics/scripts/chart.umd.js' %}"></script>
-    <script src="{% static 'analytics/scripts/bots.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/chart.umd.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/bots.js' %}"></script>
 {% endblock %}

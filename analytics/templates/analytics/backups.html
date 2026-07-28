@@ -98,7 +98,7 @@
                                         </a>
                                         <form method="post" action="{% url 'analytics:backup_delete' backup.id %}" style="display:inline;">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this backup?')">{% trans "Delete" %}</button>
+                                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="Delete this backup?">{% trans "Delete" %}</button>
                                         </form>
                                     {% elif backup.status == 'creating' %}
                                         <span class="status-creating">{% trans "Creating…" %}</span>
@@ -119,5 +119,16 @@
 {% endblock %}
 
 {% block page_scripts %}
-    <script src="{% static 'analytics/scripts/backups.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}">
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('[data-confirm]').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    if (!confirm(this.dataset.confirm)) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+    </script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/backups.js' %}"></script>
 {% endblock %}

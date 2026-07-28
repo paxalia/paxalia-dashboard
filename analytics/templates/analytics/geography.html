@@ -116,7 +116,7 @@
 {% endblock %}
 
 {% block page_scripts %}
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         window.__analytics_filter = {
             startDate: "{{ start_date|date:'Y-m-d'|default:'' }}",
             endDate: "{{ end_date|date:'Y-m-d'|default:'' }}",
@@ -136,9 +136,9 @@
             ]
         };
     </script>
-    <script src="{% static 'analytics/scripts/d3.v3.min.js' %}"></script>
-    <script src="{% static 'analytics/scripts/topojson.v1.min.js' %}"></script>
-    <script src="{% static 'analytics/scripts/datamaps.world.min.js' %}"></script>
-    <script src="{% static 'analytics/scripts/geography-map.js' %}"></script>
-    <script src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/d3.v3.min.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/topojson.v1.min.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/datamaps.world.min.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/geography-map.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
 {% endblock %}

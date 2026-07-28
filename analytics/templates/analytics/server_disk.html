@@ -40,9 +40,9 @@
 {% endblock %}
 
 {% block page_scripts %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
     window.SERVER_API_METRICS_URL = "{% url 'analytics:api_server_metrics' %}";
     window.SERVER_API_HISTORY_URL = "{% url 'analytics:api_server_history' %}";
 </script>
-<script src="{% static 'analytics/scripts/server/disk.js' %}"></script>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/server/disk.js' %}"></script>
 {% endblock %}

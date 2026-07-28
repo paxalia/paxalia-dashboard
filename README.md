@@ -1,5 +1,6 @@
 # django‑zaydany‑analytics
 
+![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
 ![Django](https://img.shields.io/badge/django-5.0+-green.svg)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
@@ -121,22 +122,35 @@ INSTALLED_APPS = [
 
 ### 3. Include the URLs
 
-In your project’s root urls.py:
+The dashboard is mounted at a secret path of your choice. The event API is mounted at a fixed public path (hardcoded in
+JavaScript). This keeps your dashboard URL hidden while allowing the event tracking to work.
+
+In your project’s root `urls.py`:
 
 ```python
 from django.urls import path, include
 from django.views.i18n import set_language
+from analytics.views.events import analytics_event_api
+
+# Choose a secret path for your dashboard
+DASHBOARD_URL = 'insights/'  # or a random string
 
 urlpatterns = [
     # ...
-    path('insights/', include('analytics.urls')),
-    path('i18n/setlang/', set_language, name='set_language'),  # required for language switching
+    # Public event API (hardcoded path, matches JavaScript)
+    path('api/analytics/event/', analytics_event_api, name='event_api'),
+
+    # Secret dashboard (everything else)
+    path(DASHBOARD_URL, include('analytics.urls')),
+
+    # Required for language switching
+    path('i18n/setlang/', set_language, name='set_language'),
 ]
 ```
 
 ### 4. Add the analytics middleware
 
-In settings.py, add AnalyticsMiddleware to the bottom of MIDDLEWARE:
+In `settings.py`, add `analytics.middleware.AnalyticsMiddleware` to the bottom of `MIDDLEWARE`:
 
 ```python
 MIDDLEWARE = [
@@ -154,18 +168,78 @@ Without it, no data will appear in the dashboard.
 python manage.py migrate analytics
 ```
 
-### 6. Compile translations (optional)
+> **Note:** The package includes a clean `0001_initial.py` migration. If you're upgrading from an older version,
+> you should run `python manage.py migrate analytics` to apply the latest schema. The migration is
+> database-agnostic and works with SQLite, PostgreSQL, MySQL, and others.
+
+### 6. Update your base.html for CSP compliance
+
+The package uses `nonce` attributes on all `<script>` tags to comply with strict Content Security Policies. To enable
+this:
+
+1. **Add the CSP context processors** to your `settings.py`:
+
+```python
+TEMPLATES = [
+    {
+        'OPTIONS': {
+            'context_processors': [
+                # ...
+                'analytics.context_processors.analytics_config',
+                'csp.context_processors.nonce',
+            ],
+        },
+    },
+]
+```
+
+2. **Add the CSP middleware** (if not already present):
+
+```python
+MIDDLEWARE = [
+    # ...
+    'csp.middleware.CSPMiddleware',
+]
+```
+
+3. **Configure CSP** in `settings.py` with `NONCE` and `'strict-dynamic'`:
+
+```python
+from csp.constants import NONCE
+
+CONTENT_SECURITY_POLICY = {
+    'DIRECTIVES': {
+        'default-src': ("'self'",),
+        'script-src': (
+            "'self'",
+            NONCE,
+            "'strict-dynamic'",
+        ),
+        # ... other directives
+    }
+}
+```
+
+4. **Add the nonce to external scripts** in your own templates:
+
+```python
+< script
+nonce = "{{ request.csp_nonce }}"
+src = "{% static 'analytics/scripts/analytics-events.js' %}" > < / script >
+```
+
+### 7. Compile translations (optional)
 
 ```bash
 python manage.py compilemessages -l es -l ar -l zh-hans -l pt-br
 ```
 
-### 7. Download the GeoIP database (required for the geography page)
+### 8. Download the GeoIP database (required for the geography page)
 
 Download GeoLite2‑City.mmdb (free) from MaxMind
 and place it in the directory specified by GEOIP_PATH (default: analytics/geoip/ inside the package).
 
-### 8. Start the server
+### 9. Start the server
 
 ```bash
 python manage.py runserver
@@ -231,6 +305,19 @@ ZAYDANY_ANALYTICS = {
 
 Important: If you enable the 'billing' section, the corresponding models must exist and be importable.
 
+### Event API Path
+
+The event API is hardcoded in JavaScript at `/api/analytics/event/`. This is intentional:
+
+- **The dashboard URL stays secret** – never exposed in client code.
+- **The event API is public** – accepts anonymous data only.
+- **No inline scripts needed** – all CSP rules are satisfied with `nonce`.
+
+If you want to change the event API path, you must update:
+
+1. The URL pattern in your project's `urls.py`
+2. The `EVENT_URL` variable in `analytics/static/analytics/scripts/analytics-events.js`
+
 ---
 
 ## Dashboard Pages
@@ -282,35 +369,6 @@ code directly into your project.
 <script src="{% static 'analytics/scripts/analytics-events.js' %}"></script>
 ```
 
-**Option 2: Copy the script directly (for non‑Django projects or custom setups)**
-
-The script is just a few lines. Place it in your site's JavaScript and adjust the URL prefix if you changed the
-default (`/insights/`):
-
-```javascript
-(function () {
-    if (typeof window.opAnalytics !== 'undefined') return;
-
-    window.opAnalytics = function (category, action, label, value) {
-        var payload = {
-            category: category,
-            action: action,
-            path: window.location.pathname
-        };
-        if (label !== undefined) payload.label = label;
-        if (value !== undefined) payload.value = value;
-
-        // Replace YOUR_PREFIX with your actual URL prefix (e.g., /insights/ or /analytics/)
-        fetch('YOUR_PREFIX/api/event/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        }).catch(function () {
-        });
-    };
-})();
-```
-
 **Note:** The default prefix is `/insights/`. If you changed it in your `urls.py`, replace `YOUR_PREFIX` in the script
 above.
 
@@ -348,6 +406,19 @@ All events appear in the Events dashboard with full date‑range filtering, comp
 | label    | No       | Extra detail, e.g. `signup-hero`, `linux-download`      |
 | value    | No       | Numeric value (optional)                                |
 | path     | No       | Page path – auto‑filled from `window.location.pathname` |
+
+### Event API Path
+
+The event tracking script uses a **hardcoded** URL: `/api/analytics/event/`. This is intentional:
+
+- It keeps the dashboard URL secret.
+- It makes the JavaScript simple and fast.
+- It allows you to mount the dashboard at any secret path.
+
+If you need to change this path, update:
+
+1. The URL pattern in your project's `urls.py`
+2. The `EVENT_URL` variable in `analytics/static/analytics/scripts/analytics-events.js`
 
 ---
 
@@ -681,14 +752,6 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   ├── middleware.py
 │   ├── migrations
 │   │   ├── 0001_initial.py
-│   │   ├── 0002_analyticssettings.py
-│   │   ├── 0003_dailysitestats_bounces_dailysitestats_total_sessions_and_more.py
-│   │   ├── 0004_pageview_city_pageview_country_code_and_more.py
-│   │   ├── 0005_analyticsevent.py
-│   │   ├── 0006_fileupload.py
-│   │   ├── 0007_analyticssettings_bot_paths_and_more.py
-│   │   ├── 0008_backuparchive_backupconfiguration.py
-│   │   ├── 0009_alter_backuparchive_id.py
 │   │   └── __init__.py
 │   ├── models.py
 │   ├── requirements.txt
@@ -823,36 +886,13 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │       ├── traffic.py
 │       ├── uploads.py
 │       └── utils.py
-├── screenshots
-│   ├── api-gold.png
-│   ├── billing-gold.png
-│   ├── events-arctic.png
-│   ├── events-arctic-three.png
-│   ├── events-arctic-two.png
-│   ├── events-gold.png
-│   ├── geography-gold.png
-│   ├── geography-indigo.png
-│   ├── geography-skybound.png
-│   ├── overview-gold.png
-│   ├── overview-gold-two.png
-│   ├── overview-onyx.png
-│   ├── pages-detail-gold.png
-│   ├── pages-gold.png
-│   ├── realtime-gold.png
-│   ├── settings-arctic.png
-│   ├── settings-arctic-two.png
-│   ├── settings-gold.png
-│   ├── settings-sunlit.png
-│   └── traffic-gold.png
+├── LICENSE
+├── MANIFEST.in
 ├── package-lock.json
 ├── pyproject.toml
-├── .gitignore
-├── .gitattributes
-├── setup.cfg
-├── setup.py
-├── MANIFEST.in
 ├── README.md
-└── LICENSE
+├── setup.cfg
+└── setup.py
 ```
 
 > **Note:** The `.mmdb` GeoIP database files are **not** included in the Git repository because of their size.  

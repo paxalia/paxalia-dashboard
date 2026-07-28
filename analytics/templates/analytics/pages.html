@@ -73,7 +73,7 @@
 {% endblock %}
 
 {% block page_scripts %}
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         window.__analytics_filter = {
             startDate: "{{ start_date|date:'Y-m-d'|default:'' }}",
             endDate: "{{ end_date|date:'Y-m-d'|default:'' }}",
@@ -81,5 +81,5 @@
             showSearch: true
         };
     </script>
-    <script src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
 {% endblock %}

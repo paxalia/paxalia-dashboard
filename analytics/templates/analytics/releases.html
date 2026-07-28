@@ -14,14 +14,15 @@
     <p class="page-subtitle">{% trans "Upload large build artifacts over HTTPS in chunks. Works even when SSH/rsync is blocked." %}</p>
 </div>
 
+
 <div class="upload-dropzone-card">
     <div id="upload-dropzone"
          class="upload-dropzone"
-         data-init-url="{% url 'analytics:upload_init' %}"
-         data-chunk-url-template="/insights/releases/upload/chunk/PLACEHOLDER/"
-         data-complete-url-template="/insights/releases/upload/complete/PLACEHOLDER/"
-         data-delete-url-template="/insights/releases/upload/delete/PLACEHOLDER/"
-         data-list-url="{% url 'analytics:upload_list' %}">
+         data-init-url="{{ ANALYTICS_UPLOAD_INIT_URL }}"
+         data-chunk-url-template="{{ ANALYTICS_UPLOAD_CHUNK_URL }}"
+         data-complete-url-template="{{ ANALYTICS_UPLOAD_COMPLETE_URL }}"
+         data-delete-url-template="{{ ANALYTICS_UPLOAD_DELETE_URL }}"
+         data-list-url="{{ ANALYTICS_UPLOAD_LIST_URL }}">
         <input type="file" id="upload-file-input" multiple />
         <div class="upload-dropzone-text">
             <strong>{% trans "Drop files here" %}</strong>
@@ -37,8 +38,8 @@
 {% endblock %}
 
 {% block page_scripts %}
-<script src="{% static 'analytics/scripts/upload-widget.js' %}"></script>
-<script>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/upload-widget.js' %}"></script>
+<script nonce="{{ request.csp_nonce }}">
     document.addEventListener('DOMContentLoaded', function () {
         initUploadWidget('#upload-dropzone', '#upload-list');
     });
