@@ -1,9 +1,9 @@
 import uuid
 import hashlib
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from django.contrib.auth.models import User
 
 
 # Create your models here.
@@ -26,8 +26,9 @@ class PageView(models.Model):
     )
     session_id = models.CharField(max_length=64, blank=True, null=True, db_index=True)
     created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
     # Geolocation (populated by middleware if GeoIP database is available)
-    country_code = models.CharField(max_length=2, blank=True, null=True, db_index=True)  # ISO 3166-1 alpha-2
+    country_code = models.CharField(max_length=2, blank=True, null=True, db_index=True)
     country_name = models.CharField(max_length=100, blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
 
@@ -50,7 +51,10 @@ class DailySiteStats(models.Model):
     top_pages = models.JSONField(default=dict, blank=True)
     total_sessions = models.PositiveIntegerField(default=0)
     bounces = models.PositiveIntegerField(default=0)
-    bot_views = models.PositiveIntegerField(default=0, help_text="Requests to paths marked as bot/scanner traffic")
+    bot_views = models.PositiveIntegerField(
+        default=0,
+        help_text="Requests to paths marked as bot/scanner traffic"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -80,7 +84,6 @@ class AnalyticsSettings(models.Model):
         default=30,
         help_text="How often (in seconds) the real‑time dashboard refreshes"
     )
-    # New fields for bot/tracked paths
     tracked_paths = models.TextField(
         blank=True,
         help_text="One path prefix per line. If non‑empty, ONLY these paths will be logged (ignored_paths still apply)."
@@ -194,10 +197,16 @@ class BackupArchive(models.Model):
     Metadata for a created backup archive.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    filename = models.CharField(max_length=255, help_text="Name of the backup file (e.g., backup_20250320_123456.tar.gz)")
+    filename = models.CharField(
+        max_length=255,
+        help_text="Name of the backup file (e.g., backup_20250320_123456.tar.gz)"
+    )
     size = models.BigIntegerField(default=0, help_text="File size in bytes")
     created_at = models.DateTimeField(auto_now_add=True)
-    storage_path = models.CharField(max_length=500, help_text="Absolute path to the backup file on disk")
+    storage_path = models.CharField(
+        max_length=500,
+        help_text="Absolute path to the backup file on disk"
+    )
     status = models.CharField(
         max_length=20,
         choices=[
@@ -227,22 +236,34 @@ class FileUpload(models.Model):
     only stores metadata, never file content, to keep the DB small.
     """
     STATUS_CHOICES = [
-        ('pending', 'Pending'),  # session created, no chunks yet
-        ('uploading', 'Uploading'),  # at least one chunk received
-        ('completed', 'Completed'),  # all chunks received & verified
-        ('failed', 'Failed'),  # size/checksum mismatch or error
+        ('pending', 'Pending'),
+        ('uploading', 'Uploading'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='file_uploads')
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='file_uploads'
+    )
     original_filename = models.CharField(max_length=255)
-    total_size = models.BigIntegerField(help_text="Expected total size in bytes, sent by client at init")
+    total_size = models.BigIntegerField(
+        help_text="Expected total size in bytes, sent by client at init"
+    )
     bytes_received = models.BigIntegerField(default=0)
-    chunk_size = models.IntegerField(help_text="Size of each chunk in bytes, as used by the client")
+    chunk_size = models.IntegerField(
+        help_text="Size of each chunk in bytes, as used by the client"
+    )
     total_chunks = models.IntegerField()
     chunks_received = models.IntegerField(default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    storage_path = models.CharField(max_length=500, help_text="Absolute path to the file on disk once completed")
+    storage_path = models.CharField(
+        max_length=500,
+        help_text="Absolute path to the file on disk once completed"
+    )
     error_message = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

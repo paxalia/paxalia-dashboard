@@ -1,23 +1,19 @@
 """
-NEW FILE: analytics/views/uploads.py
+Chunked, resumable file upload for the admin dashboard.
 
-Chunked, resumable file upload for the admin dashboard. Designed for
-moving large build artifacts onto the server over HTTPS when other
-transfer methods (SSH/rsync/raw HTTP) are unreliable on the admin's
+Designed for moving large build artifacts onto the server over HTTPS when
+other transfer methods (SSH/rsync/raw HTTP) are unreliable on the admin's
 network.
 
-All settings (storage location, chunk size, max file size, and whether
-this feature is enabled at all) come from the project's ZAYDANY_ANALYTICS
-dict — see conf_uploads.py. If 'releases' is not listed in
-SIDEBAR_SECTIONS, these endpoints still function (no harm in leaving
-them reachable), but the dashboard page/nav link simply won't appear,
-matching the same opt-in pattern used by the billing section.
+All settings come from the project's ZAYDANY_ANALYTICS dict — see
+conf_uploads.py.
 
 Flow:
-  1. POST /insights/releases/upload/init/      -> create session, get upload_id
-  2. POST /insights/releases/upload/chunk/<id>/  (repeated, in order)
-  3. POST /insights/releases/upload/complete/<id>/ -> verify + finalize
+  1. POST /insights/releases/upload/init/
+  2. POST /insights/releases/upload/chunk/<id>/
+  3. POST /insights/releases/upload/complete/<id>/
 """
+
 import os
 
 from django.contrib.admin.views.decorators import staff_member_required
@@ -36,20 +32,17 @@ from ..conf_uploads import (
 
 
 def _get_temp_dir():
-    """In-progress uploads live in a .tmp subfolder so partial/failed
-    uploads are visually and physically separate from completed ones."""
+    """Return the temporary upload directory, creating it if necessary."""
     temp_dir = os.path.join(get_uploads_incoming_root(), '.tmp')
     os.makedirs(temp_dir, exist_ok=True)
     return temp_dir
 
 
 def _safe_filename(name):
-    """Strip any path components — defence in depth against path
-    traversal via a crafted original_filename."""
+    """Strip path components as defense in depth against path traversal."""
     return os.path.basename(name).replace('..', '')
 
 
-# ── Init ─────────────────────────────────────────────────────────────────
 @staff_member_required
 @csrf_exempt
 @honeypot_exempt
@@ -76,10 +69,6 @@ def upload_init(request):
             'error': f'File exceeds maximum allowed size ({max_size // (1024*1024)} MB)'
         }, status=413)
 
-    # Chunk size: client may suggest one, but the server's configured
-    # default is authoritative if the client doesn't specify, ensuring
-    # consistent chunking regardless of which client/widget version
-    # is calling this endpoint.
     if chunk_size:
         try:
             chunk_size = int(chunk_size)
@@ -91,7 +80,7 @@ def upload_init(request):
     if chunk_size <= 0:
         return JsonResponse({'error': 'chunk_size must be positive'}, status=400)
 
-    total_chunks = (total_size + chunk_size - 1) // chunk_size  # ceil division
+    total_chunks = (total_size + chunk_size - 1) // chunk_size
 
     upload = FileUpload.objects.create(
         uploaded_by=request.user,
@@ -109,7 +98,6 @@ def upload_init(request):
     })
 
 
-# ── Chunk ────────────────────────────────────────────────────────────────
 @staff_member_required
 @csrf_exempt
 @honeypot_exempt
@@ -139,14 +127,13 @@ def upload_chunk(request, upload_id):
 
     temp_path = os.path.join(_get_temp_dir(), str(upload.id))
 
-    # Chunks MUST arrive in order for this simple append-only approach to
-    # work correctly. The client (upload-widget.js) is responsible for
-    # sequential upload with retry-on-failure for the SAME chunk index —
-    # it does not skip ahead.
     expected_index = upload.chunks_received
     if chunk_index != expected_index:
         return JsonResponse({
-            'error': f'Expected chunk {expected_index}, got {chunk_index}. Chunks must arrive in order.'
+            'error': (
+                f'Expected chunk {expected_index}, got {chunk_index}. '
+                'Chunks must arrive in order.'
+            )
         }, status=409)
 
     try:
@@ -162,7 +149,12 @@ def upload_chunk(request, upload_id):
     upload.bytes_received += chunk_file.size
     upload.chunks_received += 1
     upload.status = 'uploading'
-    upload.save(update_fields=['bytes_received', 'chunks_received', 'status', 'updated_at'])
+    upload.save(update_fields=[
+        'bytes_received',
+        'chunks_received',
+        'status',
+        'updated_at',
+    ])
 
     return JsonResponse({
         'chunks_received': upload.chunks_received,
@@ -172,7 +164,6 @@ def upload_chunk(request, upload_id):
     })
 
 
-# ── Complete ─────────────────────────────────────────────────────────────
 @staff_member_required
 @csrf_exempt
 @honeypot_exempt
@@ -184,7 +175,10 @@ def upload_complete(request, upload_id):
         return JsonResponse({'error': 'Upload session not found'}, status=404)
 
     if upload.status == 'completed':
-        return JsonResponse({'storage_path': upload.storage_path, 'already_completed': True})
+        return JsonResponse({
+            'storage_path': upload.storage_path,
+            'already_completed': True,
+        })
 
     if upload.chunks_received != upload.total_chunks:
         return JsonResponse({
@@ -221,15 +215,23 @@ def upload_complete(request, upload_id):
     upload.status = 'completed'
     upload.storage_path = final_path
     upload.completed_at = timezone.now()
-    upload.save(update_fields=['status', 'storage_path', 'completed_at', 'updated_at'])
+    upload.save(update_fields=[
+        'status',
+        'storage_path',
+        'completed_at',
+        'updated_at',
+    ])
 
-    return JsonResponse({'storage_path': final_path, 'already_completed': False})
+    return JsonResponse({
+        'storage_path': final_path,
+        'already_completed': False,
+    })
 
 
-# ── List (for the dashboard page) ────────────────────────────────────────
 @staff_member_required
 def upload_list(request):
     uploads = FileUpload.objects.all()[:100]
+
     data = [
         {
             'id': str(u.id),
@@ -240,14 +242,14 @@ def upload_list(request):
             'storage_path': u.storage_path,
             'created_at': u.created_at.isoformat(),
             'completed_at': u.completed_at.isoformat() if u.completed_at else None,
-            'uploaded_by': u.uploaded_by.username if u.uploaded_by else None,
+            'uploaded_by': str(u.uploaded_by) if u.uploaded_by else None,
         }
         for u in uploads
     ]
+
     return JsonResponse({'uploads': data})
 
 
-# ── Delete (cleanup) ──────────────────────────────────────────────────────
 @staff_member_required
 @csrf_exempt
 @honeypot_exempt
@@ -258,7 +260,11 @@ def upload_delete(request, upload_id):
     except (FileUpload.DoesNotExist, ValueError):
         return JsonResponse({'error': 'Upload session not found'}, status=404)
 
-    paths_to_try = [upload.storage_path, os.path.join(_get_temp_dir(), str(upload.id))]
+    paths_to_try = [
+        upload.storage_path,
+        os.path.join(_get_temp_dir(), str(upload.id)),
+    ]
+
     for path in paths_to_try:
         if path and os.path.exists(path):
             try:
