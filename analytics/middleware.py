@@ -112,12 +112,6 @@ class AnalyticsMiddleware:
 
         try:
             ip = self._get_ip(request)
-            # NOTE on the field name: it's called `ip_hash` for historical
-            # reasons, but it holds whichever representation of the IP the
-            # admin asked for. When anonymize_ip is True we store a SHA-256
-            # hash (irreversible, privacy-first default). When it's False
-            # we store the raw IP — previously this branch stored nothing
-            # at all when anonymization was disabled, which was a bug.
             ip_hash = ''
             if ip:
                 ip_hash = hashlib.sha256(ip.encode()).hexdigest() if cfg.anonymize_ip else ip
@@ -183,3 +177,44 @@ class AnalyticsMiddleware:
                 if hops:
                     return hops[0]
         return request.META.get('REMOTE_ADDR', '')
+
+class SecurityBlockMiddleware:
+    """
+    Opt-in middleware that rejects requests from IPs on the Security
+    Center's blocklist (analytics.models.BlockedIP).
+
+    Not added to MIDDLEWARE automatically — add it yourself, placed
+    *before* AnalyticsMiddleware, so blocked requests never even get
+    logged as a page view:
+
+        MIDDLEWARE = [
+            ...
+            'analytics.middleware.SecurityBlockMiddleware',
+            'analytics.middleware.AnalyticsMiddleware',
+        ]
+
+    Blocked-IP lookups are cached briefly (see _BLOCK_CACHE_SECONDS) so
+    this doesn't add a database query to every single request.
+    """
+    _BLOCK_CACHE_SECONDS = 30
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django.core.cache import cache
+        from django.http import HttpResponseForbidden
+
+        ip = AnalyticsMiddleware._get_ip(request)
+        if ip:
+            cache_key = f'analytics:blocked_ip:{ip}'
+            is_blocked = cache.get(cache_key)
+            if is_blocked is None:
+                from .models import BlockedIP
+                is_blocked = BlockedIP.objects.filter(ip_address=ip, active=True).exists()
+                cache.set(cache_key, is_blocked, timeout=self._BLOCK_CACHE_SECONDS)
+            if is_blocked:
+                logger.warning('Blocked request from denylisted IP %s to %s', ip, request.path)
+                return HttpResponseForbidden('Forbidden')
+
+        return self.get_response(request)

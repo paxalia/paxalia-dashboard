@@ -1,0 +1,135 @@
+/* ============================================
+   Analytics Dashboard – Security Center
+   ============================================ */
+
+.security-page .card-title {
+    font-size: var(--font-size-md, 1rem);
+    font-weight: 600;
+    margin: 0 0 var(--margin-md, 1rem);
+    color: var(--analytics-text);
+}
+
+.security-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-xs, 0.25rem);
+    margin-bottom: var(--margin-md, 1rem);
+    border-bottom: 1px solid var(--analytics-border);
+}
+
+.security-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--analytics-text-dim);
+    padding: 0.6rem 1rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.security-tab:hover {
+    color: var(--analytics-text);
+}
+
+.security-tab.active {
+    color: var(--analytics-gold, var(--analytics-text));
+    border-bottom-color: var(--analytics-gold, var(--analytics-text));
+}
+
+.security-panel {
+    margin-bottom: var(--margin-lg, 1.5rem);
+}
+
+.security-empty {
+    color: var(--analytics-text-dim);
+    padding: var(--padding-lg, 1.5rem) 0;
+    text-align: center;
+}
+
+.security-status-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: var(--font-size-xs, 0.75rem);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.security-status-ok {
+    background: rgba(46, 160, 67, 0.15);
+    color: #2ea043;
+}
+
+.security-status-bad {
+    background: rgba(220, 60, 60, 0.15);
+    color: #dc3c3c;
+}
+
+.status-flag-new {
+    color: var(--analytics-gold, #c9a227);
+    font-weight: 600;
+}
+
+.status-dim {
+    color: var(--analytics-text-dim);
+}
+
+.security-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-sm, 0.5rem);
+    margin-bottom: var(--margin-md, 1rem);
+    align-items: center;
+}
+
+.security-inline-form input[type="text"] {
+    background: var(--analytics-bg);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm, 4px);
+    padding: 0.45rem 0.6rem;
+    color: var(--analytics-text);
+}
+
+/* Minimal button set (self-contained so this page doesn't depend on
+   backup.css / about.css being loaded) */
+.btn {
+    display: inline-block;
+    border: 1px solid var(--analytics-border);
+    background: var(--analytics-surface);
+    color: var(--analytics-text);
+    border-radius: var(--radius-sm, 4px);
+    padding: 0.5rem 1rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:hover {
+    border-color: var(--analytics-gold, var(--analytics-border));
+}
+
+.btn-sm {
+    padding: 0.3rem 0.65rem;
+    font-size: var(--font-size-xs, 0.75rem);
+}
+
+.btn-primary {
+    background: var(--analytics-gold, var(--analytics-surface));
+    color: var(--analytics-bg, #111);
+    border-color: transparent;
+}
+
+.btn-danger {
+    background: rgba(220, 60, 60, 0.12);
+    color: #dc3c3c;
+    border-color: rgba(220, 60, 60, 0.4);
+}
+
+.btn-danger:hover {
+    background: rgba(220, 60, 60, 0.22);
+}
+
+.btn-secondary {
+    background: transparent;
+}
