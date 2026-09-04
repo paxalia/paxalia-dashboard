@@ -350,6 +350,32 @@ class SecurityAuditLog(models.Model):
         return f"{self.action} by {self.user or 'system'} @ {self.created_at:%Y-%m-%d %H:%M}"
 
 
+class CSPViolation(models.Model):
+    """
+    Stores Content-Security-Policy violation reports POSTed to
+    analytics:csp_report. This package does not set the CSP header
+    itself (that's the host project's job) — it only provides the
+    collection endpoint. Point your CSP's report-uri/report-to at
+    /<dashboard-path>/csp-report/ to start receiving reports here.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    blocked_uri = models.CharField(max_length=2048, blank=True)
+    violated_directive = models.CharField(max_length=255, blank=True)
+    document_uri = models.CharField(max_length=2048, blank=True)
+    source_file = models.CharField(max_length=2048, blank=True)
+    line_number = models.PositiveIntegerField(null=True, blank=True)
+    raw_report = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        verbose_name = "CSP Violation"
+        verbose_name_plural = "CSP Violations"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.violated_directive} blocked {self.blocked_uri}"[:120]
+
+
 class FileUpload(models.Model):
     """
     Tracks a single chunked upload session. The actual bytes are written

@@ -9,6 +9,7 @@ so this "just works" once analytics.apps.AnalyticsConfig.ready() wires
 these handlers up.
 """
 import logging
+from datetime import timedelta
 
 from django.contrib.auth.signals import (
     user_logged_in,
@@ -17,6 +18,7 @@ from django.contrib.auth.signals import (
 )
 from django.utils import timezone
 
+from .alerts import send_security_alert
 from .middleware import AnalyticsMiddleware, _resolve_ip
 from .models import LoginEvent
 from .settings import get_config
@@ -89,6 +91,16 @@ def handle_login(sender, request, user, **kwargs):
             is_new_location=new_location,
             **ctx,
         )
+        if new_location:
+            send_security_alert(
+                subject=f'New-location login: {user.get_username()}',
+                message=(
+                    f'{user.get_username()} signed in from a new IP/location: '
+                    f'{ctx["ip_address"]} ({ctx["city"]}, {ctx["country_name"]}). '
+                    f'{ctx["browser"]} on {ctx["os"]}.'
+                ),
+                alert_type='new_location_login',
+            )
     except Exception:
         # A logging failure must never prevent a legitimate login.
         logger.exception('Failed to record successful LoginEvent')
@@ -112,6 +124,39 @@ def handle_logout(sender, request, user, **kwargs):
         logger.exception('Failed to record logout on LoginEvent')
 
 
+def _maybe_alert_brute_force(ip_address):
+    """Fire a single alert once an IP crosses SECURITY_FAILED_LOGIN_THRESHOLD
+    failed attempts within SECURITY_FAILED_LOGIN_WINDOW_MINUTES. Uses the
+    cache to avoid re-alerting on every subsequent failed attempt."""
+    if not ip_address:
+        return
+    config = get_config()
+    threshold = config.get('SECURITY_FAILED_LOGIN_THRESHOLD', 5)
+    window_minutes = config.get('SECURITY_FAILED_LOGIN_WINDOW_MINUTES', 15)
+
+    from django.core.cache import cache
+    already_alerted_key = f'analytics:brute_force_alerted:{ip_address}'
+    if cache.get(already_alerted_key):
+        return
+
+    window_start = timezone.now() - timedelta(minutes=window_minutes)
+    recent_failures = LoginEvent.objects.filter(
+        ip_address=ip_address, result='failed', created_at__gte=window_start
+    ).count()
+
+    if recent_failures >= threshold:
+        # Don't re-alert for the rest of the window once triggered.
+        cache.set(already_alerted_key, True, timeout=window_minutes * 60)
+        send_security_alert(
+            subject=f'Possible brute-force from {ip_address}',
+            message=(
+                f'{recent_failures} failed login attempts from {ip_address} '
+                f'in the last {window_minutes} minutes (threshold: {threshold}).'
+            ),
+            alert_type='brute_force_suspected',
+        )
+
+
 def handle_login_failed(sender, credentials, request=None, **kwargs):
     # We can't know is_staff for a failed attempt (no user resolved), so
     # failed attempts are always recorded when SECURITY_TRACK_ONLY_STAFF
@@ -127,6 +172,7 @@ def handle_login_failed(sender, credentials, request=None, **kwargs):
             failure_reason='invalid_credentials',
             **ctx,
         )
+        _maybe_alert_brute_force(ctx.get('ip_address'))
     except Exception:
         logger.exception('Failed to record failed LoginEvent')
 

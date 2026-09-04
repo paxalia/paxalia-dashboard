@@ -13,6 +13,12 @@
 {% block dashboard_content %}
 <div class="security-page">
 
+    {% if not dependency_health.django_supported %}
+    <div class="security-banner security-banner--warn">
+        {% blocktrans with version=dependency_health.django_version %}Running Django {{ version }}, which isn't in this package's known-supported list. Check djangoproject.com for your version's support status.{% endblocktrans %}
+    </div>
+    {% endif %}
+
     <div class="stat-grid">
         <div class="stat-card">
             <span class="stat-label">{% trans "Successful logins (30d)" %}</span>
@@ -38,6 +44,10 @@
         <button type="button" class="security-tab" data-tab="failed" role="tab">{% trans "Failed Logins" %}</button>
         <button type="button" class="security-tab" data-tab="ips" role="tab">{% trans "IP Blocklist" %}</button>
         <button type="button" class="security-tab" data-tab="audit" role="tab">{% trans "Admin Audit Log" %}</button>
+        <button type="button" class="security-tab" data-tab="csp" role="tab">{% trans "CSP Violations" %}</button>
+        {% if mfa_status is not None %}
+        <button type="button" class="security-tab" data-tab="mfa" role="tab">{% trans "MFA Status" %}</button>
+        {% endif %}
     </div>
 
     <!-- ── Login Activity ── -->
@@ -239,6 +249,57 @@
         <div class="security-empty">{% trans "No admin actions recorded yet." %}</div>
         {% endif %}
     </div>
+
+    <!-- ── CSP Violations ── -->
+    <div class="security-panel table-card" data-panel="csp" hidden>
+        <h2 class="card-title">{% trans "CSP Violations" %}</h2>
+        <p class="form-hint">
+            {% trans "This package doesn't set your Content-Security-Policy header — point your own CSP's report-uri/report-to at this dashboard's /csp-report/ endpoint to start seeing reports here." %}
+        </p>
+        {% if csp_violations %}
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "When" %}</th><th>{% trans "Directive" %}</th><th>{% trans "Blocked URI" %}</th><th>{% trans "Page" %}</th></tr></thead>
+            <tbody>
+                {% for v in csp_violations %}
+                <tr>
+                    <td>{{ v.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ v.violated_directive|default:"—" }}</td>
+                    <td>{{ v.blocked_uri|default:"—" }}</td>
+                    <td>{{ v.document_uri|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No CSP violations reported." %}</div>
+        {% endif %}
+    </div>
+
+    {% if mfa_status is not None %}
+    <!-- ── MFA Status ── -->
+    <div class="security-panel table-card" data-panel="mfa" hidden>
+        <h2 class="card-title">{% trans "MFA Status (staff)" %}</h2>
+        {% if mfa_status %}
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "User" %}</th><th>{% trans "2FA Enabled" %}</th></tr></thead>
+            <tbody>
+                {% for row in mfa_status %}
+                <tr>
+                    <td>{{ row.user.get_username }}</td>
+                    <td>
+                        <span class="security-status-badge {% if row.mfa_enabled %}security-status-ok{% else %}security-status-bad{% endif %}">
+                            {% if row.mfa_enabled %}{% trans "Enabled" %}{% else %}{% trans "Not enabled" %}{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No staff accounts found." %}</div>
+        {% endif %}
+    </div>
+    {% endif %}
 
 </div>
 {% endblock %}
