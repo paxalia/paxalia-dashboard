@@ -15,6 +15,14 @@ import csv
 
 # Create your views here.
 
+_FORMULA_TRIGGER_CHARS = ('=', '+', '-', '@', '\t', '\r')
+
+
+def _csv_safe(value):
+    if isinstance(value, str) and value.startswith(_FORMULA_TRIGGER_CHARS):
+        return "'" + value
+    return value
+
 
 @staff_member_required
 def analytics_export(request, export_type):
@@ -30,6 +38,8 @@ def analytics_export(request, export_type):
     # Helper: return the correct HttpResponse for the chosen format
     def build_response(filename_base, headers, rows):
         if fmt == 'json':
+            # JSON isn't opened by spreadsheet apps, so export the raw
+            # values unmodified.
             payload = [dict(zip(headers, row)) for row in rows]
             response = HttpResponse(
                 json.dumps(payload, indent=2),
@@ -43,7 +53,7 @@ def analytics_export(request, export_type):
             writer = csv.writer(response)
             writer.writerow(headers)
             for row in rows:
-                writer.writerow(row)
+                writer.writerow([_csv_safe(cell) for cell in row])
             return response
 
     # ── 1. Overview – Top Pages table ──

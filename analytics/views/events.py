@@ -5,6 +5,7 @@ import logging
 from datetime import timedelta
 
 from django.contrib.admin.views.decorators import staff_member_required
+from django.core.cache import cache
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.http import JsonResponse, Http404
@@ -15,10 +16,39 @@ from django.views.decorators.http import require_http_methods
 
 from honeypot.decorators import honeypot_exempt
 
+from analytics.middleware import AnalyticsMiddleware
 from analytics.models import AnalyticsEvent
 from .utils import get_date_range, detect_active_preset, section_enabled
 
 logger = logging.getLogger(__name__)
+
+EVENT_RATE_LIMIT_WINDOW_SECONDS = 60
+EVENT_RATE_LIMIT_MAX_REQUESTS = 60
+
+
+def _event_rate_limited(request):
+    ip = AnalyticsMiddleware._get_ip(request) or 'unknown'
+    session_id = getattr(request, 'analytics_session_id', '') or 'no-session'
+    cache_key = f'analytics:event_rl:{ip}:{session_id}'
+    count = cache.get(cache_key, 0)
+    if count >= EVENT_RATE_LIMIT_MAX_REQUESTS:
+        return True
+    # incr() requires the key to exist; add() sets it only if absent.
+    cache.add(cache_key, 0, timeout=EVENT_RATE_LIMIT_WINDOW_SECONDS)
+    try:
+        cache.incr(cache_key)
+    except ValueError:
+        cache.set(cache_key, 1, timeout=EVENT_RATE_LIMIT_WINDOW_SECONDS)
+    return False
+
+
+def _clean_str(value, max_len):
+    """Coerce a JSON value to a trimmed string, never raising on bad input."""
+    if value is None:
+        return ''
+    if not isinstance(value, str):
+        value = str(value)
+    return value.strip()[:max_len]
 
 
 # ─── Public Event API ──────────────────────────────────────────────────
@@ -31,23 +61,30 @@ def analytics_event_api(request):
     Public API endpoint to record analytics events.
     Expects a JSON POST with 'category' and 'action'.
     """
+    if _event_rate_limited(request):
+        logger.warning('Analytics: event API rate limit exceeded')
+        return JsonResponse({'error': 'Too many requests'}, status=429)
+
     # 1. Parse JSON body
     try:
         body = json.loads(request.body.decode('utf-8'))
-    except json.JSONDecodeError as e:
+        if not isinstance(body, dict):
+            raise ValueError('Payload must be a JSON object')
+    except (json.JSONDecodeError, ValueError, UnicodeDecodeError) as e:
         logger.warning('Analytics: Invalid JSON received: %s', e)
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    # 2. Validate required fields
-    category = body.get('category', '').strip()
-    action = body.get('action', '').strip()
+    # 2. Validate required fields (coerced to strings so a non-string
+    #    category/action can never throw an uncaught AttributeError)
+    category = _clean_str(body.get('category'), 255)
+    action = _clean_str(body.get('action'), 255)
     if not category or not action:
-        logger.warning('Analytics: Missing category or action in payload: %s', body)
+        logger.warning('Analytics: Missing category or action in payload')
         return JsonResponse({'error': 'category and action are required'}, status=400)
 
     # 3. Handle optional fields
-    label = body.get('label', '')[:255]
-    path = body.get('path', '')[:255]
+    label = _clean_str(body.get('label'), 255)
+    path = _clean_str(body.get('path'), 255)
 
     value_raw = body.get('value')
     if value_raw is not None and value_raw != '':
@@ -61,8 +98,8 @@ def analytics_event_api(request):
     # 4. Store the event
     try:
         AnalyticsEvent.objects.create(
-            category=category[:255],
-            action=action[:255],
+            category=category,
+            action=action,
             label=label,
             value=value,
             path=path,
@@ -75,7 +112,7 @@ def analytics_event_api(request):
         return JsonResponse({'status': 'ok'})
     except Exception as e:
         logger.error('Analytics: Failed to save event: %s', e)
-        return JsonResponse({'error': f'Database error: {str(e)}'}, status=500)
+        return JsonResponse({'error': 'Failed to save event'}, status=500)
 
 
 # ─── Admin Dashboard View ─────────────────────────────────────────────
