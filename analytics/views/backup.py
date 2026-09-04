@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from ..models import BackupConfiguration, BackupArchive
 from ..security_audit import log_action
+from ..alerts import send_security_alert
 
 logger = logging.getLogger(__name__)
 CHUNK_SIZE = 5 * 1024 * 1024  # 5 MB
@@ -154,6 +155,11 @@ def backup_download_single(request, backup_id):
         raise Http404
 
     log_action(request, 'backup.downloaded', detail=f'archive_id={backup.id} filename={backup.filename}')
+    send_security_alert(
+        subject='Backup downloaded',
+        message=f'{request.user.get_username()} downloaded backup "{backup.filename}".',
+        alert_type='backup_downloaded',
+    )
     response = FileResponse(open(backup.storage_path, 'rb'), as_attachment=True, filename=backup.filename)
     return response
 

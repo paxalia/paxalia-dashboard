@@ -8,6 +8,7 @@ from .views import (
 from .views import server as server_views
 from .views import backup as backup_views
 from .views import security as security_views
+from .views import csp_reports as csp_report_views
 
 app_name = 'analytics'
 
@@ -54,6 +55,7 @@ dashboard_urlpatterns = [
     path('security/sessions/<uuid:login_event_id>/revoke/', security_views.security_revoke_session, name='security_revoke_session'),
     path('security/ip/block/', security_views.security_block_ip, name='security_block_ip'),
     path('security/ip/<int:block_id>/unblock/', security_views.security_unblock_ip, name='security_unblock_ip'),
+    path('csp-report/', csp_report_views.csp_report, name='csp_report'),
 
     path('backups/', backup_views.backup_management, name='backups'),
     path('backups/trigger/', backup_views.backup_trigger, name='backup_trigger'),

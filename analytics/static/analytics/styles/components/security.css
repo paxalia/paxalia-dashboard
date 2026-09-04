@@ -9,6 +9,19 @@
     color: var(--analytics-text);
 }
 
+.security-banner {
+    border-radius: var(--radius-md, 6px);
+    padding: var(--padding-md, 0.75rem) var(--padding-lg, 1.25rem);
+    margin-bottom: var(--margin-md, 1rem);
+    font-size: var(--font-size-sm, 0.875rem);
+}
+
+.security-banner--warn {
+    background: rgba(230, 160, 30, 0.12);
+    border: 1px solid rgba(230, 160, 30, 0.4);
+    color: #c9861f;
+}
+
 .security-tabs {
     display: flex;
     flex-wrap: wrap;

@@ -1,4 +1,5 @@
 # analytics/views/security.py
+import django
 from datetime import timedelta
 
 from django.contrib import messages
@@ -12,11 +13,50 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from ..models import BlockedIP, LoginEvent, SecurityAuditLog
+from ..models import BlockedIP, LoginEvent, SecurityAuditLog, CSPViolation
 from ..security_audit import log_action
 from .utils import section_enabled
 
 User = get_user_model()
+
+# Best-effort, manually-maintained EOL reference for Django's currently
+# supported release lines. Not a live CVE feed — just enough to flag
+# "you're on an unsupported version" at a glance. Update as new LTS/
+# feature releases ship. See https://www.djangoproject.com/download/#supported-versions
+_DJANGO_SUPPORTED_MINORS = {
+    (4, 2): "April 2026 (LTS)",
+    (5, 1): "December 2025",
+    (5, 2): "April 2028 (LTS)",
+}
+
+
+def _dependency_health():
+    current = django.VERSION[:2]
+    supported = current in _DJANGO_SUPPORTED_MINORS
+    return {
+        'django_version': django.get_version(),
+        'django_supported': supported,
+        'django_eol_note': _DJANGO_SUPPORTED_MINORS.get(current, 'Unknown — check djangoproject.com/download/#supported-versions'),
+    }
+
+
+def _mfa_status():
+    """Best-effort MFA status per staff user, if django_otp is installed.
+    Returns None (not an empty list) when django_otp isn't available, so
+    the template can distinguish "not installed" from "installed, 0 devices"."""
+    try:
+        from django_otp import devices_for_user
+    except ImportError:
+        return None
+
+    rows = []
+    for user in User.objects.filter(is_staff=True).order_by('username'):
+        try:
+            has_device = any(True for _d in devices_for_user(user, confirmed=True))
+        except Exception:
+            has_device = False
+        rows.append({'user': user, 'mfa_enabled': has_device})
+    return rows
 
 
 @staff_member_required
@@ -80,6 +120,9 @@ def security_center(request):
         created_at__gte=last_30_days
     )[:200]
 
+    # ── CSP violations ──
+    csp_violations = CSPViolation.objects.filter(created_at__gte=last_30_days)[:200]
+
     context = {
         'active_page': 'security',
         'page_title': _('Security Center'),
@@ -93,6 +136,9 @@ def security_center(request):
         'failed_by_username': failed_by_username,
         'blocked_ips': blocked_ips,
         'audit_entries': audit_entries,
+        'csp_violations': csp_violations,
+        'mfa_status': _mfa_status(),
+        'dependency_health': _dependency_health(),
     }
     return render(request, 'analytics/security.html', context)
 

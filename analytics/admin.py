@@ -11,6 +11,7 @@ from .models import (
     LoginEvent,
     BlockedIP,
     SecurityAuditLog,
+    CSPViolation,
 )
 
 
@@ -143,6 +144,18 @@ class SecurityAuditLogAdmin(admin.ModelAdmin):
     search_fields = ('action', 'detail', 'user__username')
     date_hierarchy = 'created_at'
     readonly_fields = [f.name for f in SecurityAuditLog._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(CSPViolation)
+class CSPViolationAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'violated_directive', 'blocked_uri', 'document_uri')
+    list_filter = ('violated_directive', 'created_at')
+    search_fields = ('blocked_uri', 'document_uri', 'source_file')
+    date_hierarchy = 'created_at'
+    readonly_fields = [f.name for f in CSPViolation._meta.fields]
 
     def has_add_permission(self, request):
         return False
