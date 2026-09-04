@@ -112,9 +112,15 @@ class AnalyticsMiddleware:
 
         try:
             ip = self._get_ip(request)
+            # NOTE on the field name: it's called `ip_hash` for historical
+            # reasons, but it holds whichever representation of the IP the
+            # admin asked for. When anonymize_ip is True we store a SHA-256
+            # hash (irreversible, privacy-first default). When it's False
+            # we store the raw IP — previously this branch stored nothing
+            # at all when anonymization was disabled, which was a bug.
             ip_hash = ''
-            if ip and cfg.anonymize_ip:
-                ip_hash = hashlib.sha256(ip.encode()).hexdigest()
+            if ip:
+                ip_hash = hashlib.sha256(ip.encode()).hexdigest() if cfg.anonymize_ip else ip
 
             # Resolve geolocation
             country_code, country_name, city = _resolve_ip(ip)
@@ -153,7 +159,27 @@ class AnalyticsMiddleware:
 
     @staticmethod
     def _get_ip(request):
-        x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded:
-            return x_forwarded.split(',')[0].strip()
+        """
+        Resolve the client IP.
+
+        SECURITY: X-Forwarded-For is fully attacker-controlled unless the
+        request actually passed through a proxy you control that
+        overwrites/appends it correctly. Trusting it unconditionally lets
+        any client spoof the IP that gets logged, defeating geolocation,
+        bot detection, and any IP-based blocking. We only honor it when
+        the project explicitly opts in via TRUST_X_FORWARDED_FOR, and we
+        take the entry TRUSTED_PROXY_COUNT hops from the right-hand end
+        of the chain (the hop your own trusted proxy is guaranteed to
+        have written), not the first (client-supplied) entry.
+        """
+        config = get_config()
+        if config.get('TRUST_X_FORWARDED_FOR'):
+            x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded:
+                hops = [h.strip() for h in x_forwarded.split(',') if h.strip()]
+                proxy_count = max(1, int(config.get('TRUSTED_PROXY_COUNT', 1)))
+                if len(hops) >= proxy_count:
+                    return hops[-proxy_count]
+                if hops:
+                    return hops[0]
         return request.META.get('REMOTE_ADDR', '')
