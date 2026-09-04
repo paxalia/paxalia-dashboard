@@ -16,7 +16,7 @@ def analytics_traffic(request):
     if not section_enabled('traffic'):
         raise Http404
     start_dt, end_dt = get_date_range(request)
-    base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False)
+    base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
 
     # Top referrers
     top_referrers = (

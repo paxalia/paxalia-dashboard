@@ -22,7 +22,7 @@ def analytics_page_detail(request, path):
     decoded_path = unquote(path)
 
     start_dt, end_dt = get_date_range(request)
-    base_qs = PageView.objects.filter(path=decoded_path, created_at__range=(start_dt, end_dt), is_bot=False)
+    base_qs = PageView.objects.filter(path=decoded_path, created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
 
     # Check that there is at least one view for this path in the range
     if not base_qs.exists():
@@ -50,7 +50,8 @@ def analytics_page_detail(request, path):
         prev_qs = PageView.objects.filter(
             path=decoded_path,
             created_at__range=(prev_start, prev_end),
-            is_bot=False
+            is_bot=False,
+            is_api=False
         )
         prev_daily = (
             prev_qs

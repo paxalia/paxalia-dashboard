@@ -99,6 +99,14 @@ class AnalyticsMiddleware:
         bot_paths = [p.strip() for p in cfg.bot_paths.split('\n') if p.strip()]
         is_bot = any(path.startswith(bp) for bp in bot_paths)
 
+        # 3b. Determine if this is an API call, so page-view analytics
+        # (Overview/Pages/Traffic/Geography/Realtime) and API analytics
+        # can be queried apart with a plain field lookup instead of every
+        # view re-matching the path prefix (and, previously, without ever
+        # excluding API calls from "page view" counts at all).
+        api_prefix = get_config()['API_PATH_PREFIX']
+        is_api = bool(api_prefix) and path.startswith(api_prefix)
+
         # Only set the session cookie for tracked requests
         if new_cookie:
             response.set_cookie(
@@ -112,6 +120,12 @@ class AnalyticsMiddleware:
 
         try:
             ip = self._get_ip(request)
+            # NOTE on the field name: it's called `ip_hash` for historical
+            # reasons, but it holds whichever representation of the IP the
+            # admin asked for. When anonymize_ip is True we store a SHA-256
+            # hash (irreversible, privacy-first default). When it's False
+            # we store the raw IP — previously this branch stored nothing
+            # at all when anonymization was disabled, which was a bug.
             ip_hash = ''
             if ip:
                 ip_hash = hashlib.sha256(ip.encode()).hexdigest() if cfg.anonymize_ip else ip
@@ -134,13 +148,16 @@ class AnalyticsMiddleware:
                 country_name=country_name or '',
                 city=city or '',
                 is_bot=is_bot,
+                is_api=is_api,
             )
 
-            # Update daily stats – aggregate total/bot views incrementally
+            # Update daily stats – aggregate total/bot/api views incrementally
             today = timezone.now().date()
             stats, _ = DailySiteStats.objects.get_or_create(date=today)
             if is_bot:
                 stats.bot_views += 1
+            elif is_api:
+                stats.api_calls += 1
             else:
                 stats.total_views += 1
             # (Other aggregations like unique_ips, sessions, etc. can be updated later via a separate cron)

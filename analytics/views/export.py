@@ -6,7 +6,6 @@ from django.http import HttpResponse
 
 from .utils import get_date_range, parse_user_agent, get_billing_models
 
-from analytics.settings import get_config
 from analytics.models import PageView, AnalyticsEvent
 
 import json
@@ -14,14 +13,6 @@ import csv
 
 
 # Create your views here.
-
-_FORMULA_TRIGGER_CHARS = ('=', '+', '-', '@', '\t', '\r')
-
-
-def _csv_safe(value):
-    if isinstance(value, str) and value.startswith(_FORMULA_TRIGGER_CHARS):
-        return "'" + value
-    return value
 
 
 @staff_member_required
@@ -38,8 +29,6 @@ def analytics_export(request, export_type):
     # Helper: return the correct HttpResponse for the chosen format
     def build_response(filename_base, headers, rows):
         if fmt == 'json':
-            # JSON isn't opened by spreadsheet apps, so export the raw
-            # values unmodified.
             payload = [dict(zip(headers, row)) for row in rows]
             response = HttpResponse(
                 json.dumps(payload, indent=2),
@@ -53,12 +42,12 @@ def analytics_export(request, export_type):
             writer = csv.writer(response)
             writer.writerow(headers)
             for row in rows:
-                writer.writerow([_csv_safe(cell) for cell in row])
+                writer.writerow(row)
             return response
 
     # ── 1. Overview – Top Pages table ──
     if export_type == 'overview_top_pages':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt))
+        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
         top_pages = (
             base_qs.values('path')
             .annotate(count=Count('id'))
@@ -73,7 +62,7 @@ def analytics_export(request, export_type):
 
     # ── 2. Pages list ──
     elif export_type == 'pages':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt))
+        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
         path_query = request.GET.get('path', '').strip()
         if path_query:
             base_qs = base_qs.filter(path__icontains=path_query)
@@ -91,10 +80,9 @@ def analytics_export(request, export_type):
 
     # ── 3. API – Top Endpoints table ──
     elif export_type == 'api_endpoints':
-        api_prefix = get_config()['API_PATH_PREFIX']
         api_qs = PageView.objects.filter(
             created_at__range=(start_dt, end_dt),
-            path__startswith=api_prefix,
+            is_api=True, is_bot=False,
         )
         top_eps = (
             api_qs.values('path')
@@ -110,10 +98,9 @@ def analytics_export(request, export_type):
 
     # ── 4. API – Status Codes table ──
     elif export_type == 'api_status':
-        api_prefix = get_config()['API_PATH_PREFIX']
         api_qs = PageView.objects.filter(
             created_at__range=(start_dt, end_dt),
-            path__startswith=api_prefix,
+            is_api=True, is_bot=False,
         )
         status = (
             api_qs.values('status_code')
@@ -129,7 +116,7 @@ def analytics_export(request, export_type):
 
     # ── 5. Traffic – Referrers table ──
     elif export_type == 'traffic_referrers':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt))
+        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
         referrers = (
             base_qs.exclude(referrer='')
             .values('referrer')
@@ -145,7 +132,7 @@ def analytics_export(request, export_type):
 
     # ── 6. Traffic – Browser Distribution table ──
     elif export_type == 'traffic_browsers':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt))
+        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
         raw = base_qs.values('user_agent').annotate(count=Count('id'))
         counts = {}
         for item in raw:
@@ -172,7 +159,7 @@ def analytics_export(request, export_type):
 
     # ── 7. Traffic – Operating Systems ──
     elif export_type == 'traffic_os':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt))
+        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
         raw = base_qs.values('user_agent').annotate(count=Count('id'))
         counts = {}
         for item in raw:
@@ -190,7 +177,7 @@ def analytics_export(request, export_type):
 
     # ── 8. Traffic – Device Types ──
     elif export_type == 'traffic_devices':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt))
+        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
         raw = base_qs.values('user_agent').annotate(count=Count('id'))
         counts = {}
         for item in raw:
@@ -208,7 +195,7 @@ def analytics_export(request, export_type):
 
     # ── 9. Geography ──
     elif export_type == 'geography_countries':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt))
+        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
         countries = (
             base_qs
             .exclude(country_code='')
@@ -224,7 +211,7 @@ def analytics_export(request, export_type):
         )
 
     elif export_type == 'geography_cities':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt))
+        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
         cities = (
             base_qs.exclude(city='')
             .values('city', 'country_name')

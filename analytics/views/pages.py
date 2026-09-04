@@ -17,7 +17,7 @@ def analytics_pages(request):
     if not section_enabled('pages'):
         raise Http404
     start_dt, end_dt = get_date_range(request)
-    base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False)
+    base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
 
     path_query = request.GET.get('path', '').strip()
     if path_query:

@@ -7,7 +7,6 @@ from django.db.models import Count
 from django.db.models.functions import TruncDate
 
 from analytics.models import PageView, DailySiteStats
-from analytics.settings import get_config
 
 from .utils import get_date_range, detect_active_preset, section_enabled
 
@@ -25,21 +24,20 @@ def analytics_api(request):
     yesterday = today - timedelta(days=1)
 
     # Base queryset for API calls in the range
-    api_prefix = get_config()['API_PATH_PREFIX']
     api_qs = PageView.objects.filter(
         created_at__range=(start_dt, end_dt),
-        path__startswith=api_prefix, is_bot=False
+        is_api=True, is_bot=False
     )
 
     # Today's live API calls (always today)
-    today_api = PageView.objects.filter(created_at__date=today, path__startswith=api_prefix, is_bot=False).count()
+    today_api = PageView.objects.filter(created_at__date=today, is_api=True, is_bot=False).count()
 
     # Yesterday's API calls (prefer aggregated stats if available)
     try:
         yest_stats = DailySiteStats.objects.get(date=yesterday)
         yesterday_api = yest_stats.api_calls
     except DailySiteStats.DoesNotExist:
-        yesterday_api = PageView.objects.filter(created_at__date=yesterday, path__startswith=api_prefix, is_bot=False).count()
+        yesterday_api = PageView.objects.filter(created_at__date=yesterday, is_api=True, is_bot=False).count()
 
     # Daily API chart for the selected range
     daily_api = (
@@ -63,7 +61,7 @@ def analytics_api(request):
         prev_start = prev_end - timedelta(days=period_delta)
         prev_qs = PageView.objects.filter(
             created_at__range=(prev_start, prev_end),
-            path__startswith=api_prefix, is_bot=False
+            is_api=True, is_bot=False
         )
         prev_daily = (
             prev_qs

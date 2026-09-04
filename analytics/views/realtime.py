@@ -33,14 +33,19 @@ def analytics_realtime_data(request):
     now = timezone.now()
     five_min_ago = now - timedelta(minutes=5)
 
-    # Total page views in last 5 minutes
-    total_views = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False).count()
+    # Total page views in last 5 minutes (API calls tracked separately below
+    # — a burst of API traffic shouldn't read as a spike in live visitors)
+    total_views = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=False).count()
 
     # Unique IPs in last 5 minutes
-    unique_ips = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False).values('ip_hash').distinct().count()
+    unique_ips = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=False).values('ip_hash').distinct().count()
 
-    # Recent page views (last 20)
-    recent = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False).order_by('-created_at')[:20]
+    # API calls in last 5 minutes
+    api_calls = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=True).count()
+
+    # Recent page views (last 20) — excludes API calls; those are noisy at
+    # request-per-request granularity and belong on the API page instead
+    recent = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=False).order_by('-created_at')[:20]
     recent_data = [
         {
             'path': r.path,
@@ -56,6 +61,7 @@ def analytics_realtime_data(request):
     data = {
         'total_views': total_views,
         'unique_ips': unique_ips,
+        'api_calls': api_calls,
         'recent': recent_data,
         'timestamp': now.strftime('%H:%M:%S'),
     }
