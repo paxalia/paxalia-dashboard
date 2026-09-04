@@ -8,6 +8,9 @@ from .models import (
     FileUpload,
     BackupConfiguration,
     BackupArchive,
+    LoginEvent,
+    BlockedIP,
+    SecurityAuditLog,
 )
 
 
@@ -109,3 +112,37 @@ class BackupArchiveAdmin(admin.ModelAdmin):
     list_filter = ('status', 'created_at')
     search_fields = ('filename', 'error_message')
     readonly_fields = [f.name for f in BackupArchive._meta.fields]
+
+
+@admin.register(LoginEvent)
+class LoginEventAdmin(admin.ModelAdmin):
+    list_display = (
+        'created_at', 'user', 'username_attempted', 'result',
+        'ip_address', 'country_name', 'browser', 'os', 'is_new_location',
+    )
+    list_filter = ('result', 'is_new_location', 'created_at')
+    search_fields = ('username_attempted', 'ip_address', 'user__username')
+    date_hierarchy = 'created_at'
+    readonly_fields = [f.name for f in LoginEvent._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(BlockedIP)
+class BlockedIPAdmin(admin.ModelAdmin):
+    list_display = ('ip_address', 'active', 'reason', 'created_by', 'created_at')
+    list_filter = ('active',)
+    search_fields = ('ip_address', 'reason')
+
+
+@admin.register(SecurityAuditLog)
+class SecurityAuditLogAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'user', 'action', 'ip_address')
+    list_filter = ('action', 'created_at')
+    search_fields = ('action', 'detail', 'user__username')
+    date_hierarchy = 'created_at'
+    readonly_fields = [f.name for f in SecurityAuditLog._meta.fields]
+
+    def has_add_permission(self, request):
+        return False

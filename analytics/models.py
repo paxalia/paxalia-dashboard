@@ -229,6 +229,127 @@ class BackupArchive(models.Model):
         return self.filename
 
 
+class LoginEvent(models.Model):
+    """
+    One row per authentication attempt against the site's normal Django
+    auth (staff and, optionally, regular users — see
+    ZAYDANY_ANALYTICS['SECURITY_TRACK_ONLY_STAFF']).
+
+    Populated by analytics/signals.py via Django's built-in
+    user_logged_in / user_logged_out / user_login_failed signals — no
+    custom auth backend required.
+
+    NOTE ON IP STORAGE: unlike PageView.ip_hash (hashed for visitor
+    privacy), `ip_address` here is stored in the clear. This is
+    operational security data about admin/staff sign-ins, not
+    third-party visitor data, so retaining the real IP is intentional —
+    you need it to investigate a compromised account. Retention is
+    configurable via SECURITY_LOG_RETENTION_DAYS; see
+    management/commands/prune_security_logs.py.
+    """
+    RESULT_CHOICES = [
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='login_events'
+    )
+    username_attempted = models.CharField(
+        max_length=255, blank=True,
+        help_text="Raw username submitted, kept even if it didn't match any account."
+    )
+    result = models.CharField(max_length=10, choices=RESULT_CHOICES, db_index=True)
+    failure_reason = models.CharField(max_length=255, blank=True)
+
+    ip_address = models.GenericIPAddressField(null=True, blank=True, db_index=True)
+    country_code = models.CharField(max_length=2, blank=True)
+    country_name = models.CharField(max_length=100, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+
+    user_agent = models.TextField(blank=True)
+    browser = models.CharField(max_length=100, blank=True)
+    os = models.CharField(max_length=100, blank=True)
+    device = models.CharField(max_length=50, blank=True)
+
+    session_key = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    is_new_location = models.BooleanField(
+        default=False,
+        help_text="True if this IP/country hadn't been seen before for this user."
+    )
+
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    logged_out_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Login Event"
+        verbose_name_plural = "Login Events"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['result', '-created_at']),
+        ]
+
+    def __str__(self):
+        who = self.user or self.username_attempted or 'unknown'
+        return f"{self.result}: {who} @ {self.created_at:%Y-%m-%d %H:%M}"
+
+    @property
+    def is_active_session(self):
+        return self.result == 'success' and self.logged_out_at is None
+
+
+class BlockedIP(models.Model):
+    """IP address blocked from the dashboard / login, managed from the
+    Security Center. Enforcement lives in
+    analytics/middleware.py::SecurityBlockMiddleware."""
+    ip_address = models.GenericIPAddressField(unique=True)
+    reason = models.CharField(max_length=255, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Blocked IP"
+        verbose_name_plural = "Blocked IPs"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.ip_address} ({'active' if self.active else 'inactive'})"
+
+
+class SecurityAuditLog(models.Model):
+    """
+    Records what an authenticated admin *did* inside the dashboard —
+    distinct from LoginEvent, which records how they got in.
+    Write with analytics.security_audit.log_action(...) from any view.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='security_audit_entries'
+    )
+    action = models.CharField(
+        max_length=100, db_index=True,
+        help_text="Dotted action code, e.g. 'backup.created', 'settings.updated'."
+    )
+    detail = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        verbose_name = "Security Audit Log"
+        verbose_name_plural = "Security Audit Log"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.action} by {self.user or 'system'} @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
 class FileUpload(models.Model):
     """
     Tracks a single chunked upload session. The actual bytes are written

@@ -11,6 +11,7 @@ from django.core.management import call_command
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from ..models import BackupConfiguration, BackupArchive
+from ..security_audit import log_action
 
 logger = logging.getLogger(__name__)
 CHUNK_SIZE = 5 * 1024 * 1024  # 5 MB
@@ -39,6 +40,7 @@ def backup_management(request):
             config.save()
         else:
             BackupConfiguration.objects.create(**data)
+        log_action(request, 'backup.config_updated', detail=f'storage_path={data["storage_path"]}')
         messages.success(request, _('Backup settings saved.'))
         return redirect('analytics:backups')
 
@@ -92,6 +94,7 @@ def backup_trigger(request):
     thread.daemon = True
     thread.start()
 
+    log_action(request, 'backup.triggered', detail=f'archive_id={archive.id} filename={filename}')
     return redirect('analytics:backups')
 
 
@@ -150,6 +153,7 @@ def backup_download_single(request, backup_id):
     if not os.path.exists(backup.storage_path):
         raise Http404
 
+    log_action(request, 'backup.downloaded', detail=f'archive_id={backup.id} filename={backup.filename}')
     response = FileResponse(open(backup.storage_path, 'rb'), as_attachment=True, filename=backup.filename)
     return response
 
@@ -163,6 +167,7 @@ def backup_delete(request, backup_id):
             os.remove(backup.storage_path)
         except OSError:
             pass
+    log_action(request, 'backup.deleted', detail=f'archive_id={backup.id} filename={backup.filename}')
     backup.delete()
     messages.success(request, _('Backup deleted.'))
     return redirect('analytics:backups')

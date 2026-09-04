@@ -7,6 +7,7 @@ from .views import (
 )
 from .views import server as server_views
 from .views import backup as backup_views
+from .views import security as security_views
 
 app_name = 'analytics'
 
@@ -48,6 +49,11 @@ dashboard_urlpatterns = [
     path('server/processes/', server_views.server_processes, name='server_processes'),
 
     path('admin-overview/', admin_overview, name='admin_overview'),
+
+    path('security/', security_views.security_center, name='security'),
+    path('security/sessions/<uuid:login_event_id>/revoke/', security_views.security_revoke_session, name='security_revoke_session'),
+    path('security/ip/block/', security_views.security_block_ip, name='security_block_ip'),
+    path('security/ip/<int:block_id>/unblock/', security_views.security_unblock_ip, name='security_unblock_ip'),
 
     path('backups/', backup_views.backup_management, name='backups'),
     path('backups/trigger/', backup_views.backup_trigger, name='backup_trigger'),

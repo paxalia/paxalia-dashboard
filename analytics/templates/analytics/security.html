@@ -1,0 +1,248 @@
+{% extends 'analytics/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Security Center" %} – Analytics{% endblock %}
+
+{% block page_title %}{% trans "Security Center" %}{% endblock %}
+{% block page_subtitle %}{% trans "Login activity, sessions, and admin audit log" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Successful logins (30d)" %}</span>
+            <span class="stat-value">{{ total_success_30d }}</span>
+        </div>
+        <div class="stat-card {% if total_failed_30d > 0 %}stat-card--highlight{% endif %}">
+            <span class="stat-label">{% trans "Failed logins (30d)" %}</span>
+            <span class="stat-value">{{ total_failed_30d }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "New-location logins (30d)" %}</span>
+            <span class="stat-value">{{ new_location_logins_30d }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Active sessions" %}</span>
+            <span class="stat-value">{{ active_sessions|length }}</span>
+        </div>
+    </div>
+
+    <div class="security-tabs" role="tablist">
+        <button type="button" class="security-tab active" data-tab="logins" role="tab">{% trans "Login Activity" %}</button>
+        <button type="button" class="security-tab" data-tab="sessions" role="tab">{% trans "Active Sessions" %}</button>
+        <button type="button" class="security-tab" data-tab="failed" role="tab">{% trans "Failed Logins" %}</button>
+        <button type="button" class="security-tab" data-tab="ips" role="tab">{% trans "IP Blocklist" %}</button>
+        <button type="button" class="security-tab" data-tab="audit" role="tab">{% trans "Admin Audit Log" %}</button>
+    </div>
+
+    <!-- ── Login Activity ── -->
+    <div class="security-panel table-card" data-panel="logins">
+        <h2 class="card-title">{% trans "Recent Login Activity" %}</h2>
+        {% if recent_logins %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "When" %}</th>
+                    <th>{% trans "User" %}</th>
+                    <th>{% trans "Result" %}</th>
+                    <th>{% trans "IP" %}</th>
+                    <th>{% trans "Location" %}</th>
+                    <th>{% trans "Device" %}</th>
+                    <th>{% trans "New?" %}</th>
+                    <th>{% trans "Session" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in recent_logins %}
+                <tr>
+                    <td>{{ e.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ e.user.get_username|default:e.username_attempted|default:"—" }}</td>
+                    <td>
+                        <span class="security-status-badge {% if e.result == 'success' %}security-status-ok{% else %}security-status-bad{% endif %}">
+                            {{ e.get_result_display }}
+                        </span>
+                    </td>
+                    <td>{{ e.ip_address|default:"—" }}</td>
+                    <td>{% if e.city or e.country_name %}{{ e.city }}{% if e.city and e.country_name %}, {% endif %}{{ e.country_name }}{% else %}—{% endif %}</td>
+                    <td>{{ e.browser }} / {{ e.os }}</td>
+                    <td>{% if e.is_new_location %}<span class="status-flag-new">{% trans "Yes" %}</span>{% else %}—{% endif %}</td>
+                    <td>
+                        {% if e.is_active_session %}
+                        <form method="post" action="{% url 'analytics:security_revoke_session' e.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Force logout this session?' %}">{% trans "Revoke" %}</button>
+                        </form>
+                        {% elif e.result == 'success' %}
+                            <span class="status-dim">{% trans "ended" %}</span>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No login activity recorded yet." %}</div>
+        {% endif %}
+    </div>
+
+    <!-- ── Active Sessions ── -->
+    <div class="security-panel table-card" data-panel="sessions" hidden>
+        <h2 class="card-title">{% trans "Active Sessions" %}</h2>
+        <p class="form-hint">{% trans "Session revocation requires the default database session backend. If this project uses a different SESSION_ENGINE, revoking here ends tracking but may not immediately invalidate the session." %}</p>
+        {% if active_sessions %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "User" %}</th>
+                    <th>{% trans "Signed in" %}</th>
+                    <th>{% trans "IP" %}</th>
+                    <th>{% trans "Device" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in active_sessions %}
+                <tr>
+                    <td>{{ e.user.get_username|default:"—" }}</td>
+                    <td>{{ e.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ e.ip_address|default:"—" }}</td>
+                    <td>{{ e.browser }} / {{ e.os }}</td>
+                    <td>
+                        <form method="post" action="{% url 'analytics:security_revoke_session' e.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Force logout this session?' %}">{% trans "Revoke" %}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No active sessions tracked." %}</div>
+        {% endif %}
+    </div>
+
+    <!-- ── Failed Logins / Brute-force monitor ── -->
+    <div class="security-panel" data-panel="failed" hidden>
+        <div class="setting-table-grid">
+            <div class="table-card">
+                <h2 class="card-title">{% trans "Top attacking IPs (30d)" %}</h2>
+                {% if failed_by_ip %}
+                <table class="analytics-table">
+                    <thead><tr><th>{% trans "IP" %}</th><th>{% trans "Failed attempts" %}</th><th>{% trans "Actions" %}</th></tr></thead>
+                    <tbody>
+                        {% for row in failed_by_ip %}
+                        <tr>
+                            <td>{{ row.ip_address }}</td>
+                            <td>{{ row.count }}</td>
+                            <td>
+                                <form method="post" action="{% url 'analytics:security_block_ip' %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="ip_address" value="{{ row.ip_address }}">
+                                    <input type="hidden" name="reason" value="{% trans 'Repeated failed logins' %}">
+                                    <button type="submit" class="btn btn-sm btn-danger">{% trans "Block" %}</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="security-empty">{% trans "No failed logins in the last 30 days." %}</div>
+                {% endif %}
+            </div>
+            <div class="table-card">
+                <h2 class="card-title">{% trans "Top targeted usernames (30d)" %}</h2>
+                {% if failed_by_username %}
+                <table class="analytics-table">
+                    <thead><tr><th>{% trans "Username attempted" %}</th><th>{% trans "Failed attempts" %}</th></tr></thead>
+                    <tbody>
+                        {% for row in failed_by_username %}
+                        <tr><td>{{ row.username_attempted }}</td><td>{{ row.count }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="security-empty">{% trans "No failed logins in the last 30 days." %}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ── IP Blocklist ── -->
+    <div class="security-panel table-card" data-panel="ips" hidden>
+        <h2 class="card-title">{% trans "IP Blocklist" %}</h2>
+        <form method="post" action="{% url 'analytics:security_block_ip' %}" class="analytics-settings-form security-inline-form">
+            {% csrf_token %}
+            <input type="text" name="ip_address" placeholder="{% trans 'IP address' %}" required>
+            <input type="text" name="reason" placeholder="{% trans 'Reason (optional)' %}">
+            <button type="submit" class="btn btn-primary">{% trans "Block IP" %}</button>
+        </form>
+        <p class="form-hint">
+            {% trans "Blocking here only takes effect if SecurityBlockMiddleware is added to MIDDLEWARE." %}
+        </p>
+        {% if blocked_ips %}
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "IP" %}</th><th>{% trans "Reason" %}</th><th>{% trans "Status" %}</th><th>{% trans "Added" %}</th><th>{% trans "Actions" %}</th></tr></thead>
+            <tbody>
+                {% for b in blocked_ips %}
+                <tr>
+                    <td>{{ b.ip_address }}</td>
+                    <td>{{ b.reason|default:"—" }}</td>
+                    <td>
+                        <span class="security-status-badge {% if b.active %}security-status-ok{% else %}security-status-bad{% endif %}">
+                            {% if b.active %}{% trans "Blocked" %}{% else %}{% trans "Inactive" %}{% endif %}
+                        </span>
+                    </td>
+                    <td>{{ b.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        {% if b.active %}
+                        <form method="post" action="{% url 'analytics:security_unblock_ip' b.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-secondary">{% trans "Unblock" %}</button>
+                        </form>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No IPs blocked." %}</div>
+        {% endif %}
+    </div>
+
+    <!-- ── Admin Audit Log ── -->
+    <div class="security-panel table-card" data-panel="audit" hidden>
+        <h2 class="card-title">{% trans "Admin Audit Log" %}</h2>
+        {% if audit_entries %}
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "When" %}</th><th>{% trans "User" %}</th><th>{% trans "Action" %}</th><th>{% trans "Detail" %}</th><th>{% trans "IP" %}</th></tr></thead>
+            <tbody>
+                {% for a in audit_entries %}
+                <tr>
+                    <td>{{ a.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ a.user.get_username|default:"system" }}</td>
+                    <td><code>{{ a.action }}</code></td>
+                    <td>{{ a.detail|default:"—" }}</td>
+                    <td>{{ a.ip_address|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No admin actions recorded yet." %}</div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/security.js' %}"></script>
+{% endblock %}
