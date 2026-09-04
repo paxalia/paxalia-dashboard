@@ -19,7 +19,6 @@ import os
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from honeypot.decorators import honeypot_exempt
 
@@ -44,7 +43,6 @@ def _safe_filename(name):
 
 
 @staff_member_required
-@csrf_exempt
 @honeypot_exempt
 @require_POST
 def upload_init(request):
@@ -99,7 +97,6 @@ def upload_init(request):
 
 
 @staff_member_required
-@csrf_exempt
 @honeypot_exempt
 @require_POST
 def upload_chunk(request, upload_id):
@@ -165,7 +162,6 @@ def upload_chunk(request, upload_id):
 
 
 @staff_member_required
-@csrf_exempt
 @honeypot_exempt
 @require_POST
 def upload_complete(request, upload_id):
@@ -251,7 +247,6 @@ def upload_list(request):
 
 
 @staff_member_required
-@csrf_exempt
 @honeypot_exempt
 @require_POST
 def upload_delete(request, upload_id):
