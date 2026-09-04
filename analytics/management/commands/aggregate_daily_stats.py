@@ -3,7 +3,6 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count
 from analytics.models import PageView, DailySiteStats
-from analytics.settings import get_config
 
 class Command(BaseCommand):
     help = 'Aggregate daily stats including session metrics'
@@ -12,13 +11,17 @@ class Command(BaseCommand):
         today = timezone.now().date()
         yesterday = today - timedelta(days=1)
 
-        pageviews = PageView.objects.filter(created_at__date=yesterday, is_bot=False)
+        # "Page view" metrics below deliberately exclude API calls (is_api=True)
+        # so Overview/Pages/Traffic/Geography numbers reflect human page
+        # traffic, not API requests. API volume is aggregated separately
+        # into api_calls.
+        pageviews = PageView.objects.filter(created_at__date=yesterday, is_bot=False, is_api=False)
+        api_calls_qs = PageView.objects.filter(created_at__date=yesterday, is_bot=False, is_api=True)
 
         total_views = pageviews.count()
         unique_ips = pageviews.values('ip_hash').distinct().count()
-        unique_users = pageviews.exclude(user=None, is_bot=False).values('user').distinct().count()
-        api_prefix = get_config()['API_PATH_PREFIX']
-        api_calls = pageviews.filter(path__startswith=api_prefix, is_bot=False).count()
+        unique_users = pageviews.exclude(user=None).values('user').distinct().count()
+        api_calls = api_calls_qs.count()
 
         # Session stats
         sessions = pageviews.exclude(session_id='', is_bot=False).values('session_id')

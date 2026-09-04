@@ -76,6 +76,7 @@ class Command(BaseCommand):
             # Page views
             for _ in range(num_views):
                 path = random.choice(PAGES)
+                is_api = path.startswith(get_config()['API_PATH_PREFIX'])
                 session_id = random.choice(session_ids)
                 country = random.choices(COUNTRY_POOL, weights=COUNTRY_WEIGHTS, k=1)[0]
                 city = random.choice(country[2])
@@ -97,6 +98,7 @@ class Command(BaseCommand):
                     country_code=country[0],
                     country_name=country[1],
                     city=city,
+                    is_api=is_api,
                 )
 
             # Events
@@ -162,14 +164,15 @@ class Command(BaseCommand):
         self.stdout.write('Aggregating daily stats...')
         for day_offset in range(1, 31):
             date = today - timedelta(days=day_offset)
-            views = PageView.objects.filter(created_at__date=date)
-            if not views.exists():
+            all_views = PageView.objects.filter(created_at__date=date)
+            if not all_views.exists():
                 continue
+
+            views = all_views.filter(is_api=False)
+            api_calls = all_views.filter(is_api=True).count()
 
             total = views.count()
             unique_ips = views.values('ip_hash').distinct().count()
-            api_prefix = get_config()['API_PATH_PREFIX']
-            api_calls = views.filter(path__startswith=api_prefix).count()
 
             sessions_qs = views.exclude(session_id='')
             total_sessions = sessions_qs.values('session_id').distinct().count()

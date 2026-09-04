@@ -15,6 +15,17 @@ class PageView(models.Model):
     url = models.CharField(max_length=2048)
     path = models.CharField(max_length=255, db_index=True)
     is_bot = models.BooleanField(default=False, help_text="True if the request path matches a bot path.")
+    is_api = models.BooleanField(
+        default=False, db_index=True,
+        help_text=(
+            "True if the request path matched API_PATH_PREFIX. Set once by "
+            "the middleware at write time so every view can filter page "
+            "views and API calls apart with a plain field lookup instead of "
+            "re-matching the path prefix in every query. Existing rows from "
+            "before this field was added can be backfilled with "
+            "`manage.py backfill_pageview_is_api`."
+        )
+    )
     method = models.CharField(max_length=10, default='GET')
     status_code = models.PositiveIntegerField(default=200)
     ip_hash = models.CharField(max_length=64, blank=True, db_index=True)
