@@ -1,18 +1,18 @@
-# django‑zaydany‑analytics
+# paxalia-dashboard
 
-![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
 ![Django](https://img.shields.io/badge/django-5.0+-green.svg)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 
-A **privacy‑first, self‑hosted analytics platform** for Django.  
+A **complete, self‑hosted analytics platform** for Django, from [Paxalia](https://paxalia.com).
 Drop it into any Django project and get a beautiful, full‑featured analytics dashboard with zero third‑party services.
 
 ---
 
 ## Table of Contents
 
-- [Why django‑zaydany‑analytics?](#why-django-zaydany-analytics)
+- [Why paxalia-dashboard?](#why-paxalia-dashboard)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Installation](#installation)
@@ -34,23 +34,23 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 
 ---
 
-## Why django‑zaydany‑analytics
+## Why paxalia-dashboard
 
-|                      | Google Analytics | Other Django packages | **django‑zaydany‑analytics** |
-|----------------------|------------------|-----------------------|------------------------------|
-| Self‑hosted          | ❌                | ✅                     | ✅                            |
-| Privacy‑first        | ❌                | ❌ (basic)             | ✅ (no third‑party sharing)   |
-| Full dashboard       | ✅                | ❌ (basic counters)    | ✅                            |
-| World map            | ✅                | ❌                     | ✅                            |
-| Event tracking       | ✅                | ❌                     | ✅                            |
-| Billing dashboard    | ❌                | ❌                     | ✅                            |
-| Server monitoring    | ❌                | ❌                     | ✅                            |
-| Bot detection        | ❌                | ❌                     | ✅                            |
-| Backup management    | ❌                | ❌                     | ✅                            |
-| Themes               | ❌                | ❌                     | ✅ (12 luxury themes)         |
-| Multi‑language + RTL | ❌                | ❌                     | ✅ (5 languages, RTL support) |
-| Offline map          | ❌                | ❌                     | ✅ (no CDN calls)             |
-| One‑click CSV/JSON   | ❌                | ❌                     | ✅                            |
+|                        | Google Analytics | Other Django packages | **paxalia-dashboard**             |
+|------------------------|------------------|-----------------------|-----------------------------------|
+| Self‑hosted            | ❌                | ✅                     | ✅                                 |
+| No third‑party sharing | ❌                | ❌ (basic)             | ✅ (data never leaves your server) |
+| Full dashboard         | ✅                | ❌ (basic counters)    | ✅                                 |
+| World map              | ✅                | ❌                     | ✅                                 |
+| Event tracking         | ✅                | ❌                     | ✅                                 |
+| Billing dashboard      | ❌                | ❌                     | ✅                                 |
+| Server monitoring      | ❌                | ❌                     | ✅                                 |
+| Bot detection          | ❌                | ❌                     | ✅                                 |
+| Backup management      | ❌                | ❌                     | ✅                                 |
+| Themes                 | ❌                | ❌                     | ✅ (12 luxury themes)              |
+| Multi‑language + RTL   | ❌                | ❌                     | ✅ (5 languages, RTL support)      |
+| Offline map            | ❌                | ❌                     | ✅ (no CDN calls)                  |
+| One‑click CSV/JSON     | ❌                | ❌                     | ✅                                 |
 
 ---
 
@@ -81,9 +81,9 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
   dashboard to right‑to‑left.
 - **Fully Responsive** – works on desktop, tablet, and mobile; sidebar collapses to an overlay on small screens.
 - **Configurable** – enable only the sections you need, change API paths, swap billing models, all from a single
-  `ZAYDANY_ANALYTICS` dict.
-- **Privacy‑First** – IP addresses are hashed; no cookies required (anonymous session cookie is optional and carries no
-  personal data); all data stays on your server.
+  `PAXALIA_DASHBOARD` dict.
+- **Configurable Data Handling** – IP address storage (raw by default, or SHA256-hashed if you turn on anonymization),
+  and the anonymous session cookie, are both configurable in Settings; all data stays on your server regardless.
 - **Self‑Contained** – no external CDN calls for maps, charts, or fonts – everything is bundled.
 
 ---
@@ -108,7 +108,7 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 ### 1. Install the package
 
 ```bash
-pip install django-zaydany-analytics
+pip install paxalia-dashboard
 ```
 
 ### 2. Add to INSTALLED_APPS
@@ -269,10 +269,10 @@ python manage.py create_backup
 
 ## Configuration
 
-All settings go into your settings.py under a single ZAYDANY_ANALYTICS dictionary.
+All settings go into your settings.py under a single PAXALIA_DASHBOARD dictionary.
 
 ```python
-ZAYDANY_ANALYTICS = {
+PAXALIA_DASHBOARD = {
     # Sidebar sections to show (order matters)
     'SIDEBAR_SECTIONS': [
         'overview', 'pages', 'api', 'traffic', 'realtime',
@@ -292,7 +292,7 @@ ZAYDANY_ANALYTICS = {
     'BILLING_DONATION_MODEL': 'billing.Donation',
 
     # Default middleware fallbacks (when no AnalyticsSettings row exists)
-    'DEFAULT_ANONYMIZE_IP': True,
+    'DEFAULT_ANONYMIZE_IP': False,
     'DEFAULT_IGNORED_PREFIXES': ['/admin/', '/static/', '/media/'],
     'DEFAULT_IGNORED_EXTENSIONS': ['.css', '.js', '.png', '.jpg', '.svg', '.ico', '.woff2'],
     'DEFAULT_REALTIME_REFRESH': 30,
@@ -683,11 +683,11 @@ Your project must have three models that follow this approximate structure:
 
 ### Setup
 
-1. Add `'billing'` to `SIDEBAR_SECTIONS` in your `ZAYDANY_ANALYTICS` config.
+1. Add `'billing'` to `SIDEBAR_SECTIONS` in your `PAXALIA_DASHBOARD` config.
 2. Set the model paths to match your project:
 
 ```python
-ZAYDANY_ANALYTICS = {
+PAXALIA_DASHBOARD = {
     'SIDEBAR_SECTIONS': [..., 'billing', ...],
     'BILLING_INVOICE_MODEL': 'myapp.Invoice',
     'BILLING_USER_PLAN_MODEL': 'myapp.UserPlan',
@@ -1075,11 +1075,11 @@ Built entirely by **Parsa Zaydany** — solo, offline, during difficult circumst
 This dashboard exists because the analytics landscape is broken. Most tools track your users, expose their IPs, and send
 data to third‑party servers. They're insecure by design, and they don't respect privacy.
 
-**django‑zaydany‑analytics** is different:
+**paxalia-dashboard** is different:
 
 - It's completely open source.
 - It runs entirely on your own server – no external calls, no tracking pixels.
-- Your users' privacy is protected by default.
+- Data handling (including IP anonymization) is yours to configure in Settings.
 
 The world map database is only 60MB. Downloading it took **over four hours** over an unreliable connection. Pushing this
 first release to GitHub required buying a small amount of bandwidth — a purchase that came from savings I had set aside
@@ -1090,9 +1090,9 @@ someone built it and shared it. This is my contribution back.
 
 ### About Paxalia
 
-[Paxalia](https://paxalia.com) is a collection of thoughtfully crafted digital tools – a planning app, an SVG design
-tool, and this analytics dashboard – all built by a solo developer who believes that great software should be both
-powerful and ethical.
+[Paxalia](https://paxalia.com) is a workspace, timer, planner, and team-tools platform — one app covering deep-focus
+timers, notes, goals, an infinite canvas board, a Life OS, live shareable pages, events and alarms, and team chat —
+built and maintained by a single developer. This analytics dashboard is part of the same ecosystem.
 
 ### Full Story
 
@@ -1108,4 +1108,4 @@ If this package helps your project, consider:
 - Contributing a translation or feature
 - Supporting via [Paxalia](https://paxalia.com/donation/)
 
-Thank you for using **django‑zaydany‑analytics**.
+Thank you for using **paxalia-dashboard**.

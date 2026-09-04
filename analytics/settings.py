@@ -22,8 +22,8 @@ DEFAULTS = {
 
 
 def get_config():
-    """Return the ZAYDANY_ANALYTICS dict merged with defaults."""
-    user_config = getattr(settings, 'ZAYDANY_ANALYTICS', {})
+    """Return the PAXALIA_DASHBOARD dict merged with defaults."""
+    user_config = getattr(settings, 'PAXALIA_DASHBOARD', {})
     config = DEFAULTS.copy()
     config.update(user_config)
     return config
