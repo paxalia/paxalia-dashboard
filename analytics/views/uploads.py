@@ -5,7 +5,7 @@ Designed for moving large build artifacts onto the server over HTTPS when
 other transfer methods (SSH/rsync/raw HTTP) are unreliable on the admin's
 network.
 
-All settings come from the project's ZAYDANY_ANALYTICS dict — see
+All settings come from the project's PAXALIA_DASHBOARD dict — see
 conf_uploads.py.
 
 Flow:
