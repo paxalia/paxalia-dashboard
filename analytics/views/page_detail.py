@@ -7,7 +7,7 @@ from django.db.models.functions import TruncDate
 
 from analytics.models import PageView
 
-from .utils import get_date_range, detect_active_preset, section_enabled
+from .utils import get_date_range, detect_active_preset, section_enabled, get_current_site, site_scoped
 
 from datetime import timedelta
 from urllib.parse import unquote
@@ -22,7 +22,8 @@ def analytics_page_detail(request, path):
     decoded_path = unquote(path)
 
     start_dt, end_dt = get_date_range(request)
-    base_qs = PageView.objects.filter(path=decoded_path, created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+    current_site = get_current_site(request)
+    base_qs = site_scoped(PageView.objects.filter(path=decoded_path, created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
 
     # Check that there is at least one view for this path in the range
     if not base_qs.exists():
@@ -47,12 +48,12 @@ def analytics_page_detail(request, path):
         period_delta = (end_dt - start_dt).days
         prev_end = start_dt - timedelta(seconds=1)
         prev_start = prev_end - timedelta(days=period_delta)
-        prev_qs = PageView.objects.filter(
+        prev_qs = site_scoped(PageView.objects.filter(
             path=decoded_path,
             created_at__range=(prev_start, prev_end),
             is_bot=False,
             is_api=False
-        )
+        ), current_site)
         prev_daily = (
             prev_qs
             .annotate(day=TruncDate('created_at'))

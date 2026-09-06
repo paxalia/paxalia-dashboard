@@ -3,12 +3,12 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.http import Http404
 from django.shortcuts import render
 from django.utils import timezone
-from django.db.models import Count
+from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 
 from analytics.models import PageView, DailySiteStats
 
-from .utils import get_date_range, detect_active_preset, section_enabled
+from .utils import get_date_range, detect_active_preset, section_enabled, get_current_site, site_scoped
 
 from datetime import timedelta
 
@@ -19,25 +19,31 @@ from datetime import timedelta
 def analytics_api(request):
     if not section_enabled('api'):
         raise Http404
+    current_site = get_current_site(request)
     start_dt, end_dt = get_date_range(request)
     today = timezone.now().date()
     yesterday = today - timedelta(days=1)
 
     # Base queryset for API calls in the range
-    api_qs = PageView.objects.filter(
+    api_qs = site_scoped(PageView.objects.filter(
         created_at__range=(start_dt, end_dt),
         is_api=True, is_bot=False
-    )
+    ), current_site)
 
     # Today's live API calls (always today)
-    today_api = PageView.objects.filter(created_at__date=today, is_api=True, is_bot=False).count()
+    today_api = site_scoped(PageView.objects.filter(created_at__date=today, is_api=True, is_bot=False), current_site).count()
 
     # Yesterday's API calls (prefer aggregated stats if available)
     try:
-        yest_stats = DailySiteStats.objects.get(date=yesterday)
-        yesterday_api = yest_stats.api_calls
+        if current_site is not None:
+            yesterday_api = DailySiteStats.objects.get(site=current_site, date=yesterday).api_calls
+        else:
+            agg = DailySiteStats.objects.filter(date=yesterday).aggregate(api_calls=Sum('api_calls'))
+            if agg['api_calls'] is None:
+                raise DailySiteStats.DoesNotExist
+            yesterday_api = agg['api_calls']
     except DailySiteStats.DoesNotExist:
-        yesterday_api = PageView.objects.filter(created_at__date=yesterday, is_api=True, is_bot=False).count()
+        yesterday_api = site_scoped(PageView.objects.filter(created_at__date=yesterday, is_api=True, is_bot=False), current_site).count()
 
     # Daily API chart for the selected range
     daily_api = (
@@ -59,10 +65,10 @@ def analytics_api(request):
         period_delta = (end_dt - start_dt).days
         prev_end = start_dt - timedelta(seconds=1)
         prev_start = prev_end - timedelta(days=period_delta)
-        prev_qs = PageView.objects.filter(
+        prev_qs = site_scoped(PageView.objects.filter(
             created_at__range=(prev_start, prev_end),
             is_api=True, is_bot=False
-        )
+        ), current_site)
         prev_daily = (
             prev_qs
             .annotate(day=TruncDate('created_at'))

@@ -8,10 +8,42 @@ from django.utils import timezone
 
 # Create your models here.
 
+class Site(models.Model):
+    """
+    A tracked property/domain. This single Django install can serve (or
+    receive tracking data for) more than one site — requests are matched
+    to a Site by hostname (see AnalyticsMiddleware._resolve_site()).
+
+    Unmatched hosts get site=None rather than being force-assigned to a
+    default Site — see AUTO_CREATE_SITES in settings.py for the opt-in
+    convenience behavior if you'd rather not pre-register every domain.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    domain = models.CharField(
+        max_length=255, unique=True, db_index=True,
+        help_text="Hostname only, no scheme/port, e.g. 'example.com'."
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "Site"
+        verbose_name_plural = "Sites"
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.domain})"
+
 
 class PageView(models.Model):
     """Every page visit logged by middleware."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(
+        Site, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='page_views',
+        help_text="Resolved from the request's hostname. Null if the host didn't match any registered Site."
+    )
     url = models.CharField(max_length=2048)
     path = models.CharField(max_length=255, db_index=True)
     is_bot = models.BooleanField(default=False, help_text="True if the request path matches a bot path.")
@@ -53,8 +85,11 @@ class PageView(models.Model):
 
 
 class DailySiteStats(models.Model):
-    """Aggregated stats per day."""
-    date = models.DateField(unique=True, db_index=True)
+    """Aggregated stats per day, per site (site=None aggregates unmatched-host traffic)."""
+    site = models.ForeignKey(
+        Site, on_delete=models.CASCADE, null=True, blank=True, related_name='daily_stats'
+    )
+    date = models.DateField(db_index=True)
     total_views = models.PositiveIntegerField(default=0)
     unique_ips = models.PositiveIntegerField(default=0)
     unique_users = models.PositiveIntegerField(default=0)
@@ -72,16 +107,17 @@ class DailySiteStats(models.Model):
         verbose_name = "Daily Site Stats"
         verbose_name_plural = "Daily Site Stats"
         ordering = ['-date']
+        unique_together = [('site', 'date')]
 
     def __str__(self):
-        return f"Stats for {self.date}"
+        return f"Stats for {self.site or 'all sites'} on {self.date}"
 
 
 class AnalyticsSettings(models.Model):
     """Singleton model – stores configurable analytics options."""
     anonymize_ip = models.BooleanField(
-        default=True,
-        help_text="Hash IP addresses with SHA256 before storing"
+        default=False,
+        help_text="Hash IP addresses with SHA256 before storing. Off by default — turn on if you want visitor IPs anonymized."
     )
     ignored_prefixes = models.TextField(
         default="/admin/\n/static/\n/media/",
@@ -102,6 +138,11 @@ class AnalyticsSettings(models.Model):
     bot_paths = models.TextField(
         blank=True,
         help_text="One path prefix per line. Requests to these paths are counted as bot traffic (shown separately)."
+    )
+    search_query_params = models.TextField(
+        default="q\nsearch\nquery",
+        blank=True,
+        help_text="One query-string parameter name per line. A request whose URL includes any of these params is logged as a site-search event (see AnalyticsEvent, category='site_search')."
     )
 
     class Meta:
@@ -125,6 +166,7 @@ class AnalyticsSettings(models.Model):
 
 class AnalyticsEvent(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True, related_name='events')
     category = models.CharField(max_length=100, db_index=True)
     action = models.CharField(max_length=100, db_index=True)
     label = models.CharField(max_length=255, blank=True, null=True)
@@ -244,7 +286,7 @@ class LoginEvent(models.Model):
     """
     One row per authentication attempt against the site's normal Django
     auth (staff and, optionally, regular users — see
-    ZAYDANY_ANALYTICS['SECURITY_TRACK_ONLY_STAFF']).
+    PAXALIA_DASHBOARD['SECURITY_TRACK_ONLY_STAFF']).
 
     Populated by analytics/signals.py via Django's built-in
     user_logged_in / user_logged_out / user_login_failed signals — no
@@ -370,6 +412,7 @@ class CSPViolation(models.Model):
     /<dashboard-path>/csp-report/ to start receiving reports here.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True, related_name='csp_violations')
     blocked_uri = models.CharField(max_length=2048, blank=True)
     violated_directive = models.CharField(max_length=255, blank=True)
     document_uri = models.CharField(max_length=2048, blank=True)

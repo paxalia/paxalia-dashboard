@@ -60,6 +60,43 @@ def section_enabled(section_name):
     return section_name in config['SIDEBAR_SECTIONS']
 
 
+def get_current_site(request):
+    """
+    Return the currently-selected Site for dashboard filtering, or None
+    for "All Sites" (no filter).
+
+    Selection comes from ?site=<uuid> and is persisted in the session so
+    it carries across navigation without needing it on every link. An
+    invalid/stale id (e.g. a deleted Site) is treated the same as no
+    selection — falls back to "All Sites" rather than erroring.
+    """
+    from analytics.models import Site
+
+    site_param = request.GET.get('site')
+    if site_param is not None:
+        if site_param == '':
+            request.session.pop('analytics_current_site_id', None)
+            return None
+        request.session['analytics_current_site_id'] = site_param
+    else:
+        site_param = request.session.get('analytics_current_site_id')
+
+    if not site_param:
+        return None
+
+    return Site.objects.filter(id=site_param).first()
+
+
+def site_scoped(queryset, site):
+    """Apply the current site filter to a queryset, or return it
+    unchanged for "All Sites" (site=None). Centralizing this one-liner
+    means every view filters the same way — `.filter(site=site)` when
+    site is a Site instance, untouched when it's None (which must NOT
+    become `.filter(site=None)` — that would mean "unassigned traffic
+    only," not "no filter")."""
+    return queryset.filter(site=site) if site is not None else queryset
+
+
 def get_billing_models():
     """Return (InvoiceModel, UserBillingModel, DonationModel) or (None, None, None)."""
     config = get_config()

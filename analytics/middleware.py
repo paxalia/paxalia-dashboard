@@ -3,7 +3,7 @@ import logging
 import uuid
 import geoip2.database
 import os
-from .models import PageView, AnalyticsSettings, DailySiteStats
+from .models import PageView, AnalyticsSettings, DailySiteStats, AnalyticsEvent
 from .settings import get_config
 from django.utils import timezone
 
@@ -44,6 +44,36 @@ def _resolve_ip(ip):
         return None, None, None
 
 
+def _resolve_site_id(request):
+    """
+    Resolve the Site (by id) a request belongs to, by hostname.
+
+    Cached briefly (same pattern as SecurityBlockMiddleware's blocked-IP
+    cache) so multi-site resolution doesn't add a DB query to every
+    request — returns the id directly (not a Site instance) so callers
+    can pass it straight to `site_id=` on model creation without a
+    second lookup. Returns None if the host doesn't match any
+    registered, active Site — callers should treat that as
+    "unassigned," not an error; nothing here auto-assigns to a default
+    Site unless AUTO_CREATE_SITES is turned on.
+    """
+    from django.core.cache import cache
+    from .models import Site
+
+    host = request.get_host().split(':')[0].lower()
+    cache_key = f'analytics:site_for_host:{host}'
+    cached = cache.get(cache_key, '__unset__')
+    if cached != '__unset__':
+        return cached
+
+    site = Site.objects.filter(domain=host, is_active=True).first()
+    if site is None and get_config().get('AUTO_CREATE_SITES'):
+        site, _ = Site.objects.get_or_create(domain=host, defaults={'name': host})
+    site_id = site.id if site else None
+    cache.set(cache_key, site_id, timeout=30)
+    return site_id
+
+
 def get_analytics_settings():
     instance = AnalyticsSettings.objects.first()
     if instance:
@@ -57,6 +87,7 @@ def get_analytics_settings():
         realtime_refresh_seconds = config['DEFAULT_REALTIME_REFRESH']
         tracked_paths = ''
         bot_paths = ''
+        search_query_params = '\n'.join(config['DEFAULT_SEARCH_QUERY_PARAMS'])
     return DefaultSettings()
 
 
@@ -122,10 +153,11 @@ class AnalyticsMiddleware:
             ip = self._get_ip(request)
             # NOTE on the field name: it's called `ip_hash` for historical
             # reasons, but it holds whichever representation of the IP the
-            # admin asked for. When anonymize_ip is True we store a SHA-256
-            # hash (irreversible, privacy-first default). When it's False
-            # we store the raw IP — previously this branch stored nothing
-            # at all when anonymization was disabled, which was a bug.
+            # admin asked for. When anonymize_ip is True (opt-in — see
+            # AnalyticsSettings) we store a SHA-256 hash (irreversible).
+            # When it's False (the default) we store the raw IP —
+            # previously this branch stored nothing at all when
+            # anonymization was disabled, which was a bug.
             ip_hash = ''
             if ip:
                 ip_hash = hashlib.sha256(ip.encode()).hexdigest() if cfg.anonymize_ip else ip
@@ -133,8 +165,12 @@ class AnalyticsMiddleware:
             # Resolve geolocation
             country_code, country_name, city = _resolve_ip(ip)
 
+            # Resolve which Site (if any) this request belongs to
+            site_id = _resolve_site_id(request)
+
             # Create PageView
             page_view = PageView.objects.create(
+                site_id=site_id,
                 url=request.build_absolute_uri(),
                 path=path,
                 method=request.method,
@@ -151,9 +187,33 @@ class AnalyticsMiddleware:
                 is_api=is_api,
             )
 
+            # Site search tracking: if the request's query string includes
+            # any of the configured search-param names, log it as a
+            # site_search AnalyticsEvent. Server-side, so it needs no
+            # client-side JS — it rides along with the PageView already
+            # being logged for this request.
+            if not is_bot and not is_api:
+                search_params = [p.strip() for p in cfg.search_query_params.split('\n') if p.strip()]
+                for param in search_params:
+                    query_value = request.GET.get(param)
+                    if query_value:
+                        AnalyticsEvent.objects.create(
+                            site_id=site_id,
+                            category='site_search',
+                            action=param,
+                            label=query_value[:255],
+                            path=path,
+                            session_id=session_id,
+                            ip_hash='',
+                            country_code='',
+                            country_name='',
+                            city='',
+                        )
+                        break  # one search event per request is enough
+
             # Update daily stats – aggregate total/bot/api views incrementally
             today = timezone.now().date()
-            stats, _ = DailySiteStats.objects.get_or_create(date=today)
+            stats, _ = DailySiteStats.objects.get_or_create(site_id=site_id, date=today)
             if is_bot:
                 stats.bot_views += 1
             elif is_api:
