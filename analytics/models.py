@@ -75,6 +75,15 @@ class PageView(models.Model):
     country_name = models.CharField(max_length=100, blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
 
+    # UTM campaign parameters, parsed once from the query string at write
+    # time (same reasoning as is_bot/is_api — a plain field lookup beats
+    # re-parsing the URL in every view that wants campaign data).
+    utm_source = models.CharField(max_length=255, blank=True, db_index=True)
+    utm_medium = models.CharField(max_length=255, blank=True)
+    utm_campaign = models.CharField(max_length=255, blank=True, db_index=True)
+    utm_term = models.CharField(max_length=255, blank=True)
+    utm_content = models.CharField(max_length=255, blank=True)
+
     class Meta:
         verbose_name = "Page View"
         verbose_name_plural = "Page Views"
@@ -483,3 +492,137 @@ class FileUpload(models.Model):
         if self.total_size == 0:
             return 0
         return round((self.bytes_received / self.total_size) * 100, 1)
+
+
+class Goal(models.Model):
+    """
+    A conversion goal: either "a visitor hit this page" or "a visitor
+    fired this event." Conversion rate is computed on the fly against
+    PageView/AnalyticsEvent — there's no separate completion-log table,
+    since the underlying data already exists.
+    """
+    GOAL_TYPE_CHOICES = [
+        ('page', 'Page visited'),
+        ('event', 'Event fired'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True, related_name='goals')
+    name = models.CharField(max_length=255)
+    goal_type = models.CharField(max_length=10, choices=GOAL_TYPE_CHOICES)
+    # For goal_type='page': match_value is a path (exact match against PageView.path).
+    # For goal_type='event': match_value is "category:action" (both required).
+    match_value = models.CharField(
+        max_length=255,
+        help_text="Path for a page goal (e.g. '/thank-you/'), or 'category:action' for an event goal (e.g. 'signup:completed')."
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "Goal"
+        verbose_name_plural = "Goals"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def matching_category_action(self):
+        """For an event goal, split match_value into (category, action). Returns (None, None) for a page goal."""
+        if self.goal_type != 'event' or ':' not in self.match_value:
+            return None, None
+        category, _, action = self.match_value.partition(':')
+        return category, action
+
+
+class Funnel(models.Model):
+    """An ordered sequence of steps. See FunnelStep for the steps
+    themselves, and analytics/funnels.py for how completion is computed."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True, related_name='funnels')
+    name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "Funnel"
+        verbose_name_plural = "Funnels"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class FunnelStep(models.Model):
+    """One step of a Funnel. Reuses the same page/event match shape as Goal."""
+    STEP_TYPE_CHOICES = [
+        ('page', 'Page visited'),
+        ('event', 'Event fired'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    funnel = models.ForeignKey(Funnel, on_delete=models.CASCADE, related_name='steps')
+    order = models.PositiveIntegerField()
+    name = models.CharField(max_length=255)
+    step_type = models.CharField(max_length=10, choices=STEP_TYPE_CHOICES)
+    match_value = models.CharField(max_length=255, help_text="Same format as Goal.match_value.")
+
+    class Meta:
+        verbose_name = "Funnel Step"
+        verbose_name_plural = "Funnel Steps"
+        ordering = ['funnel', 'order']
+        unique_together = [('funnel', 'order')]
+
+    def __str__(self):
+        return f"{self.funnel.name} — step {self.order}: {self.name}"
+
+    def matching_category_action(self):
+        if self.step_type != 'event' or ':' not in self.match_value:
+            return None, None
+        category, _, action = self.match_value.partition(':')
+        return category, action
+
+
+class Segment(models.Model):
+    """
+    A saved filter, reusable across Overview/Pages/Traffic. `filters` is
+    a flat JSON dict of field -> value, applied as an AND of exact-match
+    filters against PageView (see analytics/segments.py::segment_scoped).
+    Only a small, explicit set of fields is supported — see
+    ALLOWED_FILTER_FIELDS in segments.py — to avoid turning this into an
+    arbitrary-query injection surface.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True, related_name='segments')
+    name = models.CharField(max_length=255)
+    filters = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "Segment"
+        verbose_name_plural = "Segments"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class ChartAnnotation(models.Model):
+    """A marker on a specific date, shown on the traffic charts (e.g. a
+    deploy, a campaign launch). See Phase-13's deployment tracker for a
+    more automated version of this same idea."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True, related_name='annotations')
+    date = models.DateField(db_index=True)
+    label = models.CharField(max_length=255)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "Chart Annotation"
+        verbose_name_plural = "Chart Annotations"
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.date}: {self.label}"

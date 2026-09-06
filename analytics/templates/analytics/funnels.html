@@ -1,0 +1,83 @@
+{% extends 'analytics/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Funnels" %} – Analytics{% endblock %}
+{% block page_title %}{% trans "Funnels" %}{% endblock %}
+{% block page_subtitle %}{% trans "Step-by-step drop-off for the selected date range" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+    {% include 'analytics/includes/filter_bar.html' %}
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Create a Funnel" %}</h2>
+        <p class="form-hint">
+            {% trans "Up to 5 steps. A session counts toward a step if it matches that step and every step before it, anywhere in the date range — this is a simpler approximation than a strictly-ordered funnel, so treat drop-off as directional rather than exact." %}
+        </p>
+        <form method="post" class="analytics-settings-form">
+            {% csrf_token %}
+            <input type="hidden" name="save_funnel" value="1">
+            <input type="text" name="name" placeholder="{% trans 'Funnel name (e.g. Signup Flow)' %}" required style="margin-bottom: 0.75rem; width: 100%;">
+            {% for i in "12345" %}
+            <div class="security-inline-form" style="margin-bottom: 0.5rem;">
+                <span style="min-width: 4rem;">{% trans "Step" %} {{ forloop.counter }}</span>
+                <input type="text" name="step_name" placeholder="{% trans 'Step label (optional)' %}">
+                <select name="step_type">
+                    <option value="page">{% trans "Page visited" %}</option>
+                    <option value="event">{% trans "Event fired" %}</option>
+                </select>
+                <input type="text" name="step_value" placeholder="{% trans 'Path, or category:action' %}" {% if forloop.first %}required{% endif %}>
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">{% trans "Save Funnel" %}</button>
+        </form>
+    </div>
+
+    {% for report in funnel_reports %}
+    <div class="table-card">
+        <h2 class="card-title">
+            {{ report.funnel.name }}
+            <form method="post" action="{% url 'analytics:funnel_delete' report.funnel.id %}" style="display:inline; float: right;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Delete this funnel?' %}">{% trans "Delete" %}</button>
+            </form>
+        </h2>
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Step" %}</th>
+                    <th>{% trans "Matches" %}</th>
+                    <th>{% trans "Sessions" %}</th>
+                    <th>{% trans "% of step 1" %}</th>
+                    <th>{% trans "% of previous step" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.dropoff %}
+                <tr>
+                    <td>{{ row.step.order }}. {{ row.step.name }}</td>
+                    <td><code>{{ row.step.match_value }}</code></td>
+                    <td>{{ row.sessions }}</td>
+                    <td>{{ row.pct_of_step_1 }}%</td>
+                    <td>{{ row.pct_of_previous }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% empty %}
+    <div class="table-card">
+        <div class="security-empty">{% trans "No funnels defined yet." %}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/security.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'analytics/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Chart Annotations" %} – Analytics{% endblock %}
+{% block page_title %}{% trans "Chart Annotations" %}{% endblock %}
+{% block page_subtitle %}{% trans "Mark deploys, campaigns, or incidents on the Overview chart" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Add an Annotation" %}</h2>
+        <form method="post" class="analytics-settings-form security-inline-form">
+            {% csrf_token %}
+            <input type="hidden" name="save_annotation" value="1">
+            <input type="date" name="date" required>
+            <input type="text" name="label" placeholder="{% trans 'Label (e.g. Deployed v3.0.0)' %}" required>
+            <button type="submit" class="btn btn-primary">{% trans "Add" %}</button>
+        </form>
+    </div>
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Annotations" %}</h2>
+        {% if annotations %}
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "Date" %}</th><th>{% trans "Label" %}</th><th>{% trans "Added by" %}</th><th>{% trans "Actions" %}</th></tr></thead>
+            <tbody>
+                {% for a in annotations %}
+                <tr>
+                    <td>{{ a.date }}</td>
+                    <td>{{ a.label }}</td>
+                    <td>{{ a.created_by.get_username|default:"—" }}</td>
+                    <td>
+                        <form method="post" action="{% url 'analytics:annotation_delete' a.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Delete this annotation?' %}">{% trans "Delete" %}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No annotations yet." %}</div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/security.js' %}"></script>
+{% endblock %}

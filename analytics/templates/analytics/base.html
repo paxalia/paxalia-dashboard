@@ -194,6 +194,66 @@
                         </a>
                         {% endif %}
 
+                        {% if 'goals' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:goals' %}"
+                           class="analytics-sidebar-link {% if active_page == 'goals' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 16a6 6 0 1 1 6-6 6 6 0 0 1-6 6zm0-9a3 3 0 1 0 3 3 3 3 0 0 0-3-3z"/>
+                                </svg>
+                            </span>
+                            {% trans "Goals" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'funnels' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:funnels' %}"
+                           class="analytics-sidebar-link {% if active_page == 'funnels' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M3 4h18v2l-7 8v6l-4-2v-4L3 6z"/>
+                                </svg>
+                            </span>
+                            {% trans "Funnels" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'segments' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:segments' %}"
+                           class="analytics-sidebar-link {% if active_page == 'segments' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M4 5h16v3H4zm0 5.5h10v3H4zm0 5.5h7v3H4z"/>
+                                </svg>
+                            </span>
+                            {% trans "Segments" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'campaigns' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:campaigns' %}"
+                           class="analytics-sidebar-link {% if active_page == 'campaigns' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M3 11l18-7-7 18-2-8-8-2z"/>
+                                </svg>
+                            </span>
+                            {% trans "Campaigns" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'annotations' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:annotations' %}"
+                           class="analytics-sidebar-link {% if active_page == 'annotations' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M4 20l4-1 10-10-3-3L5 16l-1 4zm12.5-14.5l2 2 1.5-1.5-2-2z"/>
+                                </svg>
+                            </span>
+                            {% trans "Annotations" %}
+                        </a>
+                        {% endif %}
+
                         {% if 'bots' in analytics_config.SIDEBAR_SECTIONS %}
                         <a href="{% url 'analytics:bots' %}"
                            class="analytics-sidebar-link {% if active_page == 'bots' %}active{% endif %}">

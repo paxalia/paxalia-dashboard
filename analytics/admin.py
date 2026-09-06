@@ -13,6 +13,11 @@ from .models import (
     SecurityAuditLog,
     CSPViolation,
     Site,
+    Goal,
+    Funnel,
+    FunnelStep,
+    Segment,
+    ChartAnnotation,
 )
 
 
@@ -167,3 +172,34 @@ class SiteAdmin(admin.ModelAdmin):
     list_display = ('name', 'domain', 'is_active', 'created_at')
     list_filter = ('is_active',)
     search_fields = ('name', 'domain')
+
+
+@admin.register(Goal)
+class GoalAdmin(admin.ModelAdmin):
+    list_display = ('name', 'goal_type', 'match_value', 'site', 'is_active', 'created_at')
+    list_filter = ('goal_type', 'is_active')
+    search_fields = ('name', 'match_value')
+
+
+class FunnelStepInline(admin.TabularInline):
+    model = FunnelStep
+    extra = 1
+
+
+@admin.register(Funnel)
+class FunnelAdmin(admin.ModelAdmin):
+    list_display = ('name', 'site', 'created_at')
+    inlines = [FunnelStepInline]
+
+
+@admin.register(Segment)
+class SegmentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'site', 'created_at')
+    search_fields = ('name',)
+
+
+@admin.register(ChartAnnotation)
+class ChartAnnotationAdmin(admin.ModelAdmin):
+    list_display = ('date', 'label', 'site', 'created_by')
+    list_filter = ('date',)
+    search_fields = ('label',)

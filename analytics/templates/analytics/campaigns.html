@@ -1,0 +1,81 @@
+{% extends 'analytics/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Campaigns" %} – Analytics{% endblock %}
+{% block page_title %}{% trans "Campaigns" %}{% endblock %}
+{% block page_subtitle %}{% trans "Traffic tagged with UTM parameters" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+    {% include 'analytics/includes/filter_bar.html' %}
+
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Views with UTM tags" %}</span>
+            <span class="stat-value">{{ total_campaign_views }}</span>
+        </div>
+    </div>
+
+    <div class="setting-table-grid">
+        <div class="table-card">
+            <h2 class="card-title">{% trans "Top Campaigns" %}</h2>
+            {% if top_campaigns %}
+            <table class="analytics-table">
+                <thead><tr><th>{% trans "Campaign" %}</th><th>{% trans "Source / Medium" %}</th><th>{% trans "Views" %}</th></tr></thead>
+                <tbody>
+                    {% for row in top_campaigns %}
+                    <tr>
+                        <td>{{ row.utm_campaign }}</td>
+                        <td>{{ row.utm_source }} / {{ row.utm_medium|default:"—" }}</td>
+                        <td>{{ row.count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="security-empty">{% trans "No UTM-tagged traffic in this range." %}</div>
+            {% endif %}
+        </div>
+
+        <div class="table-card">
+            <h2 class="card-title">{% trans "Top Sources" %}</h2>
+            {% if top_sources %}
+            <table class="analytics-table">
+                <thead><tr><th>{% trans "Source" %}</th><th>{% trans "Views" %}</th></tr></thead>
+                <tbody>
+                    {% for row in top_sources %}
+                    <tr><td>{{ row.utm_source|default:"—" }}</td><td>{{ row.count }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="security-empty">{% trans "No UTM-tagged traffic in this range." %}</div>
+            {% endif %}
+        </div>
+
+        <div class="table-card">
+            <h2 class="card-title">{% trans "Top Mediums" %}</h2>
+            {% if top_mediums %}
+            <table class="analytics-table">
+                <thead><tr><th>{% trans "Medium" %}</th><th>{% trans "Views" %}</th></tr></thead>
+                <tbody>
+                    {% for row in top_mediums %}
+                    <tr><td>{{ row.utm_medium }}</td><td>{{ row.count }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="security-empty">{% trans "No UTM-tagged traffic in this range." %}</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
+{% endblock %}

@@ -87,6 +87,26 @@ def get_current_site(request):
     return Site.objects.filter(id=site_param).first()
 
 
+def get_current_segment(request):
+    """Same pattern as get_current_site(): ?segment=<uuid>, persisted in
+    session, None means no segment filter applied."""
+    from analytics.models import Segment
+
+    segment_param = request.GET.get('segment')
+    if segment_param is not None:
+        if segment_param == '':
+            request.session.pop('analytics_current_segment_id', None)
+            return None
+        request.session['analytics_current_segment_id'] = segment_param
+    else:
+        segment_param = request.session.get('analytics_current_segment_id')
+
+    if not segment_param:
+        return None
+
+    return Segment.objects.filter(id=segment_param).first()
+
+
 def site_scoped(queryset, site):
     """Apply the current site filter to a queryset, or return it
     unchanged for "All Sites" (site=None). Centralizing this one-liner

@@ -138,6 +138,15 @@ class AnalyticsMiddleware:
         api_prefix = get_config()['API_PATH_PREFIX']
         is_api = bool(api_prefix) and path.startswith(api_prefix)
 
+        # UTM campaign parameters — parsed once here (same reasoning as
+        # is_bot/is_api) rather than re-parsing the query string in every
+        # view that wants campaign data.
+        utm_source = request.GET.get('utm_source', '')[:255]
+        utm_medium = request.GET.get('utm_medium', '')[:255]
+        utm_campaign = request.GET.get('utm_campaign', '')[:255]
+        utm_term = request.GET.get('utm_term', '')[:255]
+        utm_content = request.GET.get('utm_content', '')[:255]
+
         # Only set the session cookie for tracked requests
         if new_cookie:
             response.set_cookie(
@@ -185,6 +194,11 @@ class AnalyticsMiddleware:
                 city=city or '',
                 is_bot=is_bot,
                 is_api=is_api,
+                utm_source=utm_source,
+                utm_medium=utm_medium,
+                utm_campaign=utm_campaign,
+                utm_term=utm_term,
+                utm_content=utm_content,
             )
 
             # Site search tracking: if the request's query string includes

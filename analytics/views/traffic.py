@@ -6,7 +6,8 @@ from django.db.models import Count
 
 from analytics.models import PageView
 
-from .utils import get_date_range, detect_active_preset, parse_user_agent, section_enabled, get_current_site, site_scoped
+from analytics.segments import segment_scoped
+from .utils import get_date_range, detect_active_preset, parse_user_agent, section_enabled, get_current_site, site_scoped, get_current_segment
 
 
 # Create your views here.
@@ -17,7 +18,8 @@ def analytics_traffic(request):
         raise Http404
     start_dt, end_dt = get_date_range(request)
     current_site = get_current_site(request)
-    base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
+    current_segment = get_current_segment(request)
+    base_qs = segment_scoped(site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site), current_segment)
 
     # Top referrers
     top_referrers = (

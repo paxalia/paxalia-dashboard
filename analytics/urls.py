@@ -11,6 +11,10 @@ from .views import security as security_views
 from .views import csp_reports as csp_report_views
 from .views import sites as sites_views
 from .views import broken_links as broken_links_views
+from .views import goals as goals_views
+from .views import segments as segments_views
+from .views import campaigns as campaigns_views
+from .views import annotations as annotations_views
 
 app_name = 'analytics'
 
@@ -63,6 +67,16 @@ dashboard_urlpatterns = [
     path('sites/<uuid:site_id>/toggle/', sites_views.site_toggle_active, name='site_toggle_active'),
     path('sites/<uuid:site_id>/delete/', sites_views.site_delete, name='site_delete'),
     path('broken-links/', broken_links_views.broken_links, name='broken_links'),
+
+    path('goals/', goals_views.goals_management, name='goals'),
+    path('goals/<uuid:goal_id>/delete/', goals_views.goal_delete, name='goal_delete'),
+    path('funnels/', goals_views.funnels_management, name='funnels'),
+    path('funnels/<uuid:funnel_id>/delete/', goals_views.funnel_delete, name='funnel_delete'),
+    path('segments/', segments_views.segments_management, name='segments'),
+    path('segments/<uuid:segment_id>/delete/', segments_views.segment_delete, name='segment_delete'),
+    path('campaigns/', campaigns_views.campaigns_dashboard, name='campaigns'),
+    path('annotations/', annotations_views.annotations_management, name='annotations'),
+    path('annotations/<uuid:annotation_id>/delete/', annotations_views.annotation_delete, name='annotation_delete'),
 
     path('backups/', backup_views.backup_management, name='backups'),
     path('backups/trigger/', backup_views.backup_trigger, name='backup_trigger'),
