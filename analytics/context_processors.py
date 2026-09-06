@@ -13,6 +13,11 @@ def analytics_config(request):
     current_site = get_current_site(request) if hasattr(request, 'session') else None
     all_sites = list(Site.objects.filter(is_active=True)) if 'sites' in config['SIDEBAR_SECTIONS'] else []
 
+    from .models import Segment
+    from .views.utils import get_current_segment
+    current_segment = get_current_segment(request) if hasattr(request, 'session') else None
+    all_segments = list(Segment.objects.all()) if 'segments' in config['SIDEBAR_SECTIONS'] else []
+
     # ─── Build upload URLs with a placeholder ──────────────────────
     dummy_id = uuid.uuid4()
 
@@ -37,4 +42,6 @@ def analytics_config(request):
         'ANALYTICS_EVENTS_DATA_URL': reverse('analytics:events'),
         'analytics_current_site': current_site,
         'analytics_all_sites': all_sites,
+        'analytics_current_segment': current_segment,
+        'analytics_all_segments': all_segments,
     }

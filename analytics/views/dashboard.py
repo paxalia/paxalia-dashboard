@@ -6,11 +6,12 @@ from django.utils import timezone
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 
-from analytics.models import DailySiteStats, PageView
+from analytics.models import DailySiteStats, PageView, ChartAnnotation
 
 from django.db.models import Sum
 
-from .utils import get_date_range, detect_active_preset, section_enabled, get_current_site, site_scoped
+from analytics.segments import segment_scoped
+from .utils import get_date_range, detect_active_preset, section_enabled, get_current_site, site_scoped, get_current_segment
 
 from datetime import timedelta
 
@@ -23,12 +24,13 @@ def analytics_dashboard(request):
     if not section_enabled('overview'):
         raise Http404
     current_site = get_current_site(request)
+    current_segment = get_current_segment(request)
     start_dt, end_dt = get_date_range(request)
     today = timezone.now().date()
     yesterday = today - timedelta(days=1)
 
     # Base queryset for the selected range
-    base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
+    base_qs = segment_scoped(site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site), current_segment)
 
     # Today live counts (always today)
     today_views = site_scoped(PageView.objects.filter(created_at__date=today, is_bot=False, is_api=False), current_site).count()
@@ -44,6 +46,13 @@ def analytics_dashboard(request):
             yesterday_sessions = yest_stats.total_sessions
             yesterday_bounces = yest_stats.bounces
         else:
+            # "All Sites": sum every site's row for that date instead of
+            # fetching a single row, since DailySiteStats is now one row
+            # per (site, date) rather than one row per date. NOTE:
+            # summing unique_ips across sites is an approximation (a
+            # visitor hitting two sites counts twice) — acceptable for
+            # this pre-aggregated fast path; the live "today" queries
+            # elsewhere in this view compute true distinct counts.
             agg = DailySiteStats.objects.filter(date=yesterday).aggregate(
                 total_views=Sum('total_views'), unique_ips=Sum('unique_ips'),
                 total_sessions=Sum('total_sessions'), bounces=Sum('bounces'),
@@ -130,6 +139,15 @@ def analytics_dashboard(request):
     active_preset = detect_active_preset(start_dt.date(), end_dt.date())
     date_range_label = f"{start_dt.date()} – {end_dt.date()}"
 
+    # Chart annotations within the visible range — shown as a simple list
+    # under the chart rather than plotted as vertical lines on it, since
+    # doing the latter needs a Chart.js annotation plugin this package
+    # doesn't bundle. See analytics/views/annotations.py.
+    annotations_in_range = site_scoped(
+        ChartAnnotation.objects.filter(date__range=(start_dt.date(), end_dt.date())),
+        current_site,
+    ).select_related('created_by')
+
     context = {
         'today_views': today_views,
         'today_unique': today_unique,
@@ -147,6 +165,7 @@ def analytics_dashboard(request):
         'compare_active': compare_active,
         'previous_labels': previous_labels,
         'previous_views': previous_views,
+        'annotations_in_range': annotations_in_range,
         'top_pages': top_pages,
         'top_page_path': top_page_path,
         'top_pages_labels': top_pages_labels,

@@ -1,0 +1,67 @@
+{% extends 'analytics/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Segments" %} – Analytics{% endblock %}
+{% block page_title %}{% trans "Segments" %}{% endblock %}
+{% block page_subtitle %}{% trans "Saved filters, reusable across Overview, Pages, and Traffic" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Create a Segment" %}</h2>
+        <form method="post" class="analytics-settings-form">
+            {% csrf_token %}
+            <input type="hidden" name="save_segment" value="1">
+            <input type="text" name="name" placeholder="{% trans 'Segment name (e.g. Mobile US Visitors)' %}" required style="margin-bottom: 0.75rem; width: 100%;">
+            <div class="security-inline-form">
+                {% for field in filter_fields %}
+                <input type="text" name="filter_{{ field }}" placeholder="{{ field }}">
+                {% endfor %}
+            </div>
+            <p class="form-hint">{% trans "Fill in only the fields you want to filter by — leave the rest blank." %}</p>
+            <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+        </form>
+    </div>
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Saved Segments" %}</h2>
+        {% if segments %}
+        <table class="analytics-table">
+            <thead>
+                <tr><th>{% trans "Name" %}</th><th>{% trans "Filters" %}</th><th>{% trans "Actions" %}</th></tr>
+            </thead>
+            <tbody>
+                {% for segment in segments %}
+                <tr>
+                    <td>{{ segment.name }}</td>
+                    <td>
+                        {% for key, value in segment.filters.items %}
+                        <code>{{ key }}={{ value }}</code>{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <form method="post" action="{% url 'analytics:segment_delete' segment.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Delete this segment?' %}">{% trans "Delete" %}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No segments saved yet." %}</div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/security.js' %}"></script>
+{% endblock %}
