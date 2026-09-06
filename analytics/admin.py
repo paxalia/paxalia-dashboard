@@ -12,6 +12,7 @@ from .models import (
     BlockedIP,
     SecurityAuditLog,
     CSPViolation,
+    Site,
 )
 
 
@@ -159,3 +160,10 @@ class CSPViolationAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+@admin.register(Site)
+class SiteAdmin(admin.ModelAdmin):
+    list_display = ('name', 'domain', 'is_active', 'created_at')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'domain')

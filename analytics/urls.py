@@ -9,6 +9,8 @@ from .views import server as server_views
 from .views import backup as backup_views
 from .views import security as security_views
 from .views import csp_reports as csp_report_views
+from .views import sites as sites_views
+from .views import broken_links as broken_links_views
 
 app_name = 'analytics'
 
@@ -56,6 +58,11 @@ dashboard_urlpatterns = [
     path('security/ip/block/', security_views.security_block_ip, name='security_block_ip'),
     path('security/ip/<int:block_id>/unblock/', security_views.security_unblock_ip, name='security_unblock_ip'),
     path('csp-report/', csp_report_views.csp_report, name='csp_report'),
+
+    path('sites/', sites_views.sites_management, name='sites'),
+    path('sites/<uuid:site_id>/toggle/', sites_views.site_toggle_active, name='site_toggle_active'),
+    path('sites/<uuid:site_id>/delete/', sites_views.site_delete, name='site_delete'),
+    path('broken-links/', broken_links_views.broken_links, name='broken_links'),
 
     path('backups/', backup_views.backup_management, name='backups'),
     path('backups/trigger/', backup_views.backup_trigger, name='backup_trigger'),

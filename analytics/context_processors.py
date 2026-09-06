@@ -7,6 +7,12 @@ from .settings import get_config
 def analytics_config(request):
     config = get_config()
 
+    # ─── Multi-site: current selection + switcher options ──────────
+    from .models import Site
+    from .views.utils import get_current_site
+    current_site = get_current_site(request) if hasattr(request, 'session') else None
+    all_sites = list(Site.objects.filter(is_active=True)) if 'sites' in config['SIDEBAR_SECTIONS'] else []
+
     # ─── Build upload URLs with a placeholder ──────────────────────
     dummy_id = uuid.uuid4()
 
@@ -29,4 +35,6 @@ def analytics_config(request):
         'ANALYTICS_UPLOAD_DELETE_URL': upload_delete_url,
         'ANALYTICS_UPLOAD_LIST_URL': upload_list_url,
         'ANALYTICS_EVENTS_DATA_URL': reverse('analytics:events'),
+        'analytics_current_site': current_site,
+        'analytics_all_sites': all_sites,
     }

@@ -102,6 +102,19 @@
                         </a>
                         {% endif %}
 
+                        {% if 'broken_links' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:broken_links' %}"
+                           class="analytics-sidebar-link {% if active_page == 'broken_links' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M17 7a5 5 0 0 1 0 10h-3a1 1 0 1 1 0-2h3a3 3 0 0 0 0-6h-3a1 1 0 1 1 0-2zm-7 0a1 1 0 1 1 0 2H7a3 3 0 0 0 0 6h3a1 1 0 1 1 0 2H7A5 5 0 0 1 7 7zm7 4a1 1 0 0 1 1 1v.01a1 1 0 1 1-2 0V12a1 1 0 0 1 1-1zm-4 0a1 1 0 0 1 1 1v.01a1 1 0 1 1-2 0V12a1 1 0 0 1 1-1z"/>
+                                </svg>
+                            </span>
+                            {% trans "Broken Links" %}
+                        </a>
+                        {% endif %}
+
                         {# FIXED: this used to incorrectly check 'pages' #}
                         {% if 'api' in analytics_config.SIDEBAR_SECTIONS %}
                         <a href="{% url 'analytics:api' %}"
@@ -297,8 +310,35 @@
                             {% trans "Security Center" %}
                         </a>
                         {% endif %}
+
+                        {% if 'sites' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:sites' %}"
+                           class="analytics-sidebar-link {% if active_page == 'sites' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm7.9 9h-3.02c-.13-2.11-.68-4.05-1.5-5.5A8.03 8.03 0 0 1 19.9 11zM12 4.05c1.03 1.15 2.13 3.36 2.36 6.95H9.64C9.87 7.41 10.97 5.2 12 4.05zM4.1 13h3.02c.13 2.11.68 4.05 1.5 5.5A8.03 8.03 0 0 1 4.1 13zm3.02-2H4.1a8.03 8.03 0 0 1 4.52-5.5c-.82 1.45-1.37 3.39-1.5 5.5zM12 19.95c-1.03-1.15-2.13-3.36-2.36-6.95h4.72c-.23 3.59-1.33 5.8-2.36 6.95zm2.9-1.45c.82-1.45 1.37-3.39 1.5-5.5h3.02a8.03 8.03 0 0 1-4.52 5.5z"/>
+                                </svg>
+                            </span>
+                            {% trans "Sites" %}
+                        </a>
+                        {% endif %}
                     </div>
                 </section>
+
+                {% if analytics_all_sites %}
+                <section class="analytics-sidebar-section" aria-label="{% trans 'Site filter' %}">
+                    <form method="get" class="analytics-site-switcher" onchange="this.submit()" style="padding: 0 1rem;">
+                        <select name="site" aria-label="{% trans 'Filter by site' %}"
+                                style="width: 100%; background: var(--analytics-bg); color: var(--analytics-text); border: 1px solid var(--analytics-border); border-radius: 4px; padding: 0.4rem;">
+                            <option value="" {% if not analytics_current_site %}selected{% endif %}>{% trans "All Sites" %}</option>
+                            {% for s in analytics_all_sites %}
+                            <option value="{{ s.id }}" {% if analytics_current_site.id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </section>
+                {% endif %}
 
                 {# Server group #}
                 <section class="sidebar-group" data-sidebar-group>

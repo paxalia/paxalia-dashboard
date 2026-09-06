@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 
 from analytics.models import PageView
 
-from .utils import get_date_range, detect_active_preset, section_enabled
+from .utils import get_date_range, detect_active_preset, section_enabled, get_current_site, site_scoped
 
 
 # Create your views here.
@@ -17,7 +17,8 @@ def analytics_pages(request):
     if not section_enabled('pages'):
         raise Http404
     start_dt, end_dt = get_date_range(request)
-    base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+    current_site = get_current_site(request)
+    base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
 
     path_query = request.GET.get('path', '').strip()
     if path_query:

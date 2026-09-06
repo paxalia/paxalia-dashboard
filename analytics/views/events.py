@@ -22,6 +22,14 @@ from .utils import get_date_range, detect_active_preset, section_enabled
 
 logger = logging.getLogger(__name__)
 
+# SECURITY: this endpoint is intentionally public/anonymous (any visitor's
+# browser calls it), which also makes it a prime target for flooding —
+# either to bloat the database or to skew analytics. A simple fixed-window
+# limiter keyed by IP + session keeps a single client from hammering it,
+# without requiring an extra dependency. This is deliberately conservative
+# (not exact/atomic under heavy concurrency) — good enough to blunt casual
+# abuse; put a real rate limiter (e.g. at the reverse proxy / WAF layer)
+# in front for stronger guarantees.
 EVENT_RATE_LIMIT_WINDOW_SECONDS = 60
 EVENT_RATE_LIMIT_MAX_REQUESTS = 60
 

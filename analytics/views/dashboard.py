@@ -8,7 +8,9 @@ from django.db.models.functions import TruncDate
 
 from analytics.models import DailySiteStats, PageView
 
-from .utils import get_date_range, detect_active_preset, section_enabled
+from django.db.models import Sum
+
+from .utils import get_date_range, detect_active_preset, section_enabled, get_current_site, site_scoped
 
 from datetime import timedelta
 
@@ -20,29 +22,42 @@ from datetime import timedelta
 def analytics_dashboard(request):
     if not section_enabled('overview'):
         raise Http404
+    current_site = get_current_site(request)
     start_dt, end_dt = get_date_range(request)
     today = timezone.now().date()
     yesterday = today - timedelta(days=1)
 
     # Base queryset for the selected range
-    base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+    base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
 
     # Today live counts (always today)
-    today_views = PageView.objects.filter(created_at__date=today, is_bot=False, is_api=False).count()
-    today_unique = PageView.objects.filter(created_at__date=today, is_bot=False, is_api=False).values('ip_hash').distinct().count()
-    today_api = PageView.objects.filter(created_at__date=today, is_bot=False, is_api=True).count()
+    today_views = site_scoped(PageView.objects.filter(created_at__date=today, is_bot=False, is_api=False), current_site).count()
+    today_unique = site_scoped(PageView.objects.filter(created_at__date=today, is_bot=False, is_api=False), current_site).values('ip_hash').distinct().count()
+    today_api = site_scoped(PageView.objects.filter(created_at__date=today, is_bot=False, is_api=True), current_site).count()
 
     # --- Yesterday (try aggregated stats first, fallback to live queries) ---
     try:
-        yest_stats = DailySiteStats.objects.get(date=yesterday)
-        yesterday_views = yest_stats.total_views
-        yesterday_unique = yest_stats.unique_ips
-        yesterday_sessions = yest_stats.total_sessions
-        yesterday_bounces = yest_stats.bounces
+        if current_site is not None:
+            yest_stats = DailySiteStats.objects.get(site=current_site, date=yesterday)
+            yesterday_views = yest_stats.total_views
+            yesterday_unique = yest_stats.unique_ips
+            yesterday_sessions = yest_stats.total_sessions
+            yesterday_bounces = yest_stats.bounces
+        else:
+            agg = DailySiteStats.objects.filter(date=yesterday).aggregate(
+                total_views=Sum('total_views'), unique_ips=Sum('unique_ips'),
+                total_sessions=Sum('total_sessions'), bounces=Sum('bounces'),
+            )
+            if agg['total_views'] is None:
+                raise DailySiteStats.DoesNotExist
+            yesterday_views = agg['total_views']
+            yesterday_unique = agg['unique_ips']
+            yesterday_sessions = agg['total_sessions']
+            yesterday_bounces = agg['bounces']
         yesterday_bounce_rate = round((yesterday_bounces / yesterday_sessions) * 100, 1) if yesterday_sessions else 0
         yesterday_pages_per_session = round(yesterday_views / yesterday_sessions, 1) if yesterday_sessions else 0
     except DailySiteStats.DoesNotExist:
-        yest_pageviews = PageView.objects.filter(created_at__date=yesterday, is_bot=False, is_api=False)
+        yest_pageviews = site_scoped(PageView.objects.filter(created_at__date=yesterday, is_bot=False, is_api=False), current_site)
         yesterday_views = yest_pageviews.count()
         yesterday_unique = yest_pageviews.values('ip_hash').distinct().count()
         yesterday_sessions = yest_pageviews.exclude(session_id='').values('session_id').distinct().count()
@@ -57,7 +72,7 @@ def analytics_dashboard(request):
         yesterday_pages_per_session = round(yesterday_views / yesterday_sessions, 1) if yesterday_sessions else 0
 
     # --- Today's session stats (live) ---
-    today_pageviews = PageView.objects.filter(created_at__date=today, is_bot=False, is_api=False)
+    today_pageviews = site_scoped(PageView.objects.filter(created_at__date=today, is_bot=False, is_api=False), current_site)
     today_sessions = today_pageviews.exclude(session_id='').values('session_id').distinct().count()
     today_bounce_sessions = (
         today_pageviews.exclude(session_id='')
@@ -89,7 +104,7 @@ def analytics_dashboard(request):
         period_delta = (end_dt - start_dt).days
         prev_end = start_dt - timedelta(seconds=1)  # end just before current range
         prev_start = prev_end - timedelta(days=period_delta)
-        prev_qs = PageView.objects.filter(created_at__range=(prev_start, prev_end), is_bot=False, is_api=False)
+        prev_qs = site_scoped(PageView.objects.filter(created_at__range=(prev_start, prev_end), is_bot=False, is_api=False), current_site)
         prev_daily = (
             prev_qs
             .annotate(day=TruncDate('created_at'))

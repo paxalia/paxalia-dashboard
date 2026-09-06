@@ -4,7 +4,7 @@ from django.db.models import Count
 from django.http import Http404
 from django.http import HttpResponse
 
-from .utils import get_date_range, parse_user_agent, get_billing_models
+from .utils import get_date_range, parse_user_agent, get_billing_models, get_current_site, site_scoped
 
 from analytics.models import PageView, AnalyticsEvent
 
@@ -14,6 +14,21 @@ import csv
 
 # Create your views here.
 
+# SECURITY: values exported here (referrer, path, event category/action/
+# label, ...) originate from public, unauthenticated traffic. If a cell
+# starts with =, +, -, or @, Excel/Google Sheets/LibreOffice will treat it
+# as a formula when the staff member opens the CSV — classic "CSV/formula
+# injection". We neutralize that by prefixing a leading apostrophe, which
+# forces spreadsheet apps to treat the cell as text while leaving the
+# value unchanged for JSON export and for CSV consumers that don't care.
+_FORMULA_TRIGGER_CHARS = ('=', '+', '-', '@', '\t', '\r')
+
+
+def _csv_safe(value):
+    if isinstance(value, str) and value.startswith(_FORMULA_TRIGGER_CHARS):
+        return "'" + value
+    return value
+
 
 @staff_member_required
 def analytics_export(request, export_type):
@@ -21,6 +36,7 @@ def analytics_export(request, export_type):
     Export analytics data as CSV or JSON, respecting the current date filter
     and path search (for Pages).  Accepts ?format=csv (default) or ?format=json.
     """
+    current_site = get_current_site(request)
     start_dt, end_dt = get_date_range(request)
     fmt = request.GET.get('format', 'csv').lower()
     if fmt not in ('csv', 'json'):
@@ -42,12 +58,12 @@ def analytics_export(request, export_type):
             writer = csv.writer(response)
             writer.writerow(headers)
             for row in rows:
-                writer.writerow(row)
+                writer.writerow([_csv_safe(cell) for cell in row])
             return response
 
     # ── 1. Overview – Top Pages table ──
     if export_type == 'overview_top_pages':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+        base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
         top_pages = (
             base_qs.values('path')
             .annotate(count=Count('id'))
@@ -62,7 +78,7 @@ def analytics_export(request, export_type):
 
     # ── 2. Pages list ──
     elif export_type == 'pages':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+        base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
         path_query = request.GET.get('path', '').strip()
         if path_query:
             base_qs = base_qs.filter(path__icontains=path_query)
@@ -80,10 +96,10 @@ def analytics_export(request, export_type):
 
     # ── 3. API – Top Endpoints table ──
     elif export_type == 'api_endpoints':
-        api_qs = PageView.objects.filter(
+        api_qs = site_scoped(PageView.objects.filter(
             created_at__range=(start_dt, end_dt),
             is_api=True, is_bot=False,
-        )
+        ), current_site)
         top_eps = (
             api_qs.values('path')
             .annotate(count=Count('id'))
@@ -98,10 +114,10 @@ def analytics_export(request, export_type):
 
     # ── 4. API – Status Codes table ──
     elif export_type == 'api_status':
-        api_qs = PageView.objects.filter(
+        api_qs = site_scoped(PageView.objects.filter(
             created_at__range=(start_dt, end_dt),
             is_api=True, is_bot=False,
-        )
+        ), current_site)
         status = (
             api_qs.values('status_code')
             .annotate(count=Count('id'))
@@ -116,7 +132,7 @@ def analytics_export(request, export_type):
 
     # ── 5. Traffic – Referrers table ──
     elif export_type == 'traffic_referrers':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+        base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
         referrers = (
             base_qs.exclude(referrer='')
             .values('referrer')
@@ -132,7 +148,7 @@ def analytics_export(request, export_type):
 
     # ── 6. Traffic – Browser Distribution table ──
     elif export_type == 'traffic_browsers':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+        base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
         raw = base_qs.values('user_agent').annotate(count=Count('id'))
         counts = {}
         for item in raw:
@@ -159,7 +175,7 @@ def analytics_export(request, export_type):
 
     # ── 7. Traffic – Operating Systems ──
     elif export_type == 'traffic_os':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+        base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
         raw = base_qs.values('user_agent').annotate(count=Count('id'))
         counts = {}
         for item in raw:
@@ -177,7 +193,7 @@ def analytics_export(request, export_type):
 
     # ── 8. Traffic – Device Types ──
     elif export_type == 'traffic_devices':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+        base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
         raw = base_qs.values('user_agent').annotate(count=Count('id'))
         counts = {}
         for item in raw:
@@ -195,7 +211,7 @@ def analytics_export(request, export_type):
 
     # ── 9. Geography ──
     elif export_type == 'geography_countries':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+        base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
         countries = (
             base_qs
             .exclude(country_code='')
@@ -211,7 +227,7 @@ def analytics_export(request, export_type):
         )
 
     elif export_type == 'geography_cities':
-        base_qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+        base_qs = site_scoped(PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False), current_site)
         cities = (
             base_qs.exclude(city='')
             .values('city', 'country_name')
@@ -227,19 +243,19 @@ def analytics_export(request, export_type):
 
     # ── 10. Events ──
     elif export_type == 'events_labels':
-        qs = AnalyticsEvent.objects.filter(created_at__range=(start_dt, end_dt))
+        qs = site_scoped(AnalyticsEvent.objects.filter(created_at__range=(start_dt, end_dt)), current_site)
         lbls = qs.exclude(label='').values('label').annotate(count=Count('id')).order_by('-count')
         rows = [[l['label'], l['count']] for l in lbls]
         return build_response(f'events_labels_{start_dt.date()}_{end_dt.date()}', ['Label', 'Events'], rows)
 
     elif export_type == 'events_pages':
-        qs = AnalyticsEvent.objects.filter(created_at__range=(start_dt, end_dt))
+        qs = site_scoped(AnalyticsEvent.objects.filter(created_at__range=(start_dt, end_dt)), current_site)
         pgs = qs.values('path').annotate(count=Count('id')).order_by('-count')
         rows = [[p['path'], p['count']] for p in pgs]
         return build_response(f'events_pages_{start_dt.date()}_{end_dt.date()}', ['Page', 'Events'], rows)
 
     elif export_type == 'events_recent':
-        events_qs = AnalyticsEvent.objects.filter(created_at__range=(start_dt, end_dt))
+        events_qs = site_scoped(AnalyticsEvent.objects.filter(created_at__range=(start_dt, end_dt)), current_site)
         recent = events_qs.order_by('-created_at')[:50]
         rows = [
             [e.created_at.strftime('%Y-%m-%d %H:%M:%S'), e.category, e.action, e.label or '', e.path]

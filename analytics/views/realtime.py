@@ -9,7 +9,7 @@ from analytics.settings import get_config
 
 from datetime import timedelta
 
-from analytics.views.utils import section_enabled
+from analytics.views.utils import section_enabled, get_current_site, site_scoped
 
 
 # Create your views here.
@@ -30,22 +30,23 @@ def analytics_realtime(request):
 @staff_member_required
 def analytics_realtime_data(request):
     """AJAX endpoint – returns live visitor counts as JSON."""
+    current_site = get_current_site(request)
     now = timezone.now()
     five_min_ago = now - timedelta(minutes=5)
 
     # Total page views in last 5 minutes (API calls tracked separately below
     # — a burst of API traffic shouldn't read as a spike in live visitors)
-    total_views = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=False).count()
+    total_views = site_scoped(PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=False), current_site).count()
 
     # Unique IPs in last 5 minutes
-    unique_ips = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=False).values('ip_hash').distinct().count()
+    unique_ips = site_scoped(PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=False), current_site).values('ip_hash').distinct().count()
 
     # API calls in last 5 minutes
-    api_calls = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=True).count()
+    api_calls = site_scoped(PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=True), current_site).count()
 
     # Recent page views (last 20) — excludes API calls; those are noisy at
     # request-per-request granularity and belong on the API page instead
-    recent = PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=False).order_by('-created_at')[:20]
+    recent = site_scoped(PageView.objects.filter(created_at__gte=five_min_ago, is_bot=False, is_api=False), current_site).order_by('-created_at')[:20]
     recent_data = [
         {
             'path': r.path,

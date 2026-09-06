@@ -1,0 +1,79 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Broken Links" %}{% endblock %}
+{% block page_subtitle %}{% trans "404s and the referrers pointing at them" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+    {% include 'analytics/includes/filter_bar.html' %}
+
+    <div class="stat-grid">
+        <div class="stat-card {% if total_404s > 0 %}stat-card--highlight{% endif %}">
+            <span class="stat-label">{% trans "Total 404s" %}</span>
+            <span class="stat-value">{{ total_404s }}</span>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Most-hit broken paths" %}</h2>
+        {% if top_broken_paths %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Path" %}</th>
+                    <th>{% trans "Hits" %}</th>
+                    <th>{% trans "Last seen" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in top_broken_paths %}
+                <tr>
+                    <td><code>{{ row.path }}</code></td>
+                    <td>{{ row.count }}</td>
+                    <td>{{ row.last_seen|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No 404s in this date range." %}</div>
+        {% endif %}
+    </div>
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Referrers pointing at a 404" %}</h2>
+        <p class="form-hint">
+            {% trans "A referrer here means something (an internal link, an external site) is pointing at a page that no longer resolves — usually more worth fixing than a 404 with no referrer, which is often just a scanner probing random paths." %}
+        </p>
+        {% if top_referrers %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Referrer" %}</th>
+                    <th>{% trans "Count" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in top_referrers %}
+                <tr>
+                    <td>{{ row.referrer }}</td>
+                    <td>{{ row.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No referred 404s in this date range." %}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/filter-bar.js' %}"></script>
+{% endblock %}
