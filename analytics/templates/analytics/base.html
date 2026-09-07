@@ -230,6 +230,18 @@
                         </a>
                         {% endif %}
 
+                        {% if 'cohorts' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:cohorts' %}"
+                           class="analytics-sidebar-link {% if active_page == 'cohorts' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M4 4h4v16H4zm6 6h4v10h-4zm6-4h4v14h-4z"/>
+                                </svg>
+                            </span>
+                            {% trans "Cohorts" %}
+                        </a>
+                        {% endif %}
+
                         {% if 'campaigns' in analytics_config.SIDEBAR_SECTIONS %}
                         <a href="{% url 'analytics:campaigns' %}"
                            class="analytics-sidebar-link {% if active_page == 'campaigns' %}active{% endif %}">
