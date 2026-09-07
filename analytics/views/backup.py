@@ -2,7 +2,7 @@ import os
 import threading
 import logging
 from datetime import datetime
-from django.contrib.admin.views.decorators import staff_member_required
+from analytics.permissions import require_section_permission
 from django.http import JsonResponse, Http404, HttpResponse, FileResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 CHUNK_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
-@staff_member_required
+@require_section_permission('backups')
 def backup_management(request):
     """
     Single page that combines backup configuration and archive listing.
@@ -56,7 +56,7 @@ def backup_management(request):
     return render(request, 'analytics/backups.html', context)
 
 
-@staff_member_required
+@require_section_permission('backups')
 @require_POST
 def backup_trigger(request):
     """Manually trigger a backup in a background thread."""
@@ -99,7 +99,7 @@ def backup_trigger(request):
     return redirect('analytics:backups')
 
 
-@staff_member_required
+@require_section_permission('backups')
 def backup_download_init(request, backup_id):
     """Chunked download init – return total size and chunk count."""
     backup = get_object_or_404(BackupArchive, id=backup_id)
@@ -118,7 +118,7 @@ def backup_download_init(request, backup_id):
     })
 
 
-@staff_member_required
+@require_section_permission('backups')
 def backup_download_chunk(request, backup_id, chunk_index):
     """Return a specific chunk of the backup file."""
     backup = get_object_or_404(BackupArchive, id=backup_id)
@@ -145,7 +145,7 @@ def backup_download_chunk(request, backup_id, chunk_index):
     return response
 
 
-@staff_member_required
+@require_section_permission('backups')
 def backup_download_single(request, backup_id):
     """Simple whole-file download for browsers."""
     backup = get_object_or_404(BackupArchive, id=backup_id)
@@ -164,7 +164,7 @@ def backup_download_single(request, backup_id):
     return response
 
 
-@staff_member_required
+@require_section_permission('backups')
 @require_POST
 def backup_delete(request, backup_id):
     backup = get_object_or_404(BackupArchive, id=backup_id)

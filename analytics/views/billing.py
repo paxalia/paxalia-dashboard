@@ -1,5 +1,5 @@
 # analytics/views/billing.py
-from django.contrib.admin.views.decorators import staff_member_required
+from analytics.permissions import require_section_permission
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Count
@@ -13,7 +13,7 @@ from datetime import timedelta
 
 # Create your views here.
 
-@staff_member_required
+@require_section_permission('billing')
 def analytics_billing(request):
     if not section_enabled('billing'):
         raise Http404("Billing section is disabled")
