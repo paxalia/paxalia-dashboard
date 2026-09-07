@@ -18,6 +18,7 @@ from .models import (
     FunnelStep,
     Segment,
     ChartAnnotation,
+    PaxaliaAPIKey,
 )
 
 
@@ -203,3 +204,11 @@ class ChartAnnotationAdmin(admin.ModelAdmin):
     list_display = ('date', 'label', 'site', 'created_by')
     list_filter = ('date',)
     search_fields = ('label',)
+
+
+@admin.register(PaxaliaAPIKey)
+class PaxaliaAPIKeyAdmin(admin.ModelAdmin):
+    list_display = ('name', 'key_prefix', 'site', 'scope_ingest', 'scope_read', 'is_active', 'last_used_at')
+    list_filter = ('is_active', 'scope_ingest', 'scope_read')
+    search_fields = ('name', 'key_prefix')
+    readonly_fields = ('key_prefix', 'key_hash', 'created_at', 'last_used_at')

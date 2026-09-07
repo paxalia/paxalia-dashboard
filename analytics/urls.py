@@ -17,6 +17,9 @@ from .views import campaigns as campaigns_views
 from .views import annotations as annotations_views
 from .views import cohorts as cohorts_views
 from .views import mfa as mfa_views
+from .views import api_keys as api_keys_views
+from .views import paxalia_api
+from .views import api_docs as api_docs_views
 
 app_name = 'analytics'
 
@@ -31,6 +34,14 @@ api_urlpatterns = [
     path('uploads/complete/<uuid:upload_id>/', uploads.upload_complete, name='upload_complete'),
     path('uploads/delete/<uuid:upload_id>/', uploads.upload_delete, name='upload_delete'),
     path('uploads/list/', uploads.upload_list, name='upload_list'),
+]
+
+# ─── Paxalia API (versioned, key-authenticated, documented) ───────
+paxalia_api_urlpatterns = [
+    path('ingest/', paxalia_api.paxalia_api_ingest, name='paxalia_api_ingest'),
+    path('stats/summary/', paxalia_api.paxalia_api_stats_summary, name='paxalia_api_stats_summary'),
+    path('pageviews/', paxalia_api.paxalia_api_pageviews, name='paxalia_api_pageviews'),
+    path('events/', paxalia_api.paxalia_api_events, name='paxalia_api_events'),
 ]
 
 # ─── Dashboard pages ──────────────────────────────────────────────
@@ -83,6 +94,11 @@ dashboard_urlpatterns = [
     path('mfa/enroll/', mfa_views.mfa_enroll, name='mfa_enroll'),
     path('mfa/disable/', mfa_views.mfa_disable, name='mfa_disable'),
 
+    path('api-keys/', api_keys_views.api_keys_management, name='api_keys'),
+    path('api-keys/<uuid:key_id>/revoke/', api_keys_views.api_key_revoke, name='api_key_revoke'),
+    path('api-keys/<uuid:key_id>/delete/', api_keys_views.api_key_delete, name='api_key_delete'),
+    path('api-docs/', api_docs_views.api_docs, name='api_docs'),
+
     path('backups/', backup_views.backup_management, name='backups'),
     path('backups/trigger/', backup_views.backup_trigger, name='backup_trigger'),
     path('backups/delete/<uuid:backup_id>/', backup_views.backup_delete, name='backup_delete'),
@@ -98,4 +114,5 @@ dashboard_urlpatterns = [
 # ─── Combined for backward compatibility ────────────────────────────
 urlpatterns = dashboard_urlpatterns + [
     path('api/', include(api_urlpatterns)),
+    path('paxalia-api/v1/', include(paxalia_api_urlpatterns)),
 ]

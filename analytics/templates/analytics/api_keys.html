@@ -1,0 +1,93 @@
+{% extends 'analytics/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Paxalia API Keys" %} – Analytics{% endblock %}
+{% block page_title %}{% trans "Paxalia API Keys" %}{% endblock %}
+{% block page_subtitle %}{% trans "Credentials for server-to-server event ingestion and the read API" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+
+    {% if new_key_plaintext %}
+    <div class="security-banner security-banner--warn">
+        <strong>{% trans "Copy this key now — it won't be shown again:" %}</strong><br>
+        <code style="word-break: break-all; user-select: all;">{{ new_key_plaintext }}</code>
+    </div>
+    {% endif %}
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Create a Key" %}</h2>
+        <form method="post" class="analytics-settings-form security-inline-form">
+            {% csrf_token %}
+            <input type="hidden" name="save_key" value="1">
+            <input type="text" name="name" placeholder="{% trans 'Label (e.g. Backend service)' %}" required>
+            <label><input type="checkbox" name="scope_ingest" checked> {% trans "Ingest events" %}</label>
+            <label><input type="checkbox" name="scope_read"> {% trans "Read data" %}</label>
+            <button type="submit" class="btn btn-primary">{% trans "Create Key" %}</button>
+        </form>
+        <p class="form-hint">
+            {% trans "Send it as a header on requests to the Paxalia API:" %}
+            <code>Authorization: Bearer pxa_...</code> — {% trans "never usable from browser-side JavaScript; use the public event snippet for that instead." %}
+        </p>
+    </div>
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Keys" %}</h2>
+        {% if keys %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Name" %}</th>
+                    <th>{% trans "Key" %}</th>
+                    <th>{% trans "Scopes" %}</th>
+                    <th>{% trans "Status" %}</th>
+                    <th>{% trans "Last used" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key in keys %}
+                <tr>
+                    <td>{{ key.name }}</td>
+                    <td><code>{{ key.key_prefix }}…</code></td>
+                    <td>
+                        {% if key.scope_ingest %}<span class="security-status-badge security-status-ok">{% trans "ingest" %}</span>{% endif %}
+                        {% if key.scope_read %}<span class="security-status-badge security-status-ok">{% trans "read" %}</span>{% endif %}
+                    </td>
+                    <td>
+                        <span class="security-status-badge {% if key.is_active %}security-status-ok{% else %}security-status-bad{% endif %}">
+                            {% if key.is_active %}{% trans "Active" %}{% else %}{% trans "Revoked" %}{% endif %}
+                        </span>
+                    </td>
+                    <td>{{ key.last_used_at|date:"Y-m-d H:i"|default:"—" }}</td>
+                    <td>
+                        {% if key.is_active %}
+                        <form method="post" action="{% url 'analytics:api_key_revoke' key.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-secondary" data-confirm="{% trans 'Revoke this key? Requests using it will start failing immediately.' %}">{% trans "Revoke" %}</button>
+                        </form>
+                        {% endif %}
+                        <form method="post" action="{% url 'analytics:api_key_delete' key.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Delete this key permanently?' %}">{% trans "Delete" %}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No API keys yet." %}</div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/security.js' %}"></script>
+{% endblock %}
