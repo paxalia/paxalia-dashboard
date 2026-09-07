@@ -279,6 +279,9 @@
     <!-- ── MFA Status ── -->
     <div class="security-panel table-card" data-panel="mfa" hidden>
         <h2 class="card-title">{% trans "MFA Status (staff)" %}</h2>
+        <p class="form-hint">
+            <a href="{% url 'analytics:mfa_enroll' %}">{% trans "Set up or manage two-factor authentication for your own account" %}</a>
+        </p>
         {% if mfa_status %}
         <table class="analytics-table">
             <thead><tr><th>{% trans "User" %}</th><th>{% trans "2FA Enabled" %}</th></tr></thead>

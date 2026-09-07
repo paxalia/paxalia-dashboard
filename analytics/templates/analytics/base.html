@@ -285,7 +285,7 @@
                         </a>
                         {% endif %}
 
-                        {% if 'billing' in analytics_config.SIDEBAR_SECTIONS %}
+                        {% if 'billing' in analytics_config.SIDEBAR_SECTIONS and perms.analytics.view_billing %}
                         <a href="{% url 'analytics:billing' %}"
                            class="analytics-sidebar-link {% if active_page == 'billing' %}active{% endif %}">
                         <span class="icon icon--sm" aria-hidden="true">
@@ -357,7 +357,7 @@
                         </a>
                         {% endif %}
 
-                        {% if 'backups' in analytics_config.SIDEBAR_SECTIONS %}
+                        {% if 'backups' in analytics_config.SIDEBAR_SECTIONS and perms.analytics.view_backups %}
                         <a href="{% url 'analytics:backups' %}"
                            class="analytics-sidebar-link {% if active_page == 'backups' %}active{% endif %}">
                             <span class="icon icon--sm" aria-hidden="true">
@@ -370,7 +370,7 @@
                         </a>
                         {% endif %}
 
-                        {% if 'security' in analytics_config.SIDEBAR_SECTIONS %}
+                        {% if 'security' in analytics_config.SIDEBAR_SECTIONS and perms.analytics.view_security %}
                         <a href="{% url 'analytics:security' %}"
                            class="analytics-sidebar-link {% if active_page == 'security' %}active{% endif %}">
                             <span class="icon icon--sm" aria-hidden="true">
@@ -383,7 +383,7 @@
                         </a>
                         {% endif %}
 
-                        {% if 'sites' in analytics_config.SIDEBAR_SECTIONS %}
+                        {% if 'sites' in analytics_config.SIDEBAR_SECTIONS and perms.analytics.view_sites %}
                         <a href="{% url 'analytics:sites' %}"
                            class="analytics-sidebar-link {% if active_page == 'sites' %}active{% endif %}">
                             <span class="icon icon--sm" aria-hidden="true">
@@ -413,6 +413,7 @@
                 {% endif %}
 
                 {# Server group #}
+                {% if perms.analytics.view_server %}
                 <section class="sidebar-group" data-sidebar-group>
                     <button
                             type="button"
@@ -512,6 +513,7 @@
                     </div>
                 </section>
 
+                {% endif %}
                 {# System group #}
                 <section class="sidebar-group" data-sidebar-group>
                     <button

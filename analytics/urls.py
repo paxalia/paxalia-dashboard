@@ -16,6 +16,7 @@ from .views import segments as segments_views
 from .views import campaigns as campaigns_views
 from .views import annotations as annotations_views
 from .views import cohorts as cohorts_views
+from .views import mfa as mfa_views
 
 app_name = 'analytics'
 
@@ -79,6 +80,8 @@ dashboard_urlpatterns = [
     path('annotations/', annotations_views.annotations_management, name='annotations'),
     path('annotations/<uuid:annotation_id>/delete/', annotations_views.annotation_delete, name='annotation_delete'),
     path('cohorts/', cohorts_views.cohorts_retention, name='cohorts'),
+    path('mfa/enroll/', mfa_views.mfa_enroll, name='mfa_enroll'),
+    path('mfa/disable/', mfa_views.mfa_disable, name='mfa_disable'),
 
     path('backups/', backup_views.backup_management, name='backups'),
     path('backups/trigger/', backup_views.backup_trigger, name='backup_trigger'),

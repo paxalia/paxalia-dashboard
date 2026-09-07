@@ -1,13 +1,13 @@
 import psutil
 
-from django.contrib.admin.views.decorators import staff_member_required
+from analytics.permissions import require_section_permission
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET
 
 
-@staff_member_required
+@require_section_permission('server')
 def server_overview(request):
     context = {
         'active_page': 'server_overview',
@@ -17,7 +17,7 @@ def server_overview(request):
     return render(request, 'analytics/server_overview.html', context)
 
 
-@staff_member_required
+@require_section_permission('server')
 def server_cpu(request):
     context = {
         'active_page': 'server_cpu',
@@ -27,7 +27,7 @@ def server_cpu(request):
     return render(request, 'analytics/server_cpu.html', context)
 
 
-@staff_member_required
+@require_section_permission('server')
 def server_memory(request):
     context = {
         'active_page': 'server_memory',
@@ -37,7 +37,7 @@ def server_memory(request):
     return render(request, 'analytics/server_memory.html', context)
 
 
-@staff_member_required
+@require_section_permission('server')
 def server_disk(request):
     context = {
         'active_page': 'server_disk',
@@ -47,7 +47,7 @@ def server_disk(request):
     return render(request, 'analytics/server_disk.html', context)
 
 
-@staff_member_required
+@require_section_permission('server')
 def server_network(request):
     context = {
         'active_page': 'server_network',
@@ -57,7 +57,7 @@ def server_network(request):
     return render(request, 'analytics/server_network.html', context)
 
 
-@staff_member_required
+@require_section_permission('server')
 def server_services(request):
     context = {
         'active_page': 'server_services',
@@ -67,7 +67,7 @@ def server_services(request):
     return render(request, 'analytics/server_services.html', context)
 
 
-@staff_member_required
+@require_section_permission('server')
 def server_processes(request):
     context = {
         'active_page': 'server_processes',
@@ -80,7 +80,7 @@ def server_processes(request):
 # -------------------- API endpoints (JSON) --------------------
 
 
-@staff_member_required
+@require_section_permission('server')
 @require_GET
 def api_server_metrics(request):
     """
@@ -207,7 +207,7 @@ def api_server_metrics(request):
     return JsonResponse(data)
 
 
-@staff_member_required
+@require_section_permission('server')
 @require_GET
 def api_server_history(request):
     """

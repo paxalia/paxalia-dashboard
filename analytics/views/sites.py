@@ -1,6 +1,6 @@
 # analytics/views/sites.py
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
+from analytics.permissions import require_section_permission
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
@@ -11,7 +11,7 @@ from ..security_audit import log_action
 from .utils import section_enabled
 
 
-@staff_member_required
+@require_section_permission('sites')
 def sites_management(request):
     """Single page combining the site list and an add-site form, same
     pattern as backup_management() and security_center()."""
@@ -47,7 +47,7 @@ def sites_management(request):
     return render(request, 'analytics/sites.html', context)
 
 
-@staff_member_required
+@require_section_permission('sites')
 @require_POST
 def site_toggle_active(request, site_id):
     site = get_object_or_404(Site, id=site_id)
@@ -58,7 +58,7 @@ def site_toggle_active(request, site_id):
     return redirect('analytics:sites')
 
 
-@staff_member_required
+@require_section_permission('sites')
 @require_POST
 def site_delete(request, site_id):
     site = get_object_or_404(Site, id=site_id)

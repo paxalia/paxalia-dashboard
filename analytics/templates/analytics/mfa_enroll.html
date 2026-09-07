@@ -1,0 +1,55 @@
+{% extends 'analytics/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Two-Factor Authentication" %} – Analytics{% endblock %}
+{% block page_title %}{% trans "Two-Factor Authentication" %}{% endblock %}
+{% block page_subtitle %}{% trans "Protect your account with an authenticator app" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+
+    {% if already_enrolled %}
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Two-factor authentication is enabled" %}</h2>
+        <p class="form-hint">{% trans "Your account is protected with an authenticator app." %}</p>
+        <form method="post" action="{% url 'analytics:mfa_disable' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" data-confirm="{% trans 'Disable two-factor authentication on your account?' %}">
+                {% trans "Disable 2FA" %}
+            </button>
+        </form>
+        <p class="form-hint">
+            <a href="?reset=1">{% trans "Set up a new authenticator instead" %}</a>
+        </p>
+    </div>
+    {% else %}
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Set up an authenticator app" %}</h2>
+        <ol>
+            <li>{% trans "Open your authenticator app (Google Authenticator, 1Password, Authy, etc.)." %}</li>
+            <li>
+                {% trans "Add a new account using this setup key, or open the link below on the same device:" %}
+                <br>
+                <code style="word-break: break-all;">{{ otpauth_url }}</code>
+            </li>
+            <li>{% trans "Enter the 6-digit code your app shows below to finish setup." %}</li>
+        </ol>
+        <form method="post" class="security-inline-form">
+            {% csrf_token %}
+            <input type="text" name="token" inputmode="numeric" pattern="[0-9]*" maxlength="6"
+                   placeholder="{% trans '6-digit code' %}" autofocus required>
+            <button type="submit" class="btn btn-primary">{% trans "Verify & Enable" %}</button>
+        </form>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/security.js' %}"></script>
+{% endblock %}

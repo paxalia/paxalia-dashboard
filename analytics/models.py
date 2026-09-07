@@ -626,3 +626,23 @@ class ChartAnnotation(models.Model):
 
     def __str__(self):
         return f"{self.date}: {self.label}"
+
+
+class DashboardAccess(models.Model):
+    """
+    Not a real table — this model exists purely to hold the custom
+    permissions below in Django's standard auth_permission table, so
+    per-section dashboard access can be granted through the ordinary
+    Group/User "permissions" admin screens. See analytics/permissions.py
+    for how these are enforced.
+    """
+    class Meta:
+        managed = False
+        default_permissions = ()
+        permissions = [
+            ('view_billing', 'Can view Billing section'),
+            ('view_security', 'Can view Security Center'),
+            ('view_backups', 'Can view Backups section'),
+            ('view_sites', 'Can view Sites section'),
+            ('view_server', 'Can view Server monitoring'),
+        ]

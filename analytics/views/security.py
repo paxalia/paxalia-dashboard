@@ -3,7 +3,7 @@ import django
 from datetime import timedelta
 
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
+from analytics.permissions import require_section_permission
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
 from django.db.models import Count
@@ -59,7 +59,7 @@ def _mfa_status():
     return rows
 
 
-@staff_member_required
+@require_section_permission('security')
 def security_center(request):
     """
     Single page combining every Security Center subsection. Mirrors the
@@ -143,7 +143,7 @@ def security_center(request):
     return render(request, 'analytics/security.html', context)
 
 
-@staff_member_required
+@require_section_permission('security')
 @require_POST
 def security_revoke_session(request, login_event_id):
     """Force-logout the session tied to a LoginEvent, if it's still live.
@@ -170,7 +170,7 @@ def security_revoke_session(request, login_event_id):
     return redirect('analytics:security')
 
 
-@staff_member_required
+@require_section_permission('security')
 @require_POST
 def security_block_ip(request):
     ip_address = request.POST.get('ip_address', '').strip()
@@ -193,7 +193,7 @@ def security_block_ip(request):
     return redirect('analytics:security')
 
 
-@staff_member_required
+@require_section_permission('security')
 @require_POST
 def security_unblock_ip(request, block_id):
     blocked = get_object_or_404(BlockedIP, id=block_id)
