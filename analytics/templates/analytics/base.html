@@ -416,6 +416,30 @@
                             {% trans "Paxalia API Reference" %}
                         </a>
                         {% endif %}
+
+                        {% if 'reports' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:reports' %}"
+                           class="analytics-sidebar-link {% if active_page == 'reports' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M4 4h16v2H4zm2 4h12v12H6zm2 2v2h8v-2zm0 4v2h8v-2z"/>
+                                </svg>
+                            </span>
+                            {% trans "Scheduled Reports" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'share_links' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:share_links' %}"
+                           class="analytics-sidebar-link {% if active_page == 'share_links' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M11 2a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-8 0zm2 4V6a2 2 0 1 1 4 0v2z"/>
+                                </svg>
+                            </span>
+                            {% trans "Share Links" %}
+                        </a>
+                        {% endif %}
                     </div>
                 </section>
 

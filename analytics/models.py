@@ -691,3 +691,69 @@ class PaxaliaAPIKey(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.key_prefix}…)"
+
+
+class ScheduledReport(models.Model):
+    """A recurring email (optionally with a PDF attached — see
+    analytics/reporting.py) summarizing traffic for a site."""
+    FREQUENCY_CHOICES = [('weekly', 'Weekly'), ('monthly', 'Monthly')]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True, related_name='scheduled_reports')
+    name = models.CharField(max_length=255)
+    recipient_emails = models.TextField(help_text="One email address per line.")
+    frequency = models.CharField(max_length=10, choices=FREQUENCY_CHOICES, default='weekly')
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    last_sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Scheduled Report"
+        verbose_name_plural = "Scheduled Reports"
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_frequency_display()})"
+
+    def recipient_list(self):
+        return [e.strip() for e in self.recipient_emails.split('\n') if e.strip()]
+
+
+class ShareLink(models.Model):
+    """
+    A public, unauthenticated read-only link to a site's Overview
+    snapshot. The UUID primary key doubles as the unguessable token —
+    same 128-bit random-UUID4 pattern already used as a primary key
+    everywhere else in this app, so no separate token field or
+    generation logic needed.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True, related_name='share_links')
+    name = models.CharField(max_length=255)
+    password_hash = models.CharField(max_length=64, blank=True, help_text="SHA-256. Blank means no password required.")
+    expires_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    last_viewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Share Link"
+        verbose_name_plural = "Share Links"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def is_expired(self):
+        return self.expires_at is not None and self.expires_at < timezone.now()
+
+    @property
+    def has_password(self):
+        return bool(self.password_hash)
+
+    @property
+    def is_usable(self):
+        return self.is_active and not self.is_expired
