@@ -646,3 +646,48 @@ class DashboardAccess(models.Model):
             ('view_sites', 'Can view Sites section'),
             ('view_server', 'Can view Server monitoring'),
         ]
+
+
+class PaxaliaAPIKey(models.Model):
+    """
+    A scoped, revocable credential for the Paxalia API — server-to-server
+    event ingestion and/or read access to analytics data. Distinct from
+    the browser-facing public event endpoint (analytics_event_api),
+    which stays anonymous/unauthenticated on purpose: a secret key can
+    never be safely embedded in client-side JS (anyone viewing page
+    source could extract it), so this only guards the server-to-server
+    surfaces. See analytics/api_keys.py for generation/verification.
+
+    The raw key is shown exactly once, at creation — only its SHA-256
+    hash is ever stored, same principle as a password. key_prefix is
+    the first several characters of the raw key, safe to display in
+    the UI for identification without exposing the secret.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(
+        Site, on_delete=models.CASCADE, null=True, blank=True, related_name='api_keys',
+        help_text="Restrict this key to one site, or leave blank for all sites."
+    )
+    name = models.CharField(max_length=255, help_text="A label to tell keys apart, e.g. 'Backend service'.")
+    key_prefix = models.CharField(max_length=16, unique=True, editable=False)
+    key_hash = models.CharField(max_length=64, editable=False)
+    scope_ingest = models.BooleanField(
+        default=True, help_text="Allows posting events via the server-to-server ingestion endpoint."
+    )
+    scope_read = models.BooleanField(
+        default=False, help_text="Allows reading analytics data via the read API."
+    )
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Paxalia API Key"
+        verbose_name_plural = "Paxalia API Keys"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.key_prefix}…)"

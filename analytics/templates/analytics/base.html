@@ -395,6 +395,27 @@
                             {% trans "Sites" %}
                         </a>
                         {% endif %}
+
+                        {% if 'api_keys' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:api_keys' %}"
+                           class="analytics-sidebar-link {% if active_page == 'api_keys' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M14 2a6 6 0 0 0-5.66 8L2 16.34V20h3.66l1.5-1.5H10v-2.5h2.5V13.5L14 12a6 6 0 1 0 0-10zm2 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/>
+                                </svg>
+                            </span>
+                            {% trans "Paxalia API Keys" %}
+                        </a>
+                        <a href="{% url 'analytics:api_docs' %}"
+                           class="analytics-sidebar-link {% if active_page == 'api_docs' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5zM7 12h10v1.5H7zm0 3.5h10V17H7zm0-7h5v1.5H7z"/>
+                                </svg>
+                            </span>
+                            {% trans "Paxalia API Reference" %}
+                        </a>
+                        {% endif %}
                     </div>
                 </section>
 
