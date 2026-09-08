@@ -20,6 +20,8 @@ from .views import mfa as mfa_views
 from .views import api_keys as api_keys_views
 from .views import paxalia_api
 from .views import api_docs as api_docs_views
+from .views import reports as reports_views
+from .views import share_links as share_links_views
 
 app_name = 'analytics'
 
@@ -98,6 +100,16 @@ dashboard_urlpatterns = [
     path('api-keys/<uuid:key_id>/revoke/', api_keys_views.api_key_revoke, name='api_key_revoke'),
     path('api-keys/<uuid:key_id>/delete/', api_keys_views.api_key_delete, name='api_key_delete'),
     path('api-docs/', api_docs_views.api_docs, name='api_docs'),
+
+    path('reports/', reports_views.reports_management, name='reports'),
+    path('reports/<uuid:report_id>/toggle/', reports_views.report_toggle_active, name='report_toggle_active'),
+    path('reports/<uuid:report_id>/delete/', reports_views.report_delete, name='report_delete'),
+
+    path('share-links/', share_links_views.share_links_management, name='share_links'),
+    path('share-links/<uuid:link_id>/revoke/', share_links_views.share_link_revoke, name='share_link_revoke'),
+    path('share-links/<uuid:link_id>/delete/', share_links_views.share_link_delete, name='share_link_delete'),
+    # Public — deliberately outside staff auth, gated by token (+ optional password) only.
+    path('shared/<uuid:token>/', share_links_views.shared_dashboard_view, name='shared_dashboard'),
 
     path('backups/', backup_views.backup_management, name='backups'),
     path('backups/trigger/', backup_views.backup_trigger, name='backup_trigger'),

@@ -19,6 +19,8 @@ from .models import (
     Segment,
     ChartAnnotation,
     PaxaliaAPIKey,
+    ScheduledReport,
+    ShareLink,
 )
 
 
@@ -212,3 +214,18 @@ class PaxaliaAPIKeyAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'scope_ingest', 'scope_read')
     search_fields = ('name', 'key_prefix')
     readonly_fields = ('key_prefix', 'key_hash', 'created_at', 'last_used_at')
+
+
+@admin.register(ScheduledReport)
+class ScheduledReportAdmin(admin.ModelAdmin):
+    list_display = ('name', 'frequency', 'site', 'is_active', 'last_sent_at')
+    list_filter = ('frequency', 'is_active')
+    search_fields = ('name', 'recipient_emails')
+
+
+@admin.register(ShareLink)
+class ShareLinkAdmin(admin.ModelAdmin):
+    list_display = ('name', 'site', 'has_password', 'is_active', 'expires_at', 'last_viewed_at')
+    list_filter = ('is_active',)
+    search_fields = ('name',)
+    readonly_fields = ('password_hash', 'created_at', 'last_viewed_at')
