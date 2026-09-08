@@ -21,6 +21,7 @@ from .models import (
     PaxaliaAPIKey,
     ScheduledReport,
     ShareLink,
+    Notification,
 )
 
 
@@ -229,3 +230,11 @@ class ShareLinkAdmin(admin.ModelAdmin):
     list_filter = ('is_active',)
     search_fields = ('name',)
     readonly_fields = ('password_hash', 'created_at', 'last_viewed_at')
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'category', 'subject', 'site', 'is_read')
+    list_filter = ('category', 'is_read')
+    search_fields = ('subject', 'message')
+    readonly_fields = ('created_at',)

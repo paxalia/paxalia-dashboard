@@ -18,6 +18,11 @@ def analytics_config(request):
     current_segment = get_current_segment(request) if hasattr(request, 'session') else None
     all_segments = list(Segment.objects.all()) if 'segments' in config['SIDEBAR_SECTIONS'] else []
 
+    unread_notification_count = 0
+    if 'notifications' in config['SIDEBAR_SECTIONS']:
+        from .models import Notification
+        unread_notification_count = Notification.objects.filter(is_read=False).count()
+
     # ─── Build upload URLs with a placeholder ──────────────────────
     dummy_id = uuid.uuid4()
 
@@ -44,4 +49,5 @@ def analytics_config(request):
         'analytics_all_sites': all_sites,
         'analytics_current_segment': current_segment,
         'analytics_all_segments': all_segments,
+        'analytics_unread_notification_count': unread_notification_count,
     }

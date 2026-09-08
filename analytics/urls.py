@@ -22,6 +22,7 @@ from .views import paxalia_api
 from .views import api_docs as api_docs_views
 from .views import reports as reports_views
 from .views import share_links as share_links_views
+from .views import notifications as notifications_views
 
 app_name = 'analytics'
 
@@ -110,6 +111,10 @@ dashboard_urlpatterns = [
     path('share-links/<uuid:link_id>/delete/', share_links_views.share_link_delete, name='share_link_delete'),
     # Public — deliberately outside staff auth, gated by token (+ optional password) only.
     path('shared/<uuid:token>/', share_links_views.shared_dashboard_view, name='shared_dashboard'),
+
+    path('notifications/', notifications_views.notifications_list, name='notifications'),
+    path('notifications/<uuid:notification_id>/read/', notifications_views.notification_mark_read, name='notification_mark_read'),
+    path('notifications/mark-all-read/', notifications_views.notifications_mark_all_read, name='notifications_mark_all_read'),
 
     path('backups/', backup_views.backup_management, name='backups'),
     path('backups/trigger/', backup_views.backup_trigger, name='backup_trigger'),

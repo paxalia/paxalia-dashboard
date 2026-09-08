@@ -757,3 +757,42 @@ class ShareLink(models.Model):
     @property
     def is_usable(self):
         return self.is_active and not self.is_expired
+
+
+class Notification(models.Model):
+    """
+    Powers the in-dashboard notification center (bell icon). Written by
+    analytics.alerts.send_alert()/send_security_alert() alongside their
+    existing email/webhook delivery — so every alert shows up here
+    regardless of whether email/webhook are configured, or whether
+    they succeed.
+
+    Read state is deliberately global, not per-user: any staff member
+    marking a notification read clears it for everyone. A per-user
+    read/unread table would be more precise but is real added
+    complexity (a through-model, migrations on every new staff
+    account) for a feature that's mostly "did anyone see this yet" —
+    documented here as a known simplification, not an oversight.
+    """
+    CATEGORY_CHOICES = [
+        ('anomaly', 'Anomaly'),
+        ('security', 'Security'),
+        ('report', 'Report'),
+        ('general', 'General'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='general', db_index=True)
+    subject = models.CharField(max_length=255)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        verbose_name = "Notification"
+        verbose_name_plural = "Notifications"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.subject
