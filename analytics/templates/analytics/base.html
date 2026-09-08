@@ -629,6 +629,20 @@
                     <h1 class="dashboard-page-title">{% block page_title %}{% trans "Overview" %}{% endblock %}</h1>
                     <p class="dashboard-page-subtitle">{% block page_subtitle %}{% endblock %}</p>
                 </div>
+
+                {% if 'notifications' in analytics_config.SIDEBAR_SECTIONS %}
+                <a href="{% url 'analytics:notifications' %}" class="analytics-notification-bell"
+                   aria-label="{% trans 'Notifications' %}" style="margin-left:auto; position:relative; display:inline-flex; align-items:center; padding:0.5rem;">
+                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill="currentColor" d="M12 2a6 6 0 0 0-6 6v3.2c0 .5-.2 1-.5 1.4L4 15h16l-1.5-2.4c-.3-.4-.5-.9-.5-1.4V8a6 6 0 0 0-6-6zm0 20a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22z"/>
+                    </svg>
+                    {% if analytics_unread_notification_count %}
+                    <span style="position:absolute; top:2px; right:2px; background:#c0392b; color:#fff; border-radius:999px; font-size:10px; line-height:1; padding:2px 5px;">
+                        {{ analytics_unread_notification_count }}
+                    </span>
+                    {% endif %}
+                </a>
+                {% endif %}
             </header>
 
             {% block filter_bar %}{% endblock %}

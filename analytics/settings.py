@@ -6,7 +6,7 @@ DEFAULTS = {
         'overview', 'pages', 'api', 'traffic', 'realtime', 'bots',
         'geography', 'events', 'billing', 'releases', 'backups', 'security',
         'sites', 'broken_links', 'goals', 'funnels', 'segments', 'campaigns',
-        'annotations', 'cohorts', 'api_keys', 'reports', 'share_links', 'settings'
+        'annotations', 'cohorts', 'api_keys', 'reports', 'share_links', 'notifications', 'settings'
     ],
     'API_PATH_PREFIX': '/api/',
     'GEOIP_PATH': None,  # None → use analytics/geoip/ inside the package
@@ -61,6 +61,11 @@ DEFAULTS = {
     # (unmatched hosts get site=None) beats silent auto-provisioning; turn
     # this on if you'd rather not pre-register every domain by hand.
     'AUTO_CREATE_SITES': False,
+
+    # ── Anomaly detection ──
+    # A day's traffic vs. the same weekday one week earlier, beyond
+    # this percent change (either direction), triggers an alert.
+    'ANOMALY_ALERT_THRESHOLD_PERCENT': 30,
 }
 
 

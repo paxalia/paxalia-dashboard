@@ -1,0 +1,59 @@
+{% extends 'analytics/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Notifications" %} – Analytics{% endblock %}
+{% block page_title %}{% trans "Notifications" %}{% endblock %}
+{% block page_subtitle %}{% trans "Anomalies, security events, and report activity" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+
+    <div class="table-card">
+        <form method="post" action="{% url 'analytics:notifications_mark_all_read' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary">{% trans "Mark all as read" %}</button>
+        </form>
+    </div>
+
+    <div class="table-card">
+        {% if notifications %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "When" %}</th>
+                    <th>{% trans "Category" %}</th>
+                    <th>{% trans "Subject" %}</th>
+                    <th>{% trans "Message" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for n in notifications %}
+                <tr style="{% if not n.is_read %}font-weight:600;{% endif %}">
+                    <td>{{ n.created_at|date:"Y-m-d H:i" }}</td>
+                    <td><span class="security-status-badge security-status-ok">{{ n.get_category_display }}</span></td>
+                    <td>{{ n.subject }}</td>
+                    <td>{{ n.message|truncatewords:20 }}</td>
+                    <td>
+                        {% if not n.is_read %}
+                        <form method="post" action="{% url 'analytics:notification_mark_read' n.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-secondary">{% trans "Mark read" %}</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No notifications yet." %}</div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
