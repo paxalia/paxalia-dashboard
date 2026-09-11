@@ -9,6 +9,38 @@
 
     var EVENT_URL = '/api/analytics/event/';
 
+    // ─── Consent Mode (Phase 14) ─────────────────────────────────
+    // window.PAXALIA_CONSENT_CONFIG is set by the
+    // {% analytics_consent_config %} template tag — include it right
+    // before this script tag. If it's missing, consent mode defaults
+    // to disabled and tracking behaves exactly as it did before this
+    // phase. See the README's "Consent Mode" section.
+    var consentConfig = window.PAXALIA_CONSENT_CONFIG || { enabled: false };
+
+    function hasConsent() {
+        if (!consentConfig.enabled) return true;
+        var prefix = consentConfig.cookieName + '=';
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var c = cookies[i].trim();
+            if (c.indexOf(prefix) === 0) {
+                return c.substring(prefix.length) === consentConfig.grantedValue;
+            }
+        }
+        return false;
+    }
+
+    if (!hasConsent()) {
+        // Consent not granted: define opAnalytics as a no-op so any
+        // onclick="opAnalytics(...)" call sites elsewhere on the page
+        // don't throw, but attach no listeners and send nothing. The
+        // server independently enforces this too (AnalyticsMiddleware
+        // and the event API endpoints) — this client-side gate is
+        // about not even trying, not the actual compliance guarantee.
+        window.opAnalytics = function() {};
+        return;
+    }
+
     // ─── Get CSRF token from cookie ──────────────────────────────
     function getCsrfToken() {
         var cookieValue = null;

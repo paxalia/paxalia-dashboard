@@ -25,6 +25,7 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 - [Custom Event Tracking](#custom-event-tracking)
 - [Real User Monitoring](#real-user-monitoring)
 - [Uptime Monitoring](#uptime-monitoring)
+- [Compliance](#compliance)
 - [Internationalization](#internationalization)
 - [Themes](#themes)
 - [Exporting Data](#exporting-data)
@@ -335,6 +336,7 @@ If you want to change the event API path, you must update:
 | Events           | `/events/`           | Custom events: today/yesterday counts, daily chart, top categories, top actions, top labels, events by page, recent events feed                          |
 | Real User Monitoring | `/rum/`          | Core Web Vitals (LCP/CLS/INP) at the 75th percentile with good/needs-improvement/poor breakdown, top JavaScript errors |
 | Uptime Monitoring | `/uptime/`          | Monitor list with current status and uptime %, add/pause/delete monitors, recent incident log |
+| Compliance       | `/compliance/`       | Consent-mode and retention status, "forget this visitor" deletion tool                                                                                   |
 | Billing          | `/billing/`          | (optional) Total revenue, today/month revenue, active subscriptions, donations, daily income chart, top plans, recent transactions, MRR/ARR trend, churn, failed-payment tracking |
 | Real‑time        | `/realtime/`         | Live visitor count (last 5 min), unique IPs, recent page views table with configurable refresh                                                           |
 | Server Overview  | `/server/overview/`  | System health snapshot: CPU, memory, disk, network usage with live charts                                                                                |
@@ -510,6 +512,87 @@ an extension of an existing page.
   like every other alert category.
 - **Uptime %** for a period with zero checks is shown as "—", not 0% or 100% — nothing to compute yet is different
   from "always down" or "always up".
+
+---
+
+## Compliance
+
+Consent-mode gating, per-data-type retention policies, and a "forget this visitor" deletion tool — independent of
+any other section.
+
+### Consent Mode
+
+Off by default — every deployment tracks exactly as it did before this feature existed. To require consent before
+tracking anything:
+
+```python
+PAXALIA_DASHBOARD = {
+    ...
+    'CONSENT_MODE_ENABLED': True,
+    'CONSENT_COOKIE_NAME': 'analytics_consent',       # defaults shown
+    'CONSENT_COOKIE_GRANTED_VALUE': 'granted',
+}
+```
+
+Then, on the pages you track, include the new template tag immediately before the `analytics-events.js` script tag:
+
+```html
+{% load analytics_tags %}
+{% analytics_consent_config %}
+<script src="{% static 'analytics/scripts/analytics-events.js' %}"></script>
+```
+
+Your own consent-banner/CMP JavaScript is responsible for setting the cookie once a visitor accepts — this package
+doesn't provide a banner UI, only the gate that reads the cookie it sets. Until that cookie is present with the
+configured value:
+
+- No `PageView` row is written, and no session cookie is set — `AnalyticsMiddleware` returns early, before any
+  tracking state is created.
+- The public event/JS-error API endpoints skip the write and return `{"status": "skipped"}` rather than an error.
+- `analytics-events.js` doesn't attach any listeners or send any beacons — `window.opAnalytics` becomes a no-op so
+  existing `onclick="opAnalytics(...)"` call sites on your pages don't throw.
+
+The server-side checks (middleware and the API endpoints) are the actual compliance guarantee; the client-side
+check is about not even trying, and can't be relied on alone since a request could be sent directly to the API.
+
+### Data Retention
+
+Per-data-type retention, separate from `SECURITY_LOG_RETENTION_DAYS` (which only covers `LoginEvent`/
+`SecurityAuditLog`) and `SERVER_METRIC_RETENTION_DAYS` (pruned inline by `record_server_metrics`, not by this):
+
+```python
+PAXALIA_DASHBOARD = {
+    ...
+    'DATA_RETENTION_DAYS': {
+        'pageview': 400,
+        'analytics_event': 400,
+        'js_error': 90,
+        'uptime_check': 90,
+        'slow_query': 30,
+    },
+}
+```
+
+Empty by default — nothing is deleted unless you explicitly opt a data type in. Schedule the command like the
+others:
+
+```bash
+0 3 * * * cd /path/to/project && python manage.py prune_analytics_data >> /var/log/prune-analytics.log 2>&1
+```
+
+### Forget This Visitor
+
+On `/compliance/`, delete every stored row for a given session ID or IP address — real, immediate deletion (since
+`anonymize_ip` defaults off, IP addresses are typically stored raw, so this is a real capability, not a symbolic
+one). Matches both a raw IP and its SHA-256 hash, since a deployment that toggled `anonymize_ip` partway through
+its history could have stored a visitor's IP either way at different times.
+
+**Known gap:** JS errors can only be deleted by session ID — the `JSError` model doesn't store an IP address, so an
+IP-based deletion request won't reach it. Documented here rather than silently leaving rows behind.
+
+The audit log records that a deletion happened and how much was deleted, but not the raw identifier that was
+requested to be forgotten — logging the exact thing someone asked to have forgotten, in a different table, would
+defeat the point.
 
 ---
 

@@ -155,6 +155,21 @@ class AnalyticsMiddleware:
         utm_term = request.GET.get('utm_term', '')[:255]
         utm_content = request.GET.get('utm_content', '')[:255]
 
+        # 2b. Consent gate (Phase 14). Deliberately placed after the
+        # ignored-path checks above (those stay free either way) but
+        # before the session cookie is set below — setting a tracking
+        # cookie before consent would defeat the point of a consent
+        # gate. Mirrors the client-side gate in analytics-events.js
+        # (see PAXALIA_CONSENT_CONFIG there) so a page-view row and the
+        # client-side beacons always agree on consent state. Default
+        # off — existing deployments track exactly as before unless
+        # they explicitly opt into CONSENT_MODE_ENABLED.
+        if get_config()['CONSENT_MODE_ENABLED']:
+            consent_cookie_name = get_config()['CONSENT_COOKIE_NAME']
+            consent_granted_value = get_config()['CONSENT_COOKIE_GRANTED_VALUE']
+            if request.COOKIES.get(consent_cookie_name) != consent_granted_value:
+                return response
+
         # Only set the session cookie for tracked requests
         if new_cookie:
             response.set_cookie(
