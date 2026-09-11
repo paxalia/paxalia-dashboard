@@ -6,6 +6,9 @@ from .models import (
     AnalyticsSettings,
     AnalyticsEvent,
     JSError,
+    UptimeMonitor,
+    UptimeCheck,
+    UptimeIncident,
     FileUpload,
     BackupConfiguration,
     BackupArchive,
@@ -83,6 +86,30 @@ class JSErrorAdmin(admin.ModelAdmin):
     search_fields = ('message', 'filename', 'path', 'session_id')
     date_hierarchy = 'created_at'
     readonly_fields = [f.name for f in JSError._meta.fields]
+
+
+@admin.register(UptimeMonitor)
+class UptimeMonitorAdmin(admin.ModelAdmin):
+    list_display = ('name', 'url', 'method', 'expected_status_code', 'check_interval_minutes', 'is_active')
+    list_filter = ('is_active', 'method')
+    search_fields = ('name', 'url')
+
+
+@admin.register(UptimeCheck)
+class UptimeCheckAdmin(admin.ModelAdmin):
+    list_display = ('monitor', 'status', 'status_code', 'response_time_ms', 'checked_at')
+    list_filter = ('status', 'checked_at')
+    search_fields = ('monitor__name',)
+    date_hierarchy = 'checked_at'
+    readonly_fields = [f.name for f in UptimeCheck._meta.fields]
+
+
+@admin.register(UptimeIncident)
+class UptimeIncidentAdmin(admin.ModelAdmin):
+    list_display = ('monitor', 'started_at', 'resolved_at')
+    list_filter = ('started_at',)
+    search_fields = ('monitor__name', 'cause')
+    date_hierarchy = 'started_at'
 
 
 @admin.register(FileUpload)

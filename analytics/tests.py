@@ -1,13 +1,17 @@
+import urllib.error
+from unittest.mock import MagicMock, patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .bot_classification import classify_bot
 from .conf_uploads import get_upload_blocked_extensions
-from .models import BackupConfiguration, FileUpload
+from .models import BackupConfiguration, FileUpload, UptimeIncident, UptimeMonitor
 from .revenue import _month_bounds, _shift_month
-from .rum import rate_metric, _percentile
+from .rum import _percentile, rate_metric
 from .security_scorecard import run_scorecard_checks
+from .uptime import compute_uptime_percentage, perform_check, record_check
 from .views.events import _clean_int
 
 
@@ -209,3 +213,97 @@ class JsErrorHelperTests(TestCase):
     def test_clean_int_garbage_does_not_raise(self):
         self.assertIsNone(_clean_int('not-a-number'))
         self.assertIsNone(_clean_int({}))
+
+
+class UptimeCheckTests(TestCase):
+    """
+    Phase 12. perform_check() is mocked at the urllib layer so these
+    never make a real network call; record_check()'s incident
+    state-machine is exercised against real DB rows since this
+    package owns the UptimeMonitor/UptimeCheck/UptimeIncident tables
+    (unlike the billing models in RevenueDateMathTests' neighbors).
+    """
+
+    def _monitor(self, **kwargs):
+        defaults = dict(name='Example', url='https://example.com/', expected_status_code=200, timeout_seconds=5)
+        defaults.update(kwargs)
+        return UptimeMonitor.objects.create(**defaults)
+
+    def test_perform_check_success(self):
+        monitor = self._monitor()
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        with patch('analytics.uptime.urllib.request.urlopen', return_value=mock_resp):
+            result = perform_check(monitor)
+        self.assertEqual(result['status'], 'up')
+        self.assertEqual(result['status_code'], 200)
+        self.assertEqual(result['error_message'], '')
+
+    def test_perform_check_wrong_status_code_is_down(self):
+        monitor = self._monitor(expected_status_code=200)
+        mock_resp = MagicMock()
+        mock_resp.status = 503
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        with patch('analytics.uptime.urllib.request.urlopen', return_value=mock_resp):
+            result = perform_check(monitor)
+        self.assertEqual(result['status'], 'down')
+        self.assertIn('503', result['error_message'])
+
+    def test_perform_check_http_error_with_matching_expected_code_is_up(self):
+        # A monitor that expects a 404 (checking a "not found" page
+        # stays not found, say) should treat urllib's HTTPError(404)
+        # as success, not failure.
+        monitor = self._monitor(expected_status_code=404)
+        err = urllib.error.HTTPError(url='https://example.com/', code=404, msg='Not Found', hdrs=None, fp=None)
+        with patch('analytics.uptime.urllib.request.urlopen', side_effect=err):
+            result = perform_check(monitor)
+        self.assertEqual(result['status'], 'up')
+        self.assertEqual(result['status_code'], 404)
+
+    def test_perform_check_connection_error_is_down(self):
+        monitor = self._monitor()
+        err = urllib.error.URLError('Connection refused')
+        with patch('analytics.uptime.urllib.request.urlopen', side_effect=err):
+            result = perform_check(monitor)
+        self.assertEqual(result['status'], 'down')
+        self.assertIsNone(result['status_code'])
+        self.assertIn('Connection refused', result['error_message'])
+
+    def test_record_check_opens_incident_on_first_failure(self):
+        monitor = self._monitor()
+        record_check(monitor, {'status': 'down', 'status_code': 500, 'response_time_ms': 100, 'error_message': 'boom'})
+        self.assertEqual(UptimeIncident.objects.filter(monitor=monitor, resolved_at__isnull=True).count(), 1)
+
+    def test_record_check_does_not_open_second_incident_while_still_down(self):
+        monitor = self._monitor()
+        record_check(monitor, {'status': 'down', 'status_code': 500, 'response_time_ms': 100, 'error_message': 'boom'})
+        record_check(monitor, {'status': 'down', 'status_code': 500, 'response_time_ms': 100, 'error_message': 'boom again'})
+        self.assertEqual(UptimeIncident.objects.filter(monitor=monitor).count(), 1)
+
+    def test_record_check_resolves_incident_on_recovery(self):
+        monitor = self._monitor()
+        record_check(monitor, {'status': 'down', 'status_code': 500, 'response_time_ms': 100, 'error_message': 'boom'})
+        record_check(monitor, {'status': 'up', 'status_code': 200, 'response_time_ms': 50, 'error_message': ''})
+        incident = UptimeIncident.objects.get(monitor=monitor)
+        self.assertIsNotNone(incident.resolved_at)
+
+    def test_compute_uptime_percentage_no_checks_is_none(self):
+        monitor = self._monitor()
+        from django.utils import timezone
+        from datetime import timedelta
+        now = timezone.now()
+        self.assertIsNone(compute_uptime_percentage(monitor, now - timedelta(days=1), now))
+
+    def test_compute_uptime_percentage_mixed_checks(self):
+        monitor = self._monitor()
+        record_check(monitor, {'status': 'up', 'status_code': 200, 'response_time_ms': 50, 'error_message': ''})
+        record_check(monitor, {'status': 'up', 'status_code': 200, 'response_time_ms': 50, 'error_message': ''})
+        record_check(monitor, {'status': 'down', 'status_code': 500, 'response_time_ms': 50, 'error_message': 'x'})
+        from django.utils import timezone
+        from datetime import timedelta
+        now = timezone.now()
+        pct = compute_uptime_percentage(monitor, now - timedelta(days=1), now + timedelta(minutes=1))
+        self.assertAlmostEqual(pct, 66.67, places=1)

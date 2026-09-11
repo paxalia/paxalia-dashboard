@@ -206,6 +206,18 @@
                         </a>
                         {% endif %}
 
+                        {% if 'uptime' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:uptime' %}"
+                           class="analytics-sidebar-link {% if active_page == 'uptime' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/>
+                                </svg>
+                            </span>
+                            {% trans "Uptime Monitoring" %}
+                        </a>
+                        {% endif %}
+
                         {% if 'goals' in analytics_config.SIDEBAR_SECTIONS %}
                         <a href="{% url 'analytics:goals' %}"
                            class="analytics-sidebar-link {% if active_page == 'goals' %}active{% endif %}">
