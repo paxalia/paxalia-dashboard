@@ -26,6 +26,7 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 - [Real User Monitoring](#real-user-monitoring)
 - [Uptime Monitoring](#uptime-monitoring)
 - [Compliance](#compliance)
+- [Data Import](#data-import)
 - [Internationalization](#internationalization)
 - [Themes](#themes)
 - [Exporting Data](#exporting-data)
@@ -337,6 +338,7 @@ If you want to change the event API path, you must update:
 | Real User Monitoring | `/rum/`          | Core Web Vitals (LCP/CLS/INP) at the 75th percentile with good/needs-improvement/poor breakdown, top JavaScript errors |
 | Uptime Monitoring | `/uptime/`          | Monitor list with current status and uptime %, add/pause/delete monitors, recent incident log |
 | Compliance       | `/compliance/`       | Consent-mode and retention status, "forget this visitor" deletion tool                                                                                   |
+| Data Import      | `/import/`           | Upload a GA/Plausible CSV export to backfill DailySiteStats for dates before you started tracking                                                       |
 | Billing          | `/billing/`          | (optional) Total revenue, today/month revenue, active subscriptions, donations, daily income chart, top plans, recent transactions, MRR/ARR trend, churn, failed-payment tracking |
 | Real‑time        | `/realtime/`         | Live visitor count (last 5 min), unique IPs, recent page views table with configurable refresh                                                           |
 | Server Overview  | `/server/overview/`  | System health snapshot: CPU, memory, disk, network usage with live charts                                                                                |
@@ -593,6 +595,59 @@ IP-based deletion request won't reach it. Documented here rather than silently l
 The audit log records that a deletion happened and how much was deleted, but not the raw identifier that was
 requested to be forgotten — logging the exact thing someone asked to have forgotten, in a different table, would
 defeat the point.
+
+---
+
+## Data Import
+
+Import historical daily stats from a Google Analytics or Plausible CSV export, for people migrating in — on
+`/import/`.
+
+### Why CSV, not the GA4 API
+
+A real GA4 API integration needs OAuth credentials, a Google API client library dependency, and per-property
+configuration this package has no way to own — the same category of problem as billing or Celery (it isn't this
+package's data or credentials to hold). A CSV export needs nothing but a file you already have:
+
+- **Google Analytics:** Reports → export any report as CSV.
+- **Plausible:** Settings → Imports & Export → export CSV.
+
+This is a deliberate scope decision, not a shortcut: it trades "fully automated" for "works today, no credentials,
+no new dependency."
+
+### One parser for both sources
+
+A GA4 daily-metrics export and a Plausible export are both, underneath the different UIs, a table with a date
+column and a handful of aggregate metric columns — they don't need two bespoke parsers, just column-name
+recognition across both vocabularies (GA says "Views"/"Sessions"/"Users"; Plausible says
+"pageviews"/"visitors"). GA's exports also carry a few leading title/date-range lines before the real header row —
+the parser skips anything before the first row that looks like a real header, and skips (with a warning, not an
+error) any data row whose date column doesn't parse, which also quietly handles a trailing "Totals" summary row.
+
+### Scope
+
+Only **date + aggregate-metric** CSVs are supported — one row per day. A page-level or dimension-broken-down
+export (e.g. GA's "Pages and screens" report, one row per URL) won't import usefully: historical data lands in
+daily aggregate stats, not individual page-view rows, since there's no way to reconstruct individual historical
+hits from an aggregate export.
+
+Metric mapping (documented, not guessed silently):
+
+| Export column | Lands in |
+|---|---|
+| views / pageviews | `total_views` |
+| visitors / users | `unique_ips` (closest available field — not literally an IP count, see below) |
+| sessions | `total_sessions` |
+| bounce rate (%) | `bounces`, computed as `round(bounce_rate / 100 * sessions)` when both are present |
+
+Anything this package can't derive from a generic aggregate export — `unique_users` as distinct from `unique_ips`,
+`api_calls`, `top_pages`, `bot_views` — is left at 0/empty on imported rows rather than guessed.
+
+A date that already has a `DailySiteStats` row for the target site is **skipped by default** — import is meant to
+fill in history from before you started tracking with this package, not to silently overwrite real tracked data
+that happens to overlap. Check "Overwrite" on the import form if you do want to replace it. Imported rows are
+tagged (`imported_from`: `ga`/`plausible`/`csv`) so they're distinguishable from live-tracked days in the Django
+admin.
 
 ---
 

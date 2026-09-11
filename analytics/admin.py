@@ -51,8 +51,9 @@ class DailySiteStatsAdmin(admin.ModelAdmin):
         'bot_views',
         'total_sessions',
         'bounces',
+        'imported_from',
     )
-    list_filter = ('date',)
+    list_filter = ('date', 'imported_from')
     readonly_fields = [f.name for f in DailySiteStats._meta.fields]
 
 
