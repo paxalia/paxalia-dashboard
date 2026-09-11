@@ -7,6 +7,7 @@ from django.http import Http404
 from django.db.models import Sum
 
 from .utils import get_date_range, detect_active_preset, get_billing_models, section_enabled
+from ..revenue import compute_monthly_revenue_trend, compute_churn, compute_dunning
 
 from datetime import timedelta
 
@@ -84,6 +85,12 @@ def analytics_billing(request):
         total=Sum('amount')
     )['total'] or 0
 
+    # ── Revenue analytics (Phase 9) — see revenue.py for the exact
+    # definitions and the documented-contract constraints behind them.
+    revenue_trend = compute_monthly_revenue_trend(Invoice, today=today)
+    churn = compute_churn(Invoice, today=today)
+    dunning = compute_dunning(Invoice)
+
     # Compare to previous period
     compare_active = request.GET.get('compare') == '1'
     previous_labels = []
@@ -114,6 +121,9 @@ def analytics_billing(request):
         'month_revenue': month_revenue,
         'active_subscriptions': active_subscriptions,
         'total_donations': total_donations,
+        'revenue_trend': revenue_trend,
+        'churn': churn,
+        'dunning': dunning,
         'chart_labels': chart_labels,
         'chart_income': chart_income,
         'top_plans': top_plans,

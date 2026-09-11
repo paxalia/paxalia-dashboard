@@ -4,6 +4,7 @@ from django.urls import reverse
 
 from .conf_uploads import get_upload_blocked_extensions
 from .models import BackupConfiguration, FileUpload
+from .revenue import _month_bounds, _shift_month
 from .security_scorecard import run_scorecard_checks
 
 
@@ -84,3 +85,35 @@ class SecurityScorecardTests(TestCase):
         total = result['summary']['pass'] + result['summary']['warn'] + result['summary']['fail']
         self.assertEqual(total, result['summary']['total'])
         self.assertEqual(total, len(result['django']) + len(result['package']))
+
+
+class RevenueDateMathTests(TestCase):
+    """
+    Phase 9 — the pure date-math helpers behind MRR trend / churn.
+    compute_monthly_revenue_trend/compute_churn/compute_dunning
+    themselves need a real Invoice model (see revenue.py's docstring on
+    the documented billing contract) which only exists in a consuming
+    project, so they're exercised there — this covers the month
+    arithmetic they're built on, including year wraparound.
+    """
+
+    def test_month_bounds_regular_month(self):
+        start, end = _month_bounds(2026, 4)
+        self.assertEqual((start.day, end.day), (1, 30))
+
+    def test_month_bounds_december(self):
+        start, end = _month_bounds(2026, 12)
+        self.assertEqual(end.month, 12)
+        self.assertEqual(end.day, 31)
+
+    def test_shift_month_forward_across_year_boundary(self):
+        self.assertEqual(_shift_month(2026, 11, 2), (2027, 1))
+
+    def test_shift_month_backward_across_year_boundary(self):
+        self.assertEqual(_shift_month(2026, 1, -1), (2025, 12))
+
+    def test_shift_month_backward_two_from_january(self):
+        self.assertEqual(_shift_month(2026, 1, -2), (2025, 11))
+
+    def test_shift_month_zero_is_identity(self):
+        self.assertEqual(_shift_month(2026, 6, 0), (2026, 6))
