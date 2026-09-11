@@ -137,6 +137,12 @@ class DailySiteStats(models.Model):
         default=0,
         help_text="Requests to paths marked as bot/scanner traffic"
     )
+    imported_from = models.CharField(
+        max_length=20, blank=True, default='',
+        choices=[('ga', 'Google Analytics'), ('plausible', 'Plausible'), ('csv', 'Generic CSV')],
+        help_text="Set by manage.py / the Data Import page when this row came from a historical CSV import "
+                  "rather than this package's own live tracking. Empty for every normally-tracked day."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

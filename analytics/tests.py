@@ -8,8 +8,9 @@ from django.urls import reverse
 from .bot_classification import classify_bot
 from .conf_uploads import get_upload_blocked_extensions
 from .compliance import forget_by_ip, forget_by_session
+from .data_import import import_daily_stats, parse_analytics_csv
 from .models import (
-    AnalyticsEvent, BackupConfiguration, FileUpload, JSError, PageView,
+    AnalyticsEvent, BackupConfiguration, DailySiteStats, FileUpload, JSError, PageView,
     ServerMetricSnapshot, UptimeIncident, UptimeMonitor,
 )
 from .queue_monitor import get_celery_app, get_queue_stats
@@ -457,3 +458,72 @@ class ForgetVisitorTests(TestCase):
 
         self.assertEqual(results['PageView'], 2)
         self.assertEqual(PageView.objects.filter(session_id='s3').count(), 1)
+
+
+class DataImportTests(TestCase):
+    """Phase 15 — the shared GA/Plausible CSV parser and importer."""
+
+    def test_parse_plausible_csv(self):
+        csv_text = "date,visitors,pageviews,bounce_rate,visit_duration\n2024-01-01,120,340,55%,90\n2024-01-02,95,280,60%,80\n"
+        rows, warnings = parse_analytics_csv(csv_text)
+        self.assertEqual(warnings, [])
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]['views'], 340.0)
+        self.assertEqual(rows[0]['visitors'], 120.0)
+        self.assertEqual(rows[0]['bounce_rate_pct'], 55.0)
+
+    def test_parse_ga_csv_with_preamble_and_totals_footer(self):
+        csv_text = (
+            "# ----------------------------------------\n"
+            "# Traffic acquisition\n"
+            "# 2024-01-01 - 2024-01-31\n"
+            "# ----------------------------------------\n"
+            "\n"
+            "Date,Sessions,Engaged sessions,Engagement rate,Views\n"
+            "20240101,120,80,0.66,340\n"
+            "20240102,95,60,0.63,280\n"
+            "\n"
+            "Totals,215,140,0.65,620\n"
+        )
+        rows, warnings = parse_analytics_csv(csv_text)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]['date'].isoformat(), '2024-01-01')
+        self.assertEqual(rows[0]['sessions'], 120.0)
+        self.assertEqual(rows[0]['views'], 340.0)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn('Totals', warnings[0])
+
+    def test_parse_csv_with_no_recognizable_header_returns_empty_with_warning(self):
+        rows, warnings = parse_analytics_csv("foo,bar\n1,2\n")
+        self.assertEqual(rows, [])
+        self.assertTrue(warnings)
+
+    def test_import_creates_new_rows(self):
+        rows, _ = parse_analytics_csv("date,visitors,pageviews\n2024-01-01,10,50\n")
+        summary = import_daily_stats(rows, source='plausible')
+        self.assertEqual(summary, {'created': 1, 'updated': 0, 'skipped_existing': 0})
+        stats = DailySiteStats.objects.get(date='2024-01-01', site=None)
+        self.assertEqual(stats.total_views, 50)
+        self.assertEqual(stats.unique_ips, 10)
+        self.assertEqual(stats.imported_from, 'plausible')
+
+    def test_import_skips_existing_day_by_default(self):
+        DailySiteStats.objects.create(site=None, date='2024-01-01', total_views=999)
+        rows, _ = parse_analytics_csv("date,visitors,pageviews\n2024-01-01,10,50\n")
+        summary = import_daily_stats(rows, source='ga')
+        self.assertEqual(summary, {'created': 0, 'updated': 0, 'skipped_existing': 1})
+        self.assertEqual(DailySiteStats.objects.get(date='2024-01-01').total_views, 999)
+
+    def test_import_overwrite_true_updates_existing_day(self):
+        DailySiteStats.objects.create(site=None, date='2024-01-01', total_views=999)
+        rows, _ = parse_analytics_csv("date,visitors,pageviews\n2024-01-01,10,50\n")
+        summary = import_daily_stats(rows, source='ga', overwrite=True)
+        self.assertEqual(summary, {'created': 0, 'updated': 1, 'skipped_existing': 0})
+        self.assertEqual(DailySiteStats.objects.get(date='2024-01-01').total_views, 50)
+
+    def test_bounces_computed_from_bounce_rate_and_sessions(self):
+        rows, _ = parse_analytics_csv("date,sessions,bounce_rate\n2024-01-01,200,50%\n")
+        summary = import_daily_stats(rows, source='ga')
+        self.assertEqual(summary['created'], 1)
+        stats = DailySiteStats.objects.get(date='2024-01-01')
+        self.assertEqual(stats.bounces, 100)
