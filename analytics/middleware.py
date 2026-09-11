@@ -5,6 +5,7 @@ import geoip2.database
 import os
 from .models import PageView, AnalyticsSettings, DailySiteStats, AnalyticsEvent
 from .settings import get_config
+from .bot_classification import classify_bot
 from django.utils import timezone
 
 logger = logging.getLogger('analytics')
@@ -126,9 +127,14 @@ class AnalyticsMiddleware:
         if tracked and not any(path.startswith(tp) for tp in tracked):
             return response
 
-        # 3. Determine if this is a bot path
+        # 3. Determine if this is a bot path (known scanner/attack-probe
+        # paths), then widen with User-Agent-based classification —
+        # see bot_classification.py for the full BREAKING CHANGE note on
+        # why is_bot now catches more than just path hits.
         bot_paths = [p.strip() for p in cfg.bot_paths.split('\n') if p.strip()]
-        is_bot = any(path.startswith(bp) for bp in bot_paths)
+        is_malicious_path = any(path.startswith(bp) for bp in bot_paths)
+        bot_category = classify_bot(is_malicious_path, request.META.get('HTTP_USER_AGENT', ''))
+        is_bot = bool(bot_category)
 
         # 3b. Determine if this is an API call, so page-view analytics
         # (Overview/Pages/Traffic/Geography/Realtime) and API analytics
@@ -193,6 +199,7 @@ class AnalyticsMiddleware:
                 country_name=country_name or '',
                 city=city or '',
                 is_bot=is_bot,
+                bot_category=bot_category,
                 is_api=is_api,
                 utm_source=utm_source,
                 utm_medium=utm_medium,

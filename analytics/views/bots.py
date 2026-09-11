@@ -41,6 +41,23 @@ def bots_overview(request):
     country_codes = [c['country_code'] or 'Unknown' for c in country_qs]
     country_counts = [c['count'] for c in country_qs]
 
+    # Bot category breakdown (last 30 days) — Phase 10. Categories are
+    # set at write time by bot_classification.py; see that module for
+    # what each one means and the BREAKING CHANGE note on is_bot itself.
+    category_qs = (
+        PageView.objects
+        .filter(is_bot=True, created_at__date__gte=last_30_days)
+        .exclude(bot_category='')
+        .values('bot_category')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+    category_labels = dict(PageView._meta.get_field('bot_category').choices)
+    category_breakdown = [
+        {'category': row['bot_category'], 'label': category_labels.get(row['bot_category'], row['bot_category']), 'count': row['count']}
+        for row in category_qs
+    ]
+
     bot_data = {
         'dates': dates,
         'bot_counts': bot_counts,
@@ -48,6 +65,8 @@ def bots_overview(request):
         'top_counts': top_counts,
         'country_codes': country_codes,
         'country_counts': country_counts,
+        'category_labels': [c['label'] for c in category_breakdown],
+        'category_counts': [c['count'] for c in category_breakdown],
     }
 
     context = {
@@ -58,5 +77,6 @@ def bots_overview(request):
         'bot_views_today': bot_views_today,
         'unique_bot_ips': unique_bot_ips,
         'bot_data': bot_data,
+        'category_breakdown': category_breakdown,
     }
     return render(request, 'analytics/bots.html', context)

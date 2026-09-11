@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from .bot_classification import classify_bot
 from .conf_uploads import get_upload_blocked_extensions
 from .models import BackupConfiguration, FileUpload
 from .revenue import _month_bounds, _shift_month
@@ -117,3 +118,46 @@ class RevenueDateMathTests(TestCase):
 
     def test_shift_month_zero_is_identity(self):
         self.assertEqual(_shift_month(2026, 6, 0), (2026, 6))
+
+
+class BotClassificationTests(TestCase):
+    """Phase 10."""
+
+    def test_malicious_path_wins_regardless_of_user_agent(self):
+        # A scanner spoofing Googlebot's UA while hitting a known
+        # attack-probe path is still 'malicious' — the path match
+        # always overrides a UA claim, see bot_classification.py.
+        self.assertEqual(
+            classify_bot(True, 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'),
+            'malicious',
+        )
+
+    def test_search_engine_crawler(self):
+        self.assertEqual(
+            classify_bot(False, 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'),
+            'search_engine',
+        )
+        self.assertEqual(classify_bot(False, 'Mozilla/5.0 (compatible; bingbot/2.0)'), 'search_engine')
+
+    def test_ai_crawler(self):
+        self.assertEqual(classify_bot(False, 'Mozilla/5.0 (compatible; GPTBot/1.0)'), 'ai_crawler')
+        self.assertEqual(classify_bot(False, 'ClaudeBot/1.0'), 'ai_crawler')
+
+    def test_social_preview_bot(self):
+        self.assertEqual(classify_bot(False, 'facebookexternalhit/1.1'), 'social_preview')
+
+    def test_seo_tool(self):
+        self.assertEqual(classify_bot(False, 'Mozilla/5.0 (compatible; AhrefsBot/7.0)'), 'seo_tool')
+
+    def test_generic_bot_heuristic(self):
+        self.assertEqual(classify_bot(False, 'curl/8.4.0'), 'unknown')
+        self.assertEqual(classify_bot(False, 'python-requests/2.31.0'), 'unknown')
+
+    def test_empty_user_agent_is_unknown(self):
+        self.assertEqual(classify_bot(False, ''), 'unknown')
+
+    def test_ordinary_browser_is_not_a_bot(self):
+        self.assertEqual(
+            classify_bot(False, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36'),
+            '',
+        )

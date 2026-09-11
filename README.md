@@ -66,7 +66,7 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 - **Real‑time Monitoring** – watch visitors arrive live with a configurable refresh interval.
 - **Server Monitoring** – real‑time system metrics: CPU, memory, disk, network, services, processes – all directly from
   your server, no external agents.
-- **Bot Traffic Detection** – automatically identify and separate scanner and bot requests; view them in a dedicated
+- **Bot Traffic Detection** – automatically identify and separate scanner/malicious traffic *and* known crawlers (search engines, AI crawlers, social-preview bots, SEO tools) from real user visits; view them broken out by category on a dedicated
   Bots page with its own analytics.
 - **Backup Management** – configure paths to back up, set a schedule, and create/restore backups from the dashboard.
   Chunked download for large archives.
@@ -342,7 +342,7 @@ If you want to change the event API path, you must update:
 | Server Processes | `/server/processes/` | Active process list sorted by CPU usage                                                                                                                  |
 | Settings         | `/settings/`         | IP anonymisation, ignored paths/extensions, refresh interval, theme selector, language selector                                                          |
 | Admin Overview   | `/admin-overview/`   | User registrations, content creation, and login activity charts                                                                                          |
-| Bot Traffic      | `/bots/`             | Total bot requests, daily bot charts, top bot paths, bot requests by country                                                                             |
+| Bot Traffic      | `/bots/`             | Total bot requests, daily bot charts, top bot paths, bot requests by country, bot category breakdown (search engine/AI crawler/social preview/SEO tool/unknown/malicious) |
 | Backups          | `/backups/`          | Configure backup paths, storage, schedule, and retention; create, download, and delete backups                                                           |
 | About            | `/about/`            | The story behind the project, the developer, and support options                                                                                         |
 
@@ -480,14 +480,21 @@ analytics clean and provides a dedicated view for security monitoring.
 ```
 
 - The middleware checks each incoming request: if the path matches any bot path, it:
-    - Marks the `PageView` with `is_bot=True`
+    - Marks the `PageView` with `is_bot=True` and `bot_category='malicious'`
     - Increments `DailySiteStats.bot_views` (not `total_views`)
+- **In addition**, every request's User-Agent is checked against a maintained pattern list (`analytics/bot_classification.py`) for known search engines (Googlebot, Bingbot, ...), AI crawlers (GPTBot, ClaudeBot, CCBot, ...), social-preview bots (facebookexternalhit, Twitterbot, Slackbot, ...), and SEO tools (AhrefsBot, SemrushBot, ...) — any match also sets `is_bot=True`, with `bot_category` set to the matching category. A generic bot-like User-Agent that doesn't match a known list (`curl/...`, `python-requests/...`, a bare "bot"/"crawler"/"spider" token, or no User-Agent at all) is categorized `'unknown'`.
+
+> **⚠️ Breaking change:** `is_bot` used to be set *only* from the path match above — a real crawler (Googlebot, a social-media link-preview fetch, etc.) visiting an ordinary page was previously counted as regular human traffic in Overview/Traffic/Cohorts/Funnels/Goals and everywhere else that filters `is_bot=False`. That was never actually correct, but it means upgrading will change your numbers: "human" page-view counts will drop and Bot Traffic counts will rise on any site that gets real crawler traffic (which is nearly every public site). Existing rows are **not** reclassified automatically — run `python manage.py backfill_pageview_bot_category` once after upgrading to apply the new classification to history (safe to re-run any time `bot_paths` changes or the pattern list is extended). Add `--dry-run` to preview the counts first.
+>
+> User-Agent is exactly what the request claims to be — nothing here verifies it against the crawler's published IP ranges (that would require a network call this package doesn't make). A path match on a known attack-probe path always overrides a UA claim, precisely because scanners sometimes spoof "Googlebot" to bypass filtering — but a spoofed UA hitting an ordinary page will be misclassified as the real thing.
+
 - Bot requests are **excluded** from all main analytics (overview, pages, geography, traffic, real‑time, events, API).
 - They are **only** visible on the dedicated **Bot Traffic** page, which shows:
     - Total bot requests, today's bot requests, unique bot IPs
     - Daily bot requests chart (last 30 days)
     - Top 20 bot paths (horizontal bar chart)
     - Bot requests by country (doughnut chart)
+    - **Bot category breakdown** (search engine / AI crawler / social preview / SEO tool / unknown / malicious), last 30 days
 
 ### Importing a large bot path list
 
