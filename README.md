@@ -27,6 +27,7 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 - [Uptime Monitoring](#uptime-monitoring)
 - [Compliance](#compliance)
 - [Data Import](#data-import)
+- [Slack/Discord App](#slackdiscord-app)
 - [Internationalization](#internationalization)
 - [Themes](#themes)
 - [Exporting Data](#exporting-data)
@@ -648,6 +649,54 @@ fill in history from before you started tracking with this package, not to silen
 that happens to overlap. Check "Overwrite" on the import form if you do want to replace it. Imported rows are
 tagged (`imported_from`: `ga`/`plausible`/`csv`) so they're distinguishable from live-tracked days in the Django
 admin.
+
+---
+
+## Slack/Discord App
+
+`alerts.py` has been able to *send* alerts to a Slack/Discord incoming webhook since v2.2.0. This is the other
+direction: a slash command that *asks* for data on demand — `/analytics today`, `/analytics week`, etc.
+
+### Slack setup
+
+1. Create a Slack app at [api.slack.com/apps](https://api.slack.com/apps) and add a **Slash Command** (e.g.
+   `/analytics`) pointing at `https://yourdomain.com/api/analytics/slack/command/`.
+2. Copy the app's **Signing Secret** into your settings:
+   ```python
+   PAXALIA_DASHBOARD = {
+       ...
+       'SLACK_SIGNING_SECRET': 'your-signing-secret',
+   }
+   ```
+3. No new dependency — Slack verification is HMAC-SHA256 over the request body, using only `hmac`/`hashlib` from
+   the standard library.
+
+### Discord setup
+
+1. Create a Discord application at [discord.com/developers/applications](https://discord.com/developers/applications),
+   register a slash command (e.g. `/analytics` with an optional `period` choice: today/yesterday/week/month), and
+   set the **Interactions Endpoint URL** to `https://yourdomain.com/api/analytics/discord/interactions/`.
+2. Copy the application's **Public Key** into your settings:
+   ```python
+   PAXALIA_DASHBOARD = {
+       ...
+       'DISCORD_PUBLIC_KEY': 'your-public-key',
+   }
+   ```
+3. Discord requires Ed25519 signature verification, which the standard library doesn't provide — install
+   [PyNaCl](https://pynacl.readthedocs.io/) (`pip install pynacl`) to enable it. This is an **optional** dependency,
+   the same pattern as `django-otp`/`weasyprint`: without it installed, the Discord endpoint responds "not
+   configured" (and, notably, Discord won't even let you save the Interactions Endpoint URL, since it requires the
+   initial verification ping to pass). Slack support needs no such dependency either way.
+
+### Scope
+
+One command surface, reusing the exact same `compute_overview_snapshot()` the scheduled email/PDF report and
+public share links already use: total views, unique visitors, top 5 pages, top 5 referrers, for
+today/yesterday/this week/this month — answered against combined (all-sites) traffic; there's no per-site argument
+in this version. Both platforms get the same plain-text response format rather than either platform's richer
+formatting (Slack Block Kit / Discord embeds) — a single shared format that renders reasonably on both was worth
+more here than a prettier response on only one of them.
 
 ---
 

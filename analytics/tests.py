@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from .bot_classification import classify_bot
 from .conf_uploads import get_upload_blocked_extensions
+from .chat_ops import format_snapshot_text, resolve_period, verify_discord_signature, verify_slack_signature
 from .compliance import forget_by_ip, forget_by_session
 from .data_import import import_daily_stats, parse_analytics_csv
 from .models import (
@@ -527,3 +528,107 @@ class DataImportTests(TestCase):
         self.assertEqual(summary['created'], 1)
         stats = DailySiteStats.objects.get(date='2024-01-01')
         self.assertEqual(stats.bounces, 100)
+
+
+class ChatOpsTests(TestCase):
+    """Phase 16 — Slack/Discord slash-command app."""
+
+    def test_slack_signature_valid(self):
+        import hashlib
+        import hmac
+        import time
+        secret = 'testsecret'
+        ts = str(int(time.time()))
+        body = b'command=/analytics&text=today'
+        basestring = f'v0:{ts}:{body.decode()}'
+        sig = 'v0=' + hmac.new(secret.encode(), basestring.encode(), hashlib.sha256).hexdigest()
+        self.assertTrue(verify_slack_signature(body, ts, sig, secret))
+
+    def test_slack_signature_wrong_secret(self):
+        import hashlib
+        import hmac
+        import time
+        ts = str(int(time.time()))
+        body = b'command=/analytics&text=today'
+        basestring = f'v0:{ts}:{body.decode()}'
+        sig = 'v0=' + hmac.new(b'testsecret', basestring.encode(), hashlib.sha256).hexdigest()
+        self.assertFalse(verify_slack_signature(body, ts, sig, 'wrong-secret'))
+
+    def test_slack_signature_expired_timestamp(self):
+        import hashlib
+        import hmac
+        import time
+        secret = 'testsecret'
+        ts = str(int(time.time()) - 1000)
+        body = b'command=/analytics&text=today'
+        basestring = f'v0:{ts}:{body.decode()}'
+        sig = 'v0=' + hmac.new(secret.encode(), basestring.encode(), hashlib.sha256).hexdigest()
+        self.assertFalse(verify_slack_signature(body, ts, sig, secret))
+
+    def test_slack_signature_missing_pieces(self):
+        self.assertFalse(verify_slack_signature(b'x', '123', 'v0=abc', None))
+        self.assertFalse(verify_slack_signature(b'x', '', 'v0=abc', 'secret'))
+        self.assertFalse(verify_slack_signature(b'x', '123', '', 'secret'))
+
+    def test_discord_signature_missing_pieces_is_false(self):
+        self.assertFalse(verify_discord_signature(b'x', '123', 'ab', None))
+        self.assertFalse(verify_discord_signature(b'x', None, 'ab', 'deadbeef'))
+        self.assertFalse(verify_discord_signature(b'x', '123', None, 'deadbeef'))
+
+    def test_discord_signature_garbage_never_raises(self):
+        # Malformed hex, wrong lengths — verify_discord_signature must
+        # normalize every failure mode to False, never propagate an
+        # exception from nacl/bytes.fromhex.
+        self.assertFalse(verify_discord_signature(b'x', '123', 'not-hex!!', 'also-not-hex'))
+
+    def test_resolve_period_today_default(self):
+        start, end, label = resolve_period('')
+        self.assertEqual(label, 'today')
+        self.assertEqual(start.date(), end.date())
+
+    def test_resolve_period_unrecognized_falls_back_to_today(self):
+        _, _, label = resolve_period('bogus')
+        self.assertEqual(label, 'today')
+
+    def test_resolve_period_week_spans_seven_days(self):
+        start, end, label = resolve_period('week')
+        self.assertEqual(label, 'week')
+        self.assertEqual((end.date() - start.date()).days, 6)
+
+    def test_format_snapshot_text_includes_core_numbers(self):
+        snapshot = {
+            'start_date': '2024-01-01', 'end_date': '2024-01-01',
+            'total_views': 42, 'unique_visitors': 10,
+            'top_pages': [{'path': '/', 'count': 20}],
+            'top_referrers': [{'referrer': 'google.com', 'count': 5}],
+        }
+        text = format_snapshot_text(snapshot, 'today')
+        self.assertIn('42', text)
+        self.assertIn('10', text)
+        self.assertIn('/', text)
+        self.assertIn('google.com', text)
+
+
+class ChatOpsViewTests(TestCase):
+    """Phase 16 — the actual endpoints, signature-gated."""
+
+    @override_settings(PAXALIA_DASHBOARD={'SLACK_SIGNING_SECRET': None})
+    def test_slack_command_not_configured(self):
+        response = self.client.post(reverse('slack_command'), {'text': 'today'})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('not configured', response.json()['text'])
+
+    @override_settings(PAXALIA_DASHBOARD={'SLACK_SIGNING_SECRET': 'testsecret'})
+    def test_slack_command_rejects_bad_signature(self):
+        response = self.client.post(
+            reverse('slack_command'), {'text': 'today'},
+            HTTP_X_SLACK_REQUEST_TIMESTAMP='123', HTTP_X_SLACK_SIGNATURE='v0=bad',
+        )
+        self.assertEqual(response.status_code, 401)
+
+    @override_settings(PAXALIA_DASHBOARD={'DISCORD_PUBLIC_KEY': None})
+    def test_discord_interaction_not_configured(self):
+        response = self.client.post(
+            reverse('discord_interactions'), data='{"type": 1}', content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 401)
