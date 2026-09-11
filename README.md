@@ -23,6 +23,7 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 - [Backup Management](#backup-management)
 - [Admin Overview](#admin-overview)
 - [Custom Event Tracking](#custom-event-tracking)
+- [Real User Monitoring](#real-user-monitoring)
 - [Internationalization](#internationalization)
 - [Themes](#themes)
 - [Exporting Data](#exporting-data)
@@ -331,6 +332,7 @@ If you want to change the event API path, you must update:
 | Traffic          | `/traffic/`          | Top referrers, browsers, operating systems, device types                                                                                                 |
 | Geography        | `/geography/`        | Offline world map with drill‑down, country table, top cities (click a country to filter cities)                                                          |
 | Events           | `/events/`           | Custom events: today/yesterday counts, daily chart, top categories, top actions, top labels, events by page, recent events feed                          |
+| Real User Monitoring | `/rum/`          | Core Web Vitals (LCP/CLS/INP) at the 75th percentile with good/needs-improvement/poor breakdown, top JavaScript errors |
 | Billing          | `/billing/`          | (optional) Total revenue, today/month revenue, active subscriptions, donations, daily income chart, top plans, recent transactions, MRR/ARR trend, churn, failed-payment tracking |
 | Real‑time        | `/realtime/`         | Live visitor count (last 5 min), unique IPs, recent page views table with configurable refresh                                                           |
 | Server Overview  | `/server/overview/`  | System health snapshot: CPU, memory, disk, network usage with live charts                                                                                |
@@ -409,16 +411,61 @@ All events appear in the Events dashboard with full date‑range filtering, comp
 
 ### Event API Path
 
-The event tracking script uses a **hardcoded** URL: `/api/analytics/event/`. This is intentional:
+The event tracking script uses **hardcoded** URLs: `/api/analytics/event/` and (since Real User Monitoring, below) `/api/analytics/js-error/`. This is intentional:
 
 - It keeps the dashboard URL secret.
 - It makes the JavaScript simple and fast.
 - It allows you to mount the dashboard at any secret path.
 
-If you need to change this path, update:
+If you need to change these paths, update:
 
-1. The URL pattern in your project's `urls.py`
-2. The `EVENT_URL` variable in `analytics/static/analytics/scripts/analytics-events.js`
+1. The URL patterns in your project's `urls.py`
+2. The `EVENT_URL` and `JS_ERROR_URL` variables in `analytics/static/analytics/scripts/analytics-events.js`
+
+---
+
+## Real User Monitoring
+
+Core Web Vitals and JavaScript error tracking, collected by the same `analytics-events.js` script used for custom
+events — no separate tracker file, no third-party `web-vitals` library dependency.
+
+### What's collected
+
+- **LCP** (Largest Contentful Paint) and **INP** (Interaction to Next Paint) — measured natively via the browser's
+  `PerformanceObserver` API.
+- **CLS** (Cumulative Layout Shift) — computed with the standard session-window algorithm (shifts less than 1s apart,
+  capped at a 5s session, largest session wins), not a naive lifetime sum.
+- **JavaScript errors** — via `window.onerror` and `unhandledrejection`, including message, filename, line/column,
+  and a truncated stack trace. Capped at 10 reports per page load (with per-error dedup) so a runaway error loop
+  can't flood the endpoint.
+
+All of it is sent right before the page is hidden/unloaded (Web Vitals, via `sendBeacon`, same lifecycle as the
+existing time-on-page tracking) or immediately (JS errors, via `fetch(..., {keepalive: true})`, since a page may
+keep running long after an error and you want to know sooner).
+
+### Where it's stored
+
+- Web Vitals ride on the existing `AnalyticsEvent` model (`category='web_vitals'`, `action` is the metric name,
+  `value` the metric value) — no new table for these.
+- JS errors get their own `JSError` model, since a useful report needs filename/line/column and a stack trace,
+  which `AnalyticsEvent`'s generic 255-character label has no room for.
+
+### The `/insights/rum/` page
+
+- Three Web Vitals cards (LCP/CLS/INP), each showing the **75th percentile** for the selected period — the
+  industry-standard way to aggregate field data, not an average — plus a good/needs-improvement/poor breakdown bar
+  and the sample count. A metric with no samples yet shows an empty state rather than a misleading zero.
+- A **Top JavaScript Errors** table, grouped by error message (count, first seen, last seen, a sample file:line).
+
+### Accuracy notes (read before treating these as lab-grade metrics)
+
+- **INP** here is the single worst interaction duration observed on the page, not the full percentile-ranking
+  algorithm the spec uses for pages with dozens of interactions. This converges to the same number on a typical
+  page and runs slightly pessimistic on a highly-interactive single-page app.
+- **User-Agent-based** classification doesn't apply here, but the same "field data, not lab data" caveat as any
+  RUM tool applies: these numbers reflect whatever devices/connections your real visitors actually have.
+- JS error **grouping** is by message text only (not filename/line too) — grouping in a build-specific location
+  would split the same error across every minified-bundle hash your deploys produce.
 
 ---
 

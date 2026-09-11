@@ -17,7 +17,7 @@ from django.views.decorators.http import require_http_methods
 from honeypot.decorators import honeypot_exempt
 
 from analytics.middleware import AnalyticsMiddleware
-from analytics.models import AnalyticsEvent
+from analytics.models import AnalyticsEvent, JSError
 from .utils import get_date_range, detect_active_preset, section_enabled
 
 logger = logging.getLogger(__name__)
@@ -121,6 +121,67 @@ def analytics_event_api(request):
     except Exception as e:
         logger.error('Analytics: Failed to save event: %s', e)
         return JsonResponse({'error': 'Failed to save event'}, status=500)
+
+
+# ─── Public JS Error API (Phase 11 — Real User Monitoring) ─────────────
+
+MAX_STACK_LENGTH = 4000
+
+
+def _clean_int(value):
+    """Coerce to int, or None on anything that isn't cleanly one — a
+    malformed lineno/colno shouldn't fail the whole report."""
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+@csrf_exempt
+@honeypot_exempt
+@require_http_methods(["POST"])
+def analytics_js_error_api(request):
+    """
+    Public API endpoint for client-side JS error reports — see
+    analytics-events.js's window.onerror/unhandledrejection handlers.
+    Shares the event endpoint's rate limiter (same cache key scheme,
+    same 60/min-per-IP+session budget) rather than a second, separate
+    budget, so this can't be used to double a single client's total
+    write rate against the two public endpoints combined.
+    """
+    if _event_rate_limited(request):
+        logger.warning('Analytics: JS error API rate limit exceeded')
+        return JsonResponse({'error': 'Too many requests'}, status=429)
+
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        if not isinstance(body, dict):
+            raise ValueError('Payload must be a JSON object')
+    except (json.JSONDecodeError, ValueError, UnicodeDecodeError) as e:
+        logger.warning('Analytics: Invalid JSON received (js-error): %s', e)
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    message = _clean_str(body.get('message'), 500)
+    if not message:
+        return JsonResponse({'error': 'message is required'}, status=400)
+
+    try:
+        JSError.objects.create(
+            message=message,
+            filename=_clean_str(body.get('filename'), 500),
+            lineno=_clean_int(body.get('lineno')),
+            colno=_clean_int(body.get('colno')),
+            stack=_clean_str(body.get('stack'), MAX_STACK_LENGTH),
+            path=_clean_str(body.get('path'), 255),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:512],
+            session_id=getattr(request, 'analytics_session_id', ''),
+        )
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        logger.error('Analytics: Failed to save JS error: %s', e)
+        return JsonResponse({'error': 'Failed to save error report'}, status=500)
 
 
 # ─── Admin Dashboard View ─────────────────────────────────────────────

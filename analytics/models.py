@@ -224,6 +224,40 @@ class AnalyticsEvent(models.Model):
         return f"{self.category}:{self.action}"
 
 
+class JSError(models.Model):
+    """
+    Client-side JS errors reported via window.onerror /
+    unhandledrejection — see analytics-events.js. Kept as its own model
+    (rather than squeezed into AnalyticsEvent's generic 255-char label)
+    because a useful error report needs filename/line/column and a
+    stack trace, which AnalyticsEvent has no room for.
+
+    Every occurrence is stored as its own row (same approach as
+    AnalyticsEvent) — the RUM dashboard groups them by message for a
+    "top errors" view rather than deduplicating at write time, so nothing
+    here needs a fingerprint/hash field.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True, related_name='js_errors')
+    message = models.CharField(max_length=500, db_index=True)
+    filename = models.CharField(max_length=500, blank=True)
+    lineno = models.PositiveIntegerField(null=True, blank=True)
+    colno = models.PositiveIntegerField(null=True, blank=True)
+    stack = models.TextField(blank=True, help_text="Truncated client-side; truncated again on write as defense in depth.")
+    path = models.CharField(max_length=255, blank=True, db_index=True)
+    user_agent = models.CharField(max_length=512, blank=True)
+    session_id = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'JS Error'
+        verbose_name_plural = 'JS Errors'
+
+    def __str__(self):
+        return self.message[:80]
+
+
 class BackupConfiguration(models.Model):
     """
     Singleton model that stores backup settings.

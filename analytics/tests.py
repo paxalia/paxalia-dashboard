@@ -6,7 +6,9 @@ from .bot_classification import classify_bot
 from .conf_uploads import get_upload_blocked_extensions
 from .models import BackupConfiguration, FileUpload
 from .revenue import _month_bounds, _shift_month
+from .rum import rate_metric, _percentile
 from .security_scorecard import run_scorecard_checks
+from .views.events import _clean_int
 
 
 class FileUploadModelTests(TestCase):
@@ -161,3 +163,49 @@ class BotClassificationTests(TestCase):
             classify_bot(False, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36'),
             '',
         )
+
+
+class WebVitalsTests(TestCase):
+    """Phase 11."""
+
+    def test_percentile_of_empty_list_is_none(self):
+        self.assertIsNone(_percentile([], 75))
+
+    def test_percentile_single_value(self):
+        self.assertEqual(_percentile([42], 75), 42)
+
+    def test_percentile_75_matches_known_case(self):
+        # Sorted 1..10 — the 75th percentile via linear interpolation
+        # is 7.75 (matches numpy's default 'linear' method).
+        self.assertAlmostEqual(_percentile(list(range(1, 11)), 75), 7.75)
+
+    def test_rate_metric_lcp_thresholds(self):
+        self.assertEqual(rate_metric('LCP', 2000), 'good')
+        self.assertEqual(rate_metric('LCP', 3000), 'needs-improvement')
+        self.assertEqual(rate_metric('LCP', 5000), 'poor')
+
+    def test_rate_metric_cls_thresholds(self):
+        self.assertEqual(rate_metric('CLS', 0.05), 'good')
+        self.assertEqual(rate_metric('CLS', 0.2), 'needs-improvement')
+        self.assertEqual(rate_metric('CLS', 0.4), 'poor')
+
+    def test_rate_metric_unknown_metric_is_none(self):
+        self.assertIsNone(rate_metric('FID', 100))
+
+    def test_rate_metric_none_value_is_none(self):
+        self.assertIsNone(rate_metric('LCP', None))
+
+
+class JsErrorHelperTests(TestCase):
+    """Phase 11 — the small int-coercion helper used by the JS error API."""
+
+    def test_clean_int_valid(self):
+        self.assertEqual(_clean_int('42'), 42)
+        self.assertEqual(_clean_int(42), 42)
+
+    def test_clean_int_none(self):
+        self.assertIsNone(_clean_int(None))
+
+    def test_clean_int_garbage_does_not_raise(self):
+        self.assertIsNone(_clean_int('not-a-number'))
+        self.assertIsNone(_clean_int({}))

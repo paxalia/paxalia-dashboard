@@ -6,7 +6,7 @@ DEFAULTS = {
         'overview', 'pages', 'api', 'traffic', 'realtime', 'bots',
         'geography', 'events', 'billing', 'releases', 'backups', 'security',
         'sites', 'broken_links', 'goals', 'funnels', 'segments', 'campaigns',
-        'annotations', 'cohorts', 'api_keys', 'reports', 'share_links', 'notifications', 'settings'
+        'annotations', 'cohorts', 'api_keys', 'reports', 'share_links', 'notifications', 'rum', 'settings'
     ],
     'API_PATH_PREFIX': '/api/',
     'GEOIP_PATH': None,  # None → use analytics/geoip/ inside the package

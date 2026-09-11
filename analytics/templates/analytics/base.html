@@ -194,6 +194,18 @@
                         </a>
                         {% endif %}
 
+                        {% if 'rum' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'analytics:rum' %}"
+                           class="analytics-sidebar-link {% if active_page == 'rum' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 3a9 9 0 0 0-7.5 14h2.4a7 7 0 1 1 10.2 0h2.4A9 9 0 0 0 12 3zm0 6a1.5 1.5 0 0 0-1.5 1.5c0 .3.08.58.22.82l-2.3 3.98a1 1 0 1 0 1.73 1l2.3-3.98A1.5 1.5 0 1 0 12 9z"/>
+                                </svg>
+                            </span>
+                            {% trans "Real User Monitoring" %}
+                        </a>
+                        {% endif %}
+
                         {% if 'goals' in analytics_config.SIDEBAR_SECTIONS %}
                         <a href="{% url 'analytics:goals' %}"
                            class="analytics-sidebar-link {% if active_page == 'goals' %}active{% endif %}">

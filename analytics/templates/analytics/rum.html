@@ -1,0 +1,79 @@
+{% extends 'analytics/base.html' %}
+{% load static %}{% load i18n %}
+
+{% block title %}{% trans "Real User Monitoring" %} – Analytics{% endblock %}
+{% block page_title %}{% trans "Real User Monitoring" %}{% endblock %}
+{% block page_subtitle %}{% trans "Core Web Vitals and JavaScript errors from real visitors" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/rum.css' %}">
+{% endblock %}
+
+{% block filter_bar %}
+    {% include 'analytics/includes/filter_bar.html' %}
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="rum-page">
+    <p class="form-hint">
+        {% trans "Web Vitals are aggregated as the 75th percentile of real visits in this period, not an average — the industry-standard way to read field data. See the README for what's measured natively vs. simplified." %}
+    </p>
+
+    <div class="stat-grid">
+        {% for metric, data in web_vitals.items %}
+        <div class="stat-card vitals-card">
+            <span class="stat-label">{{ data.label }} ({{ metric }})</span>
+            {% if data.sample_count %}
+                <span class="stat-value">
+                    {{ data.p75 }}{% if metric != 'CLS' %} ms{% endif %}
+                    <span class="vitals-rating vitals-rating-{{ data.rating }}">{{ data.rating }}</span>
+                </span>
+                <div class="vitals-breakdown">
+                    <div class="vitals-breakdown-bar">
+                        <span class="vitals-seg vitals-seg-good" style="width: {{ data.good_pct }}%" title="{% trans 'Good' %}: {{ data.good_pct }}%"></span>
+                        <span class="vitals-seg vitals-seg-needs-improvement" style="width: {{ data.needs_improvement_pct }}%" title="{% trans 'Needs improvement' %}: {{ data.needs_improvement_pct }}%"></span>
+                        <span class="vitals-seg vitals-seg-poor" style="width: {{ data.poor_pct }}%" title="{% trans 'Poor' %}: {{ data.poor_pct }}%"></span>
+                    </div>
+                    <span class="form-hint">{{ data.sample_count }} {% trans "samples" %}</span>
+                </div>
+            {% else %}
+                <span class="stat-value">—</span>
+                <span class="form-hint">{% trans "No data for this period yet." %}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="table-card">
+        <div class="chart-title-wrapper">
+            <h3 class="chart-title">{% trans "Top JavaScript Errors" %} – {{ date_range_label }}</h3>
+        </div>
+        {% if top_errors %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Message" %}</th>
+                    <th>{% trans "Location" %}</th>
+                    <th>{% trans "Count" %}</th>
+                    <th>{% trans "First seen" %}</th>
+                    <th>{% trans "Last seen" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for err in top_errors %}
+                <tr>
+                    <td class="rum-error-message" title="{{ err.message }}">{{ err.message|truncatechars:120 }}</td>
+                    <td>{{ err.sample_location|default:"—" }}<br><span class="form-hint">{{ err.sample_path }}</span></td>
+                    <td>{{ err.count }}</td>
+                    <td>{{ err.first_seen|date:"M d, H:i" }}</td>
+                    <td>{{ err.last_seen|date:"M d, H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <div class="chart-empty">{% trans "No JavaScript errors reported for this period." %}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
