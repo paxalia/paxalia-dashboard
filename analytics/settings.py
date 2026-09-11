@@ -54,6 +54,10 @@ DEFAULTS = {
     # Optional: webhook URL (e.g. Slack/Discord incoming webhook) to POST
     # the same alerts to. None/empty disables webhook alerting.
     'SECURITY_ALERT_WEBHOOK_URL': None,
+    # A staff user must have entered their password within this many
+    # minutes before they can download a backup archive. Re-checked on
+    # every download attempt; re-authenticating resets the window.
+    'BACKUP_REAUTH_MINUTES': 15,
 
     # ── Multi-site ──
     # If True, a request from an unrecognized hostname automatically gets

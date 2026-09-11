@@ -45,6 +45,10 @@
         <button type="button" class="security-tab" data-tab="ips" role="tab">{% trans "IP Blocklist" %}</button>
         <button type="button" class="security-tab" data-tab="audit" role="tab">{% trans "Admin Audit Log" %}</button>
         <button type="button" class="security-tab" data-tab="csp" role="tab">{% trans "CSP Violations" %}</button>
+        <button type="button" class="security-tab" data-tab="scorecard" role="tab">
+            {% trans "Scorecard" %}
+            {% if scorecard.summary.fail %}<span class="scorecard-tab-badge scorecard-tab-badge--fail">{{ scorecard.summary.fail }}</span>{% elif scorecard.summary.warn %}<span class="scorecard-tab-badge scorecard-tab-badge--warn">{{ scorecard.summary.warn }}</span>{% endif %}
+        </button>
         {% if mfa_status is not None %}
         <button type="button" class="security-tab" data-tab="mfa" role="tab">{% trans "MFA Status" %}</button>
         {% endif %}
@@ -273,6 +277,65 @@
         {% else %}
         <div class="security-empty">{% trans "No CSP violations reported." %}</div>
         {% endif %}
+    </div>
+
+    <!-- ── Security Scorecard ── -->
+    <div class="security-panel table-card" data-panel="scorecard" hidden>
+        <h2 class="card-title">{% trans "Security Scorecard" %}</h2>
+        <p class="form-hint">
+            {% trans "A pass/fail/warn checklist read from your Django settings at page-load time — not a live filesystem scan." %}
+        </p>
+
+        <div class="stat-grid">
+            <div class="stat-card">
+                <span class="stat-label">{% trans "Passing" %}</span>
+                <span class="stat-value">{{ scorecard.summary.pass }}</span>
+            </div>
+            <div class="stat-card {% if scorecard.summary.warn > 0 %}stat-card--highlight{% endif %}">
+                <span class="stat-label">{% trans "Warnings" %}</span>
+                <span class="stat-value">{{ scorecard.summary.warn }}</span>
+            </div>
+            <div class="stat-card {% if scorecard.summary.fail > 0 %}stat-card--highlight{% endif %}">
+                <span class="stat-label">{% trans "Failing" %}</span>
+                <span class="stat-value">{{ scorecard.summary.fail }}</span>
+            </div>
+        </div>
+
+        <h3 class="scorecard-group-title">{% trans "Django configuration" %}</h3>
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "Check" %}</th><th>{% trans "Status" %}</th><th>{% trans "Detail" %}</th></tr></thead>
+            <tbody>
+                {% for check in scorecard.django %}
+                <tr>
+                    <td>{{ check.label }}</td>
+                    <td>
+                        <span class="security-status-badge security-status-{{ check.status }}">
+                            {{ check.status }}
+                        </span>
+                    </td>
+                    <td>{{ check.detail }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h3 class="scorecard-group-title">{% trans "This package" %}</h3>
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "Check" %}</th><th>{% trans "Status" %}</th><th>{% trans "Detail" %}</th></tr></thead>
+            <tbody>
+                {% for check in scorecard.package %}
+                <tr>
+                    <td>{{ check.label }}</td>
+                    <td>
+                        <span class="security-status-badge security-status-{{ check.status }}">
+                            {{ check.status }}
+                        </span>
+                    </td>
+                    <td>{{ check.detail }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
     {% if mfa_status is not None %}

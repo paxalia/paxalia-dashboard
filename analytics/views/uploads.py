@@ -27,6 +27,8 @@ from ..conf_uploads import (
     get_uploads_incoming_root,
     get_upload_chunk_size_bytes,
     get_upload_max_file_size_bytes,
+    get_upload_blocked_extensions,
+    get_upload_allowed_extensions,
 )
 
 
@@ -42,6 +44,25 @@ def _safe_filename(name):
     return os.path.basename(name).replace('..', '')
 
 
+def _extension_error(filename):
+    """
+    Return an error string if filename's extension is rejected, else
+    None. Checked once at upload_init, before any bytes are written —
+    see conf_uploads.py for the blocklist/allowlist config.
+    """
+    ext = os.path.splitext(filename)[1].lower()
+
+    blocked = get_upload_blocked_extensions()
+    if ext in blocked:
+        return f'Files with extension "{ext}" are not allowed.'
+
+    allowed = get_upload_allowed_extensions()
+    if allowed is not None and ext not in allowed:
+        return f'Extension "{ext}" is not in the allowed list for this deployment.'
+
+    return None
+
+
 @staff_member_required
 @honeypot_exempt
 @require_POST
@@ -52,6 +73,10 @@ def upload_init(request):
 
     if not filename or not total_size:
         return JsonResponse({'error': 'filename and total_size are required'}, status=400)
+
+    ext_error = _extension_error(filename)
+    if ext_error:
+        return JsonResponse({'error': ext_error}, status=400)
 
     try:
         total_size = int(total_size)

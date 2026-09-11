@@ -117,6 +117,7 @@ dashboard_urlpatterns = [
     path('notifications/mark-all-read/', notifications_views.notifications_mark_all_read, name='notifications_mark_all_read'),
 
     path('backups/', backup_views.backup_management, name='backups'),
+    path('backups/reauth/', backup_views.backup_reauth, name='backup_reauth'),
     path('backups/trigger/', backup_views.backup_trigger, name='backup_trigger'),
     path('backups/delete/<uuid:backup_id>/', backup_views.backup_delete, name='backup_delete'),
     path('backups/download/<uuid:backup_id>/', backup_views.backup_download_single, name='backup_download_single'),
