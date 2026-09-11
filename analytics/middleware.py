@@ -1,5 +1,7 @@
 import hashlib
 import logging
+import threading
+import time
 import uuid
 import geoip2.database
 import os
@@ -316,3 +318,60 @@ class SecurityBlockMiddleware:
                 return HttpResponseForbidden('Forbidden')
 
         return self.get_response(request)
+
+
+class SlowQueryMiddleware:
+    """
+    Opt-in — add to MIDDLEWARE the same way AnalyticsMiddleware itself
+    is added:
+
+        MIDDLEWARE = [
+            ...
+            'analytics.middleware.SlowQueryMiddleware',
+        ]
+
+    Wraps every DB query issued during a request with
+    connection.execute_wrapper() and records anything slower than
+    SLOW_QUERY_THRESHOLD_MS (default 100ms) as a SlowQuery. This
+    instruments Django's own query execution, which works identically
+    across every DB backend Django supports — the alternative (parsing
+    a database engine's native slow-query log file) would need a
+    different parser and a different, environment-specific log path
+    per engine, which this package can't portably assume.
+
+    A thread-local reentrancy guard prevents the SlowQuery.objects.create()
+    call this middleware makes from being recorded as a slow query
+    against itself — without it, a query over threshold would trigger
+    a second query (the INSERT that logs it), which the same wrapper
+    would also see and potentially try to log again.
+    """
+    _guard = threading.local()
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django.db import connection
+
+        threshold_ms = get_config().get('SLOW_QUERY_THRESHOLD_MS', 100)
+
+        def wrapper(execute, sql, params, many, context):
+            start = time.monotonic()
+            try:
+                return execute(sql, params, many, context)
+            finally:
+                duration_ms = (time.monotonic() - start) * 1000
+                if duration_ms >= threshold_ms and not getattr(self._guard, 'active', False):
+                    self._guard.active = True
+                    try:
+                        from .models import SlowQuery
+                        SlowQuery.objects.create(
+                            sql=sql[:4000], duration_ms=duration_ms, path=request.path[:255],
+                        )
+                    except Exception:
+                        logger.exception('SlowQueryMiddleware: failed to record slow query')
+                    finally:
+                        self._guard.active = False
+
+        with connection.execute_wrapper(wrapper):
+            return self.get_response(request)

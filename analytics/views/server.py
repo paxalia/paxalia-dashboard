@@ -77,6 +77,47 @@ def server_processes(request):
     return render(request, 'analytics/server_processes.html', context)
 
 
+@require_section_permission('server')
+def server_slow_queries(request):
+    from analytics.models import SlowQuery
+
+    slow_queries = SlowQuery.objects.all()[:200]
+    context = {
+        'active_page': 'server_slow_queries',
+        'page_title': _('Slow Queries'),
+        'page_subtitle': _('Database queries recorded by SlowQueryMiddleware'),
+        'slow_queries': slow_queries,
+    }
+    return render(request, 'analytics/server_slow_queries.html', context)
+
+
+@require_section_permission('server')
+def server_queues(request):
+    from analytics.queue_monitor import get_queue_stats
+
+    context = {
+        'active_page': 'server_queues',
+        'page_title': _('Queues'),
+        'page_subtitle': _('Celery worker and task status'),
+        'queue_stats': get_queue_stats(),
+    }
+    return render(request, 'analytics/server_queues.html', context)
+
+
+@require_section_permission('server')
+def server_deployments(request):
+    from analytics.models import Deployment
+
+    deployments = Deployment.objects.select_related('site', 'annotation')[:100]
+    context = {
+        'active_page': 'server_deployments',
+        'page_title': _('Deployments'),
+        'page_subtitle': _('Recorded via manage.py record_deployment'),
+        'deployments': deployments,
+    }
+    return render(request, 'analytics/server_deployments.html', context)
+
+
 # -------------------- API endpoints (JSON) --------------------
 
 
@@ -211,27 +252,53 @@ def api_server_metrics(request):
 @require_GET
 def api_server_history(request):
     """
-    Return historical data (e.g., last 60 minutes) for charts.
+    Real historical data from ServerMetricSnapshot, written by
+    `manage.py record_server_metrics` (see that command's docstring
+    for the required cron/Celery beat scheduling). Before Phase 13
+    this endpoint returned synthetic random.randint() data — a
+    placeholder that looked real but wasn't (flagged explicitly in
+    Phase 8's audit pass and deliberately deferred here). If the
+    command has never been scheduled, this now returns an empty list
+    rather than fabricating a chart — the frontend shows an empty
+    state, not fake numbers.
 
-    Since there is no persistent time-series store yet, this retains the
-    current demonstration behavior and generates a synthetic series.
+    disk/network deltas are computed here, between consecutive
+    snapshots, from the cumulative counters ServerMetricSnapshot
+    stores — max(0, ...) guards against a negative delta if the
+    process restarted and psutil's own counters reset to zero
+    in between two snapshots.
     """
-    import random
-    import time
+    from datetime import timedelta
 
-    now = time.time()
+    from django.utils import timezone
+
+    from analytics.models import ServerMetricSnapshot
+
+    minutes = int(request.GET.get('minutes', 60))
+    cutoff = timezone.now() - timedelta(minutes=minutes)
+    snapshots = list(
+        ServerMetricSnapshot.objects.filter(recorded_at__gte=cutoff).order_by('recorded_at')
+    )
+
     history = []
-
-    for i in range(60):
-        t = now - (60 - i) * 60
-        history.append({
-            'time': t * 1000,
-            'cpu': random.randint(10, 80),
-            'memory': random.randint(30, 90),
-            'disk_io_read': random.randint(0, 100) * 1024 * 1024,
-            'disk_io_write': random.randint(0, 100) * 1024 * 1024,
-            'network_in': random.randint(0, 50) * 1024 * 1024,
-            'network_out': random.randint(0, 50) * 1024 * 1024,
-        })
+    previous = None
+    for snap in snapshots:
+        entry = {
+            'time': snap.recorded_at.timestamp() * 1000,
+            'cpu': round(snap.cpu_percent, 1),
+            'memory': round(snap.memory_percent, 1),
+        }
+        if previous is not None:
+            entry['disk_io_read'] = max(0, snap.disk_io_read_bytes - previous.disk_io_read_bytes)
+            entry['disk_io_write'] = max(0, snap.disk_io_write_bytes - previous.disk_io_write_bytes)
+            entry['network_in'] = max(0, snap.network_in_bytes - previous.network_in_bytes)
+            entry['network_out'] = max(0, snap.network_out_bytes - previous.network_out_bytes)
+        else:
+            entry['disk_io_read'] = 0
+            entry['disk_io_write'] = 0
+            entry['network_in'] = 0
+            entry['network_out'] = 0
+        history.append(entry)
+        previous = snap
 
     return JsonResponse(history, safe=False)

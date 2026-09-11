@@ -344,6 +344,9 @@ If you want to change the event API path, you must update:
 | Server Network   | `/server/network/`   | Interface statistics and network traffic chart                                                                                                           |
 | Server Services  | `/server/services/`  | List of running systemd services                                                                                                                         |
 | Server Processes | `/server/processes/` | Active process list sorted by CPU usage                                                                                                                  |
+| Server Slow Queries | `/server/slow-queries/` | Queries recorded by the opt-in SlowQueryMiddleware, over a configurable threshold |
+| Server Queues    | `/server/queues/`    | Celery worker and task status (if CELERY_APP_PATH is configured)                                                                                         |
+| Server Deployments | `/server/deployments/` | Log of recorded deployments (manage.py record_deployment), each creating a matching Overview chart annotation |
 | Settings         | `/settings/`         | IP anonymisation, ignored paths/extensions, refresh interval, theme selector, language selector                                                          |
 | Admin Overview   | `/admin-overview/`   | User registrations, content creation, and login activity charts                                                                                          |
 | Bot Traffic      | `/bots/`             | Total bot requests, daily bot charts, top bot paths, bot requests by country, bot category breakdown (search engine/AI crawler/social preview/SEO tool/unknown/malicious) |
@@ -538,6 +541,64 @@ library. No agents, no external services – all data is collected locally.
 - **Network** – interface statistics and traffic history.
 - **Services** – list of running systemd services (Linux) with status.
 - **Processes** – active process list sorted by CPU usage, updated every 5 seconds.
+- **Slow Queries** – database queries that took longer than a configurable threshold, recorded by the opt-in
+  `SlowQueryMiddleware` (see below).
+- **Queues** – Celery worker and task status, if `CELERY_APP_PATH` is configured (see below).
+- **Deployments** – a log of recorded deployments, each one also creating a matching annotation on the Overview
+  traffic chart.
+
+### History charts are now backed by real data
+
+`api_server_history` used to generate synthetic `random.randint()` data as a placeholder — that's fixed. History
+now comes from `ServerMetricSnapshot`, written by a new scheduled command:
+
+```bash
+# Run every minute; also prunes snapshots older than
+# SERVER_METRIC_RETENTION_DAYS (default 7) on every run.
+* * * * * cd /path/to/project && python manage.py record_server_metrics >> /var/log/server-metrics.log 2>&1
+```
+
+Without this scheduled, the history charts show an empty state rather than fabricated numbers.
+
+### Slow query tracking (opt-in)
+
+Add the middleware to your project's `MIDDLEWARE`, the same way `AnalyticsMiddleware` itself is added:
+
+```python
+MIDDLEWARE = [
+    ...
+    'analytics.middleware.SlowQueryMiddleware',
+]
+```
+
+Any query slower than `SLOW_QUERY_THRESHOLD_MS` (default 100ms, configurable in your `PAXALIA_DASHBOARD` dict) gets
+recorded. This instruments Django's own query execution via `connection.execute_wrapper()`, so it works identically
+across every database backend Django supports — no per-engine slow-query-log file to locate or parse.
+
+### Queue monitoring (Celery)
+
+Point `CELERY_APP_PATH` at your project's Celery `Application` instance:
+
+```python
+PAXALIA_DASHBOARD = {
+    ...
+    'CELERY_APP_PATH': 'myproject.celery.app',
+}
+```
+
+This package doesn't add `celery` as a dependency — if it's not installed, or `CELERY_APP_PATH` isn't configured, the
+Queues page just shows an empty state. RQ isn't implemented yet; it would follow the same dotted-path pattern.
+
+### Deployment tracking
+
+Call this from CI/CD right after a successful deploy:
+
+```bash
+python manage.py record_deployment --version "$(git rev-parse --short HEAD)" --notes "Deploy from main"
+```
+
+This records a `Deployment` row and auto-creates a matching `ChartAnnotation` at the same date, so the deploy shows
+up on the Overview traffic chart with no extra configuration.
 
 ### Privacy and Security
 

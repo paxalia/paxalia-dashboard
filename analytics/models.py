@@ -979,3 +979,84 @@ class UptimeIncident(models.Model):
     def duration_seconds(self):
         end = self.resolved_at or timezone.now()
         return (end - self.started_at).total_seconds()
+
+
+class ServerMetricSnapshot(models.Model):
+    """
+    One point-in-time system-metrics reading, written by
+    `manage.py record_server_metrics`. This is what makes
+    api_server_history real — before Phase 13 that endpoint returned
+    synthetic random.randint() data because there was no persistent
+    time-series store; this is that store.
+
+    disk_io_*_bytes and network_*_bytes are stored as the raw
+    cumulative counters psutil reports (bytes since boot), same as
+    psutil.disk_io_counters()/net_io_counters() themselves — the
+    history API computes deltas between consecutive snapshots at read
+    time, not here, so any future consumer of this table can choose
+    its own window rather than being stuck with whatever delta was
+    computed at write time.
+    """
+    recorded_at = models.DateTimeField(default=timezone.now, db_index=True)
+    cpu_percent = models.FloatField()
+    memory_percent = models.FloatField()
+    disk_io_read_bytes = models.BigIntegerField(default=0)
+    disk_io_write_bytes = models.BigIntegerField(default=0)
+    network_in_bytes = models.BigIntegerField(default=0)
+    network_out_bytes = models.BigIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-recorded_at']
+
+    def __str__(self):
+        return f"snapshot @ {self.recorded_at}"
+
+
+class SlowQuery(models.Model):
+    """
+    A single database query that took longer than
+    SLOW_QUERY_THRESHOLD_MS (default 100ms), captured by
+    SlowQueryMiddleware via Django's connection.execute_wrapper() —
+    portable across any DB backend Django supports, since it
+    instruments Django's own query execution rather than trying to
+    parse a database engine's native slow-query log file (which would
+    need a different parser and a different, environment-specific log
+    file path per engine). Opt-in: SlowQueryMiddleware has to be added
+    to MIDDLEWARE, same as AnalyticsMiddleware itself.
+    """
+    sql = models.TextField()
+    duration_ms = models.FloatField(db_index=True)
+    path = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Slow Query'
+        verbose_name_plural = 'Slow Queries'
+
+    def __str__(self):
+        return f"{self.duration_ms:.0f}ms: {self.sql[:80]}"
+
+
+class Deployment(models.Model):
+    """
+    Recorded via `manage.py record_deployment`, meant to be called
+    from CI/CD right after a successful deploy. Auto-creates a
+    matching ChartAnnotation (see that model's docstring) at the same
+    date, so a deploy shows up on the Overview traffic chart with zero
+    extra configuration — the whole point of pairing this with an
+    existing feature rather than building a separate timeline view.
+    """
+    version = models.CharField(max_length=100, blank=True, help_text="Git SHA, tag, or version string — whatever CI passes.")
+    notes = models.TextField(blank=True)
+    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True, related_name='deployments')
+    deployed_at = models.DateTimeField(default=timezone.now, db_index=True)
+    annotation = models.OneToOneField(
+        ChartAnnotation, on_delete=models.SET_NULL, null=True, blank=True, related_name='deployment'
+    )
+
+    class Meta:
+        ordering = ['-deployed_at']
+
+    def __str__(self):
+        return self.version or f"deployment @ {self.deployed_at}"

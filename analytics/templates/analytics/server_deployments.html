@@ -1,0 +1,49 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Deployments" %}{% endblock %}
+{% block page_subtitle %}{% trans "Recorded via manage.py record_deployment" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/server.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/tables.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="server-deployments">
+    <div class="table-card">
+        <div class="chart-title-wrapper">
+            <h2 class="chart-title">{% trans "Recent Deployments" %}</h2>
+        </div>
+        <p class="form-hint">
+            {% trans "Each deployment recorded here also creates a matching annotation on the Overview traffic chart." %}
+        </p>
+        {% if deployments %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Version" %}</th>
+                    <th>{% trans "Site" %}</th>
+                    <th>{% trans "Notes" %}</th>
+                    <th>{% trans "Deployed" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in deployments %}
+                <tr>
+                    <td>{{ d.version|default:"—" }}</td>
+                    <td>{{ d.site.name|default:"All sites" }}</td>
+                    <td class="table-cell-truncate" title="{{ d.notes }}">{{ d.notes|truncatechars:100|default:"—" }}</td>
+                    <td>{{ d.deployed_at|date:"M d, H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="chart-empty">
+            {% trans "No deployments recorded yet. Call manage.py record_deployment from your CI/CD pipeline after a successful deploy — see the README." %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
