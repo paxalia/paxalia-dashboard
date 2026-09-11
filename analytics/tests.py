@@ -7,7 +7,8 @@ from django.urls import reverse
 
 from .bot_classification import classify_bot
 from .conf_uploads import get_upload_blocked_extensions
-from .models import BackupConfiguration, FileUpload, UptimeIncident, UptimeMonitor
+from .models import BackupConfiguration, FileUpload, ServerMetricSnapshot, UptimeIncident, UptimeMonitor
+from .queue_monitor import get_celery_app, get_queue_stats
 from .revenue import _month_bounds, _shift_month
 from .rum import _percentile, rate_metric
 from .security_scorecard import run_scorecard_checks
@@ -307,3 +308,75 @@ class UptimeCheckTests(TestCase):
         now = timezone.now()
         pct = compute_uptime_percentage(monitor, now - timedelta(days=1), now + timedelta(minutes=1))
         self.assertAlmostEqual(pct, 66.67, places=1)
+
+
+class ServerHistoryTests(TestCase):
+    """Phase 13 — api_server_history now reads real ServerMetricSnapshot
+    rows instead of generating synthetic random.randint() data."""
+
+    def test_history_empty_when_no_snapshots(self):
+        user = get_user_model().objects.create_superuser(username='root', password='pw', email='r@example.com')
+        self.client.force_login(user)
+        response = self.client.get(reverse('api_server_history'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+    def test_history_computes_deltas_between_snapshots(self):
+        from django.utils import timezone
+
+        user = get_user_model().objects.create_superuser(username='root2', password='pw', email='r2@example.com')
+        self.client.force_login(user)
+
+        now = timezone.now()
+        ServerMetricSnapshot.objects.create(
+            recorded_at=now - timezone.timedelta(minutes=2), cpu_percent=10, memory_percent=20,
+            disk_io_read_bytes=1000, disk_io_write_bytes=500, network_in_bytes=2000, network_out_bytes=1000,
+        )
+        ServerMetricSnapshot.objects.create(
+            recorded_at=now - timezone.timedelta(minutes=1), cpu_percent=15, memory_percent=25,
+            disk_io_read_bytes=1500, disk_io_write_bytes=700, network_in_bytes=2500, network_out_bytes=1400,
+        )
+
+        response = self.client.get(reverse('api_server_history'))
+        data = response.json()
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]['disk_io_read'], 0)  # first snapshot has no prior point to diff against
+        self.assertEqual(data[1]['disk_io_read'], 500)  # 1500 - 1000
+        self.assertEqual(data[1]['network_out'], 400)  # 1400 - 1000
+
+    def test_history_guards_against_counter_reset(self):
+        # A service restart resets psutil's cumulative counters to a
+        # small number — the delta must never go negative.
+        from django.utils import timezone
+
+        user = get_user_model().objects.create_superuser(username='root3', password='pw', email='r3@example.com')
+        self.client.force_login(user)
+
+        now = timezone.now()
+        ServerMetricSnapshot.objects.create(
+            recorded_at=now - timezone.timedelta(minutes=2), cpu_percent=10, memory_percent=20,
+            disk_io_read_bytes=100000, disk_io_write_bytes=0, network_in_bytes=0, network_out_bytes=0,
+        )
+        ServerMetricSnapshot.objects.create(
+            recorded_at=now - timezone.timedelta(minutes=1), cpu_percent=10, memory_percent=20,
+            disk_io_read_bytes=50, disk_io_write_bytes=0, network_in_bytes=0, network_out_bytes=0,  # reset!
+        )
+
+        response = self.client.get(reverse('api_server_history'))
+        data = response.json()
+        self.assertEqual(data[1]['disk_io_read'], 0)  # guarded, not a negative number
+
+
+class QueueMonitorTests(TestCase):
+    """Phase 13 — Celery introspection via a dotted-path config, same
+    pattern as the billing integration."""
+
+    @override_settings(PAXALIA_DASHBOARD={})
+    def test_no_app_configured_returns_none(self):
+        self.assertIsNone(get_celery_app())
+        self.assertIsNone(get_queue_stats())
+
+    @override_settings(PAXALIA_DASHBOARD={'CELERY_APP_PATH': 'not.a.real.module.app'})
+    def test_unimportable_path_returns_none_not_raise(self):
+        self.assertIsNone(get_celery_app())
+        self.assertIsNone(get_queue_stats())

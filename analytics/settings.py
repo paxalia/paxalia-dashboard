@@ -59,6 +59,20 @@ DEFAULTS = {
     # every download attempt; re-authenticating resets the window.
     'BACKUP_REAUTH_MINUTES': 15,
 
+    # ── Ops/server monitoring (Phase 13) ──
+    # How long ServerMetricSnapshot rows are kept — pruned by
+    # record_server_metrics on every run, since it's typically
+    # scheduled every minute and would otherwise grow unbounded.
+    'SERVER_METRIC_RETENTION_DAYS': 7,
+    # A query slower than this (via SlowQueryMiddleware, opt-in — see
+    # README) gets recorded as a SlowQuery.
+    'SLOW_QUERY_THRESHOLD_MS': 100,
+    # Dotted path to your project's Celery Application instance (e.g.
+    # 'myproject.celery.app'), same pattern as BILLING_INVOICE_MODEL —
+    # this package doesn't own that instance, only reads it if you
+    # point at one. None/unset means the Queues page shows nothing.
+    'CELERY_APP_PATH': None,
+
     # ── Multi-site ──
     # If True, a request from an unrecognized hostname automatically gets
     # a new Site row created for it. Off by default — predictable behavior

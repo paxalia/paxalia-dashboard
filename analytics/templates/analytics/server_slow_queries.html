@@ -1,0 +1,47 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Slow Queries" %}{% endblock %}
+{% block page_subtitle %}{% trans "Database queries recorded by SlowQueryMiddleware" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/server.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/tables.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="server-slow-queries">
+    <div class="table-card">
+        <div class="chart-title-wrapper">
+            <h2 class="chart-title">{% trans "Recent Slow Queries" %}</h2>
+        </div>
+        {% if slow_queries %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Duration" %}</th>
+                    <th>{% trans "SQL" %}</th>
+                    <th>{% trans "Path" %}</th>
+                    <th>{% trans "When" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in slow_queries %}
+                <tr>
+                    <td>{{ q.duration_ms|floatformat:0 }}ms</td>
+                    <td class="table-cell-truncate" title="{{ q.sql }}"><code>{{ q.sql|truncatechars:140 }}</code></td>
+                    <td>{{ q.path|default:"—" }}</td>
+                    <td>{{ q.created_at|date:"M d, H:i:s" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="chart-empty">
+            {% trans "No slow queries recorded yet." %}
+            {% trans "Add analytics.middleware.SlowQueryMiddleware to MIDDLEWARE to start recording — see the README." %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

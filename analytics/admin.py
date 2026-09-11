@@ -9,6 +9,9 @@ from .models import (
     UptimeMonitor,
     UptimeCheck,
     UptimeIncident,
+    ServerMetricSnapshot,
+    SlowQuery,
+    Deployment,
     FileUpload,
     BackupConfiguration,
     BackupArchive,
@@ -110,6 +113,30 @@ class UptimeIncidentAdmin(admin.ModelAdmin):
     list_filter = ('started_at',)
     search_fields = ('monitor__name', 'cause')
     date_hierarchy = 'started_at'
+
+
+@admin.register(ServerMetricSnapshot)
+class ServerMetricSnapshotAdmin(admin.ModelAdmin):
+    list_display = ('recorded_at', 'cpu_percent', 'memory_percent')
+    date_hierarchy = 'recorded_at'
+    readonly_fields = [f.name for f in ServerMetricSnapshot._meta.fields]
+
+
+@admin.register(SlowQuery)
+class SlowQueryAdmin(admin.ModelAdmin):
+    list_display = ('duration_ms', 'path', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('sql', 'path')
+    date_hierarchy = 'created_at'
+    readonly_fields = [f.name for f in SlowQuery._meta.fields]
+
+
+@admin.register(Deployment)
+class DeploymentAdmin(admin.ModelAdmin):
+    list_display = ('version', 'site', 'deployed_at')
+    list_filter = ('deployed_at',)
+    search_fields = ('version', 'notes')
+    date_hierarchy = 'deployed_at'
 
 
 @admin.register(FileUpload)

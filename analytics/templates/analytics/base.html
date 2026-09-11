@@ -579,6 +579,34 @@
                             </span>
                             {% trans "Processes" %}
                         </a>
+
+                        <a href="{% url 'analytics:server_slow_queries' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_slow_queries' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm.75 5v5.5l4.5 2.67-.75 1.23L11 13V7z"/>
+                                </svg>
+                            </span>
+                            {% trans "Slow Queries" %}
+                        </a>
+                        <a href="{% url 'analytics:server_queues' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_queues' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M4 4h16v3H4zm0 6.5h16v3H4zM4 17h16v3H4z"/>
+                                </svg>
+                            </span>
+                            {% trans "Queues" %}
+                        </a>
+                        <a href="{% url 'analytics:server_deployments' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_deployments' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6zm0 9-3-3 1.4-1.4L12 8.2l1.6-1.6L15 8z"/>
+                                </svg>
+                            </span>
+                            {% trans "Deployments" %}
+                        </a>
                     </div>
                 </section>
 

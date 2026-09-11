@@ -78,6 +78,9 @@ dashboard_urlpatterns = [
     path('server/network/', server_views.server_network, name='server_network'),
     path('server/services/', server_views.server_services, name='server_services'),
     path('server/processes/', server_views.server_processes, name='server_processes'),
+    path('server/slow-queries/', server_views.server_slow_queries, name='server_slow_queries'),
+    path('server/queues/', server_views.server_queues, name='server_queues'),
+    path('server/deployments/', server_views.server_deployments, name='server_deployments'),
 
     path('admin-overview/', admin_overview, name='admin_overview'),
 

@@ -1,0 +1,79 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Queues" %}{% endblock %}
+{% block page_subtitle %}{% trans "Celery worker and task status" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/server.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="server-queues">
+    {% if queue_stats is None %}
+        <div class="table-card">
+            <div class="chart-empty">
+                {% trans "Celery isn't configured for this dashboard yet." %}
+                {% trans "Set CELERY_APP_PATH in your PAXALIA_DASHBOARD settings dict to your Celery Application's dotted path (e.g. 'myproject.celery.app') — see the README." %}
+            </div>
+        </div>
+    {% elif not queue_stats.reachable %}
+        <div class="table-card">
+            <div class="chart-empty">
+                {% trans "Celery is configured, but no worker responded to the inspect ping. Workers may be down or restarting." %}
+            </div>
+        </div>
+    {% else %}
+        <div class="stat-grid">
+            <div class="stat-card">
+                <span class="stat-label">{% trans "Workers" %}</span>
+                <span class="stat-value">{{ queue_stats.workers|length }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">{% trans "Active tasks" %}</span>
+                <span class="stat-value">{{ queue_stats.active_count }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">{% trans "Reserved tasks" %}</span>
+                <span class="stat-value">{{ queue_stats.reserved_count }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">{% trans "Scheduled tasks" %}</span>
+                <span class="stat-value">{{ queue_stats.scheduled_count }}</span>
+            </div>
+        </div>
+
+        <div class="table-card">
+            <div class="chart-title-wrapper">
+                <h2 class="chart-title">{% trans "Workers" %}</h2>
+            </div>
+            {% if queue_stats.workers %}
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>{% trans "Worker" %}</th>
+                        <th>{% trans "Active" %}</th>
+                        <th>{% trans "Reserved" %}</th>
+                        <th>{% trans "Scheduled" %}</th>
+                        <th>{% trans "Concurrency" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for w in queue_stats.workers %}
+                    <tr>
+                        <td>{{ w.name }}</td>
+                        <td>{{ w.active }}</td>
+                        <td>{{ w.reserved }}</td>
+                        <td>{{ w.scheduled }}</td>
+                        <td>{{ w.concurrency|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="chart-empty">{% trans "No workers found." %}</div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
