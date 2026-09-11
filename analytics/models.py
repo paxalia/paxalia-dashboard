@@ -1,3 +1,4 @@
+import os
 import uuid
 import hashlib
 
@@ -252,6 +253,34 @@ class BackupConfiguration(models.Model):
     def get_backup_paths_list(self):
         """Return non‑empty lines as a list."""
         return [p.strip() for p in self.backup_paths.splitlines() if p.strip()]
+
+    def get_path_overlap_warning(self):
+        """
+        Return a warning string if storage_path is the same as, sits
+        inside, or contains one of the configured backup_paths — any of
+        which means each new backup would include previously-created
+        backup archives, growing without bound. Returns None if
+        nothing is configured yet, or if the paths look safe.
+
+        Used both to block saving an unsafe configuration
+        (views/backup.py) and by the Security Scorecard
+        (security_scorecard.py) to flag an already-saved one.
+        """
+        if not self.storage_path:
+            return None
+        storage = os.path.normpath(os.path.abspath(self.storage_path))
+        for raw in self.get_backup_paths_list():
+            candidate = os.path.normpath(os.path.abspath(raw))
+            if (
+                storage == candidate
+                or storage.startswith(candidate + os.sep)
+                or candidate.startswith(storage + os.sep)
+            ):
+                return (
+                    f'Storage path overlaps backup path "{raw}" — backups would '
+                    'include previously-created archives and grow without bound.'
+                )
+        return None
 
 
 class BackupArchive(models.Model):

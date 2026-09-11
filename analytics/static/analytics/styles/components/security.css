@@ -69,13 +69,50 @@
     letter-spacing: 0.03em;
 }
 
-.security-status-ok {
+.security-status-ok,
+.security-status-pass {
     background: rgba(46, 160, 67, 0.15);
     color: #2ea043;
 }
 
-.security-status-bad {
+.security-status-bad,
+.security-status-fail {
     background: rgba(220, 60, 60, 0.15);
+    color: #dc3c3c;
+}
+
+.security-status-warn {
+    background: rgba(230, 160, 30, 0.15);
+    color: #c9861f;
+}
+
+.scorecard-group-title {
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: 600;
+    margin: var(--margin-lg, 1.5rem) 0 var(--margin-sm, 0.5rem);
+    color: var(--analytics-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.scorecard-tab-badge {
+    display: inline-block;
+    min-width: 1.1rem;
+    padding: 0 0.35rem;
+    margin-left: 0.35rem;
+    border-radius: 999px;
+    font-size: var(--font-size-xs, 0.7rem);
+    line-height: 1.4;
+    text-align: center;
+}
+
+.scorecard-tab-badge--warn {
+    background: rgba(230, 160, 30, 0.2);
+    color: #c9861f;
+}
+
+.scorecard-tab-badge--fail {
+    background: rgba(220, 60, 60, 0.2);
     color: #dc3c3c;
 }
 

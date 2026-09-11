@@ -15,6 +15,7 @@ from django.views.decorators.http import require_POST
 
 from ..models import BlockedIP, LoginEvent, SecurityAuditLog, CSPViolation
 from ..security_audit import log_action
+from ..security_scorecard import run_scorecard_checks
 from .utils import section_enabled
 
 User = get_user_model()
@@ -139,6 +140,7 @@ def security_center(request):
         'csp_violations': csp_violations,
         'mfa_status': _mfa_status(),
         'dependency_health': _dependency_health(),
+        'scorecard': run_scorecard_checks(),
     }
     return render(request, 'analytics/security.html', context)
 
