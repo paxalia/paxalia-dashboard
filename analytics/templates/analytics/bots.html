@@ -40,7 +40,37 @@
                 <canvas id="countryChart"></canvas>
             </div>
         </div>
+        <div class="chart-card">
+            <h2 class="chart-title">{% trans "Bot Category Breakdown" %}</h2>
+            <p class="form-hint">
+                {% trans "Search engines, AI crawlers, and social-preview bots are now classified separately from malicious/scanner traffic — see README for the full list." %}
+            </p>
+            {% if category_breakdown %}
+                <div class="chart-wrap">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            {% else %}
+                <div class="chart-empty">{% trans "No classified bot traffic in the last 30 days." %}</div>
+            {% endif %}
+        </div>
     </div>
+
+    {% if category_breakdown %}
+    <div class="table-card">
+        <h3 class="card-title">{% trans "Category detail" %}</h3>
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "Category" %}</th><th>{% trans "Requests (last 30 days)" %}</th></tr></thead>
+            <tbody>
+                {% for row in category_breakdown %}
+                <tr>
+                    <td>{{ row.label }}</td>
+                    <td>{{ row.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 

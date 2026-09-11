@@ -78,4 +78,32 @@ document.addEventListener('DOMContentLoaded', function() {
             cutout: '60%',
         }
     });
+
+    // Category breakdown (doughnut) — Phase 10
+    const categoryChartEl = document.getElementById('categoryChart');
+    if (categoryChartEl && data.category_labels && data.category_labels.length) {
+        new Chart(categoryChartEl.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: data.category_labels,
+                datasets: [{
+                    data: data.category_counts,
+                    backgroundColor: ['#58a6ff', '#a970ff', '#3fb950', '#e6a01e', '#8b949e', '#dc3c3c'],
+                    borderWidth: 2,
+                    borderColor: 'var(--analytics-surface, #161b22)',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: 'var(--analytics-text, #c9d1d9)', font: { size: 12 } }
+                    }
+                },
+                cutout: '60%',
+            }
+        });
+    }
 });

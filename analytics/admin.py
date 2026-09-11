@@ -27,8 +27,8 @@ from .models import (
 
 @admin.register(PageView)
 class PageViewAdmin(admin.ModelAdmin):
-    list_display = ('path', 'method', 'status_code', 'ip_hash', 'is_bot', 'created_at')
-    list_filter = ('method', 'status_code', 'is_bot', 'created_at')
+    list_display = ('path', 'method', 'status_code', 'ip_hash', 'is_bot', 'bot_category', 'created_at')
+    list_filter = ('method', 'status_code', 'is_bot', 'bot_category', 'created_at')
     search_fields = ('path', 'ip_hash', 'user_agent')
     date_hierarchy = 'created_at'
     readonly_fields = [f.name for f in PageView._meta.fields]
