@@ -54,3 +54,35 @@
         }
     });
 })();
+
+(function() {
+    const data = window.__analytics_revenue;
+    if (!data) return;
+    const ctx = document.getElementById('mrrChart');
+    if (!ctx) return;
+
+    new Chart(ctx.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Revenue',
+                data: data.values,
+                backgroundColor: 'rgba(88,166,255,0.35)',
+                borderColor: '#58a6ff',
+                borderWidth: 1,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                x: { ticks: { color: '#8b949e' }, grid: { display: false } },
+                y: { beginAtZero: true, ticks: { color: '#8b949e', callback: function(v) { return '$' + v; } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+        }
+    });
+})();

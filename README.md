@@ -331,7 +331,7 @@ If you want to change the event API path, you must update:
 | Traffic          | `/traffic/`          | Top referrers, browsers, operating systems, device types                                                                                                 |
 | Geography        | `/geography/`        | Offline world map with drill‑down, country table, top cities (click a country to filter cities)                                                          |
 | Events           | `/events/`           | Custom events: today/yesterday counts, daily chart, top categories, top actions, top labels, events by page, recent events feed                          |
-| Billing          | `/billing/`          | (optional) Total revenue, today/month revenue, active subscriptions, donations, daily income chart, top plans, recent transactions                       |
+| Billing          | `/billing/`          | (optional) Total revenue, today/month revenue, active subscriptions, donations, daily income chart, top plans, recent transactions, MRR/ARR trend, churn, failed-payment tracking |
 | Real‑time        | `/realtime/`         | Live visitor count (last 5 min), unique IPs, recent page views table with configurable refresh                                                           |
 | Server Overview  | `/server/overview/`  | System health snapshot: CPU, memory, disk, network usage with live charts                                                                                |
 | Server CPU       | `/server/cpu/`       | Detailed CPU usage per core, historical chart, load average                                                                                              |
@@ -663,6 +663,7 @@ No additional configuration is needed. The export buttons appear automatically o
 | Recent Events       | Last 50 events with timestamps         |
 | Billing Plans       | Plan slugs with user counts            |
 | Recent Transactions | Invoice number, user, amount, and date |
+| Failed Payments (Dunning) | Invoice number, user, amount, date, and status for non-paid invoices in the last 90 days |
 
 ---
 
@@ -704,8 +705,13 @@ PAXALIA_DASHBOARD = {
 - Daily income chart with compare toggle
 - Plan distribution table
 - Recent transactions table
+- **Monthly revenue trend, last 12 months, plus a projected ARR run-rate** (an invoice-based proxy for MRR — see the note below)
+- **Churn** (customer and revenue), computed from the last two fully-completed calendar months of invoice history
+- **Failed/pending payments** ("dunning"), grouped by whatever status values your `Invoice.status` field actually uses, with CSV/JSON export
 
 If the models don't exist or aren't configured, the billing section simply doesn't appear — no errors, no broken pages.
+
+> **Why "MRR proxy" and not MRR:** this package doesn't require a Plan/price field in its documented contract above, only `current_plan.slug`. So "MRR" here is the sum of `'paid'` invoices in a calendar month — a reasonable stand-in when there's genuine month-to-month billing, but it will differ from true subscription MRR if your billing cycles aren't monthly, or if a Plan's price ever changed after an invoice was cut. Likewise, churn is computed from invoice history (paid last month, not paid this month) since there's no subscription start/cancel timestamp in the documented contract — it won't catch a customer who churns and resubscribes within the same window, and works best for regular (e.g. monthly) billing cycles.
 
 ---
 

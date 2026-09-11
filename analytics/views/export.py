@@ -284,5 +284,17 @@ def analytics_export(request, export_type):
         rows = [[i.invoice_number, i.user.username, str(i.amount), str(i.date)] for i in invoices]
         return build_response(f'invoices_{start_dt.date()}_{end_dt.date()}', ['Invoice', 'User', 'Amount', 'Date'], rows)
 
+    elif export_type == 'billing_dunning':
+        Invoice, _, _ = get_billing_models()
+        if not Invoice:
+            raise Http404
+        from analytics.revenue import compute_dunning
+        dunning = compute_dunning(Invoice)
+        rows = [
+            [i.invoice_number, i.user.username, str(i.amount), str(i.date), i.status]
+            for i in dunning['recent']
+        ]
+        return build_response('billing_dunning', ['Invoice', 'User', 'Amount', 'Date', 'Status'], rows)
+
     # Fallback
     raise Http404("Invalid export type")
