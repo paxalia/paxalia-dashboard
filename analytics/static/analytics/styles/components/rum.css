@@ -52,10 +52,3 @@
 .vitals-seg-good { background: #2ea043; }
 .vitals-seg-needs-improvement { background: #c9861f; }
 .vitals-seg-poor { background: #dc3c3c; }
-
-.rum-error-message {
-    max-width: 360px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}

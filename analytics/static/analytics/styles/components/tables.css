@@ -79,3 +79,14 @@
     flex-direction: column;
     gap: var(--gap-md);
 }
+
+/* Generic long-text-in-a-table-cell truncation, used wherever a cell
+   holds a URL, error message, or stack-trace-adjacent text that
+   shouldn't blow out the table's width. Hover/title shows the full
+   text. */
+.table-cell-truncate {
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

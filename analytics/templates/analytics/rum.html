@@ -62,7 +62,7 @@
             <tbody>
                 {% for err in top_errors %}
                 <tr>
-                    <td class="rum-error-message" title="{{ err.message }}">{{ err.message|truncatechars:120 }}</td>
+                    <td class="table-cell-truncate" title="{{ err.message }}">{{ err.message|truncatechars:120 }}</td>
                     <td>{{ err.sample_location|default:"—" }}<br><span class="form-hint">{{ err.sample_path }}</span></td>
                     <td>{{ err.count }}</td>
                     <td>{{ err.first_seen|date:"M d, H:i" }}</td>

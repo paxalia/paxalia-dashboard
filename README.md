@@ -24,6 +24,7 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 - [Admin Overview](#admin-overview)
 - [Custom Event Tracking](#custom-event-tracking)
 - [Real User Monitoring](#real-user-monitoring)
+- [Uptime Monitoring](#uptime-monitoring)
 - [Internationalization](#internationalization)
 - [Themes](#themes)
 - [Exporting Data](#exporting-data)
@@ -333,6 +334,7 @@ If you want to change the event API path, you must update:
 | Geography        | `/geography/`        | Offline world map with drill‑down, country table, top cities (click a country to filter cities)                                                          |
 | Events           | `/events/`           | Custom events: today/yesterday counts, daily chart, top categories, top actions, top labels, events by page, recent events feed                          |
 | Real User Monitoring | `/rum/`          | Core Web Vitals (LCP/CLS/INP) at the 75th percentile with good/needs-improvement/poor breakdown, top JavaScript errors |
+| Uptime Monitoring | `/uptime/`          | Monitor list with current status and uptime %, add/pause/delete monitors, recent incident log |
 | Billing          | `/billing/`          | (optional) Total revenue, today/month revenue, active subscriptions, donations, daily income chart, top plans, recent transactions, MRR/ARR trend, churn, failed-payment tracking |
 | Real‑time        | `/realtime/`         | Live visitor count (last 5 min), unique IPs, recent page views table with configurable refresh                                                           |
 | Server Overview  | `/server/overview/`  | System health snapshot: CPU, memory, disk, network usage with live charts                                                                                |
@@ -466,6 +468,45 @@ keep running long after an error and you want to know sooner).
   RUM tool applies: these numbers reflect whatever devices/connections your real visitors actually have.
 - JS error **grouping** is by message text only (not filename/line too) — grouping in a build-specific location
   would split the same error across every minified-bundle hash your deploys produce.
+
+---
+
+## Uptime Monitoring
+
+Scheduled HTTP checks against URLs you configure, with status history and an incident log — a new subsystem, not
+an extension of an existing page.
+
+### How it works
+
+1. Add a monitor on `/uptime/`: name, URL, HTTP method (GET/HEAD/POST), expected status code, timeout, and check
+   interval.
+2. Schedule the check command via cron or Celery beat — this package already assumes cron/Celery beat access for
+   `aggregate_daily_stats`, `send_scheduled_reports`, and `detect_anomalies`, so this isn't a new operational
+   requirement:
+
+    ```bash
+    # Run every minute; each monitor is only actually pinged once its own
+    # check_interval_minutes has elapsed since its last check.
+    * * * * * cd /path/to/project && python manage.py check_uptime >> /var/log/uptime.log 2>&1
+    ```
+
+3. The `/uptime/` page shows each monitor's current status, uptime % for the selected date range, and a combined
+   recent-incidents table across all monitors.
+
+### Design notes
+
+- **No new dependency.** The HTTP check uses only `urllib.request` from the standard library — a GET/HEAD with a
+  timeout and a status-code check doesn't need anything the `requests` library provides over urllib, and this
+  package already goes out of its way to keep optional features from forcing new dependencies (`django-otp` and
+  `weasyprint` are both guarded, optional imports).
+- **Incidents are transition-based, not one row per failed check.** An incident opens on an up→down transition (or
+  a monitor's very first check coming back down) and resolves on the next down→up transition — a monitor that's
+  down for an hour with a check every minute is one incident with a ~60-minute duration, not sixty rows.
+- **Alerts** go through the same `send_alert()` used by security and anomaly alerts (`category='uptime'`) — every
+  down/recovery transition creates an in-dashboard notification and, if configured, an email/webhook alert, exactly
+  like every other alert category.
+- **Uptime %** for a period with zero checks is shown as "—", not 0% or 100% — nothing to compute yet is different
+  from "always down" or "always up".
 
 ---
 

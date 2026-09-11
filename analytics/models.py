@@ -867,6 +867,7 @@ class Notification(models.Model):
         ('anomaly', 'Anomaly'),
         ('security', 'Security'),
         ('report', 'Report'),
+        ('uptime', 'Uptime'),
         ('general', 'General'),
     ]
 
@@ -885,3 +886,96 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.subject
+
+
+class UptimeMonitor(models.Model):
+    """
+    A configured URL to periodically check — see analytics/uptime.py
+    for the actual HTTP check logic and analytics/management/commands/
+    check_uptime.py for the scheduled command that drives it.
+    """
+    METHOD_CHOICES = [('GET', 'GET'), ('HEAD', 'HEAD'), ('POST', 'POST')]
+
+    name = models.CharField(max_length=200)
+    url = models.URLField(max_length=500)
+    method = models.CharField(max_length=6, choices=METHOD_CHOICES, default='GET')
+    expected_status_code = models.PositiveIntegerField(default=200)
+    timeout_seconds = models.PositiveIntegerField(default=10)
+    check_interval_minutes = models.PositiveIntegerField(
+        default=5,
+        help_text="How often this monitor is checked. check_uptime can run as often as "
+                  "you like (every minute is typical) — it only actually pings a monitor "
+                  "once this many minutes have passed since its last check."
+    )
+    is_active = models.BooleanField(default=True)
+    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True, related_name='uptime_monitors')
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Uptime Monitor'
+        verbose_name_plural = 'Uptime Monitors'
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def latest_check(self):
+        return self.checks.order_by('-checked_at').first()
+
+    @property
+    def open_incident(self):
+        return self.incidents.filter(resolved_at__isnull=True).first()
+
+
+class UptimeCheck(models.Model):
+    """One HTTP check result. Every check is stored — see compute_uptime_percentage()
+    in uptime.py for how these roll up into an uptime %."""
+    STATUS_CHOICES = [('up', 'Up'), ('down', 'Down')]
+
+    monitor = models.ForeignKey(UptimeMonitor, on_delete=models.CASCADE, related_name='checks')
+    checked_at = models.DateTimeField(default=timezone.now, db_index=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, db_index=True)
+    status_code = models.PositiveIntegerField(null=True, blank=True)
+    response_time_ms = models.PositiveIntegerField(null=True, blank=True)
+    error_message = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ['-checked_at']
+        indexes = [models.Index(fields=['monitor', 'checked_at'])]
+
+    def __str__(self):
+        return f"{self.monitor.name}: {self.status} @ {self.checked_at}"
+
+
+class UptimeIncident(models.Model):
+    """
+    Opened on an up->down transition (or a monitor's very first check
+    coming back down), resolved on the next down->up transition. See
+    uptime.py::record_check() for the state-transition logic —
+    deliberately transition-based rather than "one row per down check",
+    so a monitor failing every minute for an hour is one incident, not
+    sixty.
+    """
+    monitor = models.ForeignKey(UptimeMonitor, on_delete=models.CASCADE, related_name='incidents')
+    started_at = models.DateTimeField(default=timezone.now, db_index=True)
+    resolved_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    cause = models.CharField(max_length=500, blank=True, help_text="error_message from the check that opened this incident.")
+
+    class Meta:
+        ordering = ['-started_at']
+        verbose_name = 'Uptime Incident'
+        verbose_name_plural = 'Uptime Incidents'
+
+    def __str__(self):
+        state = 'ongoing' if self.resolved_at is None else 'resolved'
+        return f"{self.monitor.name} — {state} since {self.started_at}"
+
+    @property
+    def is_ongoing(self):
+        return self.resolved_at is None
+
+    @property
+    def duration_seconds(self):
+        end = self.resolved_at or timezone.now()
+        return (end - self.started_at).total_seconds()

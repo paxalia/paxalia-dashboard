@@ -7,6 +7,7 @@ from .views import (
 )
 from .views.events import analytics_js_error_api
 from .views import rum as rum_views
+from .views import uptime as uptime_views
 from .views import server as server_views
 from .views import backup as backup_views
 from .views import security as security_views
@@ -64,6 +65,9 @@ dashboard_urlpatterns = [
     path('geography/', analytics_geography, name='geography'),
     path('events/', analytics_events, name='events'),
     path('rum/', rum_views.rum_overview, name='rum'),
+    path('uptime/', uptime_views.uptime_overview, name='uptime'),
+    path('uptime/<int:monitor_id>/toggle/', uptime_views.uptime_monitor_toggle, name='uptime_monitor_toggle'),
+    path('uptime/<int:monitor_id>/delete/', uptime_views.uptime_monitor_delete, name='uptime_monitor_delete'),
     path('billing/', analytics_billing, name='billing'),
     path('bots/', bots_overview, name='bots'),
 
