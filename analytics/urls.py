@@ -6,6 +6,7 @@ from .views import (
     analytics_billing, uploads, releases_page, admin_overview, bots_overview, about
 )
 from .views.events import analytics_js_error_api
+from .views.chat_ops import slack_command, discord_interaction
 from .views import rum as rum_views
 from .views import uptime as uptime_views
 from .views import compliance as compliance_views
@@ -35,6 +36,8 @@ app_name = 'analytics'
 api_urlpatterns = [
     path('event/', analytics_event_api, name='event_api'),
     path('js-error/', analytics_js_error_api, name='js_error_api'),
+    path('slack/command/', slack_command, name='slack_command'),
+    path('discord/interactions/', discord_interaction, name='discord_interactions'),
     path('realtime/data/', analytics_realtime_data, name='realtime_data'),
     path('server/metrics/', server_views.api_server_metrics, name='api_server_metrics'),
     path('server/history/', server_views.api_server_history, name='api_server_history'),

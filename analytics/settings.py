@@ -91,6 +91,13 @@ DEFAULTS = {
     # pageview, analytics_event, js_error, uptime_check, slow_query.
     'DATA_RETENTION_DAYS': {},
 
+    # ── Slack/Discord app (Phase 16) ──
+    # Both None by default — each platform's endpoint responds
+    # "not configured" until you set its secret/key. See the README's
+    # "Slack/Discord App" section.
+    'SLACK_SIGNING_SECRET': None,
+    'DISCORD_PUBLIC_KEY': None,
+
     # ── Multi-site ──
     # If True, a request from an unrecognized hostname automatically gets
     # a new Site row created for it. Off by default — predictable behavior
