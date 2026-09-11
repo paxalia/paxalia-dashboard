@@ -6,7 +6,7 @@ DEFAULTS = {
         'overview', 'pages', 'api', 'traffic', 'realtime', 'bots',
         'geography', 'events', 'billing', 'releases', 'backups', 'security',
         'sites', 'broken_links', 'goals', 'funnels', 'segments', 'campaigns',
-        'annotations', 'cohorts', 'api_keys', 'reports', 'share_links', 'notifications', 'rum', 'uptime', 'settings'
+        'annotations', 'cohorts', 'api_keys', 'reports', 'share_links', 'notifications', 'rum', 'uptime', 'compliance', 'settings'
     ],
     'API_PATH_PREFIX': '/api/',
     'GEOIP_PATH': None,  # None → use analytics/geoip/ inside the package
@@ -72,6 +72,24 @@ DEFAULTS = {
     # this package doesn't own that instance, only reads it if you
     # point at one. None/unset means the Queues page shows nothing.
     'CELERY_APP_PATH': None,
+
+    # ── Compliance tooling (Phase 14) ──
+    # Off by default — existing deployments track exactly as before.
+    # When True, nothing is tracked (no PageView row, no session
+    # cookie, client-side beacons no-op) until a cookie named
+    # CONSENT_COOKIE_NAME is present with value CONSENT_COOKIE_GRANTED_VALUE
+    # — set that cookie from your own CMP/consent-banner JS once the
+    # visitor accepts. See the README's "Consent Mode" section.
+    'CONSENT_MODE_ENABLED': False,
+    'CONSENT_COOKIE_NAME': 'analytics_consent',
+    'CONSENT_COOKIE_GRANTED_VALUE': 'granted',
+    # Per-data-type retention, read by prune_analytics_data — separate
+    # from SECURITY_LOG_RETENTION_DAYS (LoginEvent/SecurityAuditLog
+    # only) and SERVER_METRIC_RETENTION_DAYS (pruned inline elsewhere).
+    # Empty by default: nothing is deleted unless you explicitly opt a
+    # data type in, e.g. {'pageview': 400, 'js_error': 90}. Valid keys:
+    # pageview, analytics_event, js_error, uptime_check, slow_query.
+    'DATA_RETENTION_DAYS': {},
 
     # ── Multi-site ──
     # If True, a request from an unrecognized hostname automatically gets

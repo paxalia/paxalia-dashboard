@@ -18,6 +18,7 @@ from honeypot.decorators import honeypot_exempt
 
 from analytics.middleware import AnalyticsMiddleware
 from analytics.models import AnalyticsEvent, JSError
+from analytics.settings import get_config
 from .utils import get_date_range, detect_active_preset, section_enabled
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,22 @@ def _clean_str(value, max_len):
 
 # ─── Public Event API ──────────────────────────────────────────────────
 
+def _consent_denied(request):
+    """
+    True if consent mode is on and this request's cookie doesn't show
+    granted consent — mirrors AnalyticsMiddleware's server-side gate
+    and analytics-events.js's client-side gate (Phase 14). Checked
+    here too as defense in depth: the client-side gate stops the
+    normal tracker from firing, but nothing stops a request sent
+    directly to this endpoint from bypassing it.
+    """
+    if not get_config()['CONSENT_MODE_ENABLED']:
+        return False
+    cookie_name = get_config()['CONSENT_COOKIE_NAME']
+    granted_value = get_config()['CONSENT_COOKIE_GRANTED_VALUE']
+    return request.COOKIES.get(cookie_name) != granted_value
+
+
 @csrf_exempt
 @honeypot_exempt
 @require_http_methods(["POST"])
@@ -72,6 +89,9 @@ def analytics_event_api(request):
     if _event_rate_limited(request):
         logger.warning('Analytics: event API rate limit exceeded')
         return JsonResponse({'error': 'Too many requests'}, status=429)
+
+    if _consent_denied(request):
+        return JsonResponse({'status': 'skipped', 'reason': 'consent not granted'})
 
     # 1. Parse JSON body
     try:
@@ -154,6 +174,9 @@ def analytics_js_error_api(request):
     if _event_rate_limited(request):
         logger.warning('Analytics: JS error API rate limit exceeded')
         return JsonResponse({'error': 'Too many requests'}, status=429)
+
+    if _consent_denied(request):
+        return JsonResponse({'status': 'skipped', 'reason': 'consent not granted'})
 
     try:
         body = json.loads(request.body.decode('utf-8'))

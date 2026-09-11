@@ -8,8 +8,8 @@ already provides, nothing new to learn.
 
 SCOPE (deliberate, not an oversight): applied to a chosen subset of
 the most sensitive sections — Billing, Security Center, Backups,
-Sites, and Server monitoring — rather than swept mechanically across
-every dashboard view. Every other section (Overview, Pages, Traffic,
+Sites, Server monitoring, and Compliance tools — rather than swept
+mechanically across every dashboard view. Every other section (Overview, Pages, Traffic,
 Events, Goals, etc.) stays staff-wide, gated only by
 @staff_member_required as before. This matches how most teams
 actually want access split: broad visibility into general traffic

@@ -734,6 +734,7 @@ class DashboardAccess(models.Model):
             ('view_backups', 'Can view Backups section'),
             ('view_sites', 'Can view Sites section'),
             ('view_server', 'Can view Server monitoring'),
+            ('view_compliance', 'Can view Compliance tools'),
         ]
 
 

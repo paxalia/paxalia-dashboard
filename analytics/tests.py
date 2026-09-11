@@ -7,7 +7,11 @@ from django.urls import reverse
 
 from .bot_classification import classify_bot
 from .conf_uploads import get_upload_blocked_extensions
-from .models import BackupConfiguration, FileUpload, ServerMetricSnapshot, UptimeIncident, UptimeMonitor
+from .compliance import forget_by_ip, forget_by_session
+from .models import (
+    AnalyticsEvent, BackupConfiguration, FileUpload, JSError, PageView,
+    ServerMetricSnapshot, UptimeIncident, UptimeMonitor,
+)
 from .queue_monitor import get_celery_app, get_queue_stats
 from .revenue import _month_bounds, _shift_month
 from .rum import _percentile, rate_metric
@@ -380,3 +384,76 @@ class QueueMonitorTests(TestCase):
     def test_unimportable_path_returns_none_not_raise(self):
         self.assertIsNone(get_celery_app())
         self.assertIsNone(get_queue_stats())
+
+
+class ConsentModeTests(TestCase):
+    """Phase 14 — server-side consent gate on the public event endpoints."""
+
+    @override_settings(PAXALIA_DASHBOARD={'CONSENT_MODE_ENABLED': False})
+    def test_event_api_works_normally_when_consent_mode_disabled(self):
+        response = self.client.post(
+            reverse('event_api'),
+            data='{"category": "test", "action": "click"}',
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(AnalyticsEvent.objects.filter(category='test').count(), 1)
+
+    @override_settings(PAXALIA_DASHBOARD={
+        'CONSENT_MODE_ENABLED': True, 'CONSENT_COOKIE_NAME': 'analytics_consent',
+        'CONSENT_COOKIE_GRANTED_VALUE': 'granted',
+    })
+    def test_event_api_skips_write_without_consent_cookie(self):
+        response = self.client.post(
+            reverse('event_api'),
+            data='{"category": "test2", "action": "click"}',
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'skipped')
+        self.assertEqual(AnalyticsEvent.objects.filter(category='test2').count(), 0)
+
+    @override_settings(PAXALIA_DASHBOARD={
+        'CONSENT_MODE_ENABLED': True, 'CONSENT_COOKIE_NAME': 'analytics_consent',
+        'CONSENT_COOKIE_GRANTED_VALUE': 'granted',
+    })
+    def test_event_api_writes_once_consent_cookie_present(self):
+        self.client.cookies['analytics_consent'] = 'granted'
+        response = self.client.post(
+            reverse('event_api'),
+            data='{"category": "test3", "action": "click"}',
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(AnalyticsEvent.objects.filter(category='test3').count(), 1)
+
+
+class ForgetVisitorTests(TestCase):
+    """Phase 14 — bulk deletion by session_id or IP."""
+
+    def test_forget_by_session_deletes_across_models(self):
+        PageView.objects.create(path='/', method='GET', status_code=200, session_id='sess-1', ip_hash='1.2.3.4')
+        AnalyticsEvent.objects.create(category='c', action='a', session_id='sess-1')
+        JSError.objects.create(message='boom', session_id='sess-1')
+        # A different session shouldn't be touched.
+        PageView.objects.create(path='/', method='GET', status_code=200, session_id='sess-2', ip_hash='5.6.7.8')
+
+        results = forget_by_session('sess-1')
+
+        self.assertEqual(results['PageView'], 1)
+        self.assertEqual(results['AnalyticsEvent'], 1)
+        self.assertEqual(results['JSError'], 1)
+        self.assertEqual(PageView.objects.filter(session_id='sess-2').count(), 1)
+
+    def test_forget_by_ip_matches_raw_and_hashed_forms(self):
+        import hashlib
+        raw_ip = '9.9.9.9'
+        hashed_ip = hashlib.sha256(raw_ip.encode()).hexdigest()
+        PageView.objects.create(path='/', method='GET', status_code=200, session_id='s1', ip_hash=raw_ip)
+        PageView.objects.create(path='/', method='GET', status_code=200, session_id='s2', ip_hash=hashed_ip)
+        PageView.objects.create(path='/', method='GET', status_code=200, session_id='s3', ip_hash='not-this-one')
+
+        results = forget_by_ip(raw_ip)
+
+        self.assertEqual(results['PageView'], 2)
+        self.assertEqual(PageView.objects.filter(session_id='s3').count(), 1)
