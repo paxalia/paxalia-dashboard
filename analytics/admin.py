@@ -5,6 +5,7 @@ from .models import (
     DailySiteStats,
     AnalyticsSettings,
     AnalyticsEvent,
+    JSError,
     FileUpload,
     BackupConfiguration,
     BackupArchive,
@@ -73,6 +74,15 @@ class AnalyticsEventAdmin(admin.ModelAdmin):
     search_fields = ('label', 'path', 'session_id')
     date_hierarchy = 'created_at'
     readonly_fields = [f.name for f in AnalyticsEvent._meta.fields]
+
+
+@admin.register(JSError)
+class JSErrorAdmin(admin.ModelAdmin):
+    list_display = ('message', 'filename', 'lineno', 'path', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('message', 'filename', 'path', 'session_id')
+    date_hierarchy = 'created_at'
+    readonly_fields = [f.name for f in JSError._meta.fields]
 
 
 @admin.register(FileUpload)

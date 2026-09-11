@@ -166,4 +166,154 @@
         }
     });
     window.addEventListener('pagehide', sendEngagementBeacon);
+
+    // ─── Core Web Vitals (LCP, CLS, INP) ───────────────────────
+    // Native PerformanceObserver only — no third-party web-vitals
+    // library, to keep this dependency-free like the rest of the
+    // package. See analytics/rum.py's module docstring for the
+    // accuracy caveats on the CLS session-window and simplified INP
+    // implementations below; the 75th-percentile aggregation that
+    // Core Web Vitals reporting actually relies on happens
+    // server-side, not here — this just measures one page load.
+    if (window.PerformanceObserver) {
+        var vitalsReported = {};
+
+        function reportVital(metric, value) {
+            if (vitalsReported[metric]) return;
+            vitalsReported[metric] = true;
+            var payload = JSON.stringify({
+                category: 'web_vitals',
+                action: metric,
+                path: window.location.pathname,
+                value: value
+            });
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(EVENT_URL, new Blob([payload], { type: 'application/json' }));
+            }
+        }
+
+        // LCP — track the latest candidate; the final value is only
+        // known once nothing bigger paints before the page is hidden.
+        var lcpValue = null;
+        try {
+            var lcpObserver = new PerformanceObserver(function(list) {
+                var entries = list.getEntries();
+                var last = entries[entries.length - 1];
+                if (last) lcpValue = last.renderTime || last.loadTime || last.startTime;
+            });
+            lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+        } catch (err) { /* not supported in this browser */ }
+
+        // CLS — session-windowed sum per the current official
+        // algorithm: shifts less than 1s apart (session capped at 5s
+        // total) are grouped into one session; CLS is the largest
+        // session's total, not a running lifetime sum.
+        var clsValue = 0;
+        var clsSessionValue = 0;
+        var clsSessionEntries = [];
+        try {
+            var clsObserver = new PerformanceObserver(function(list) {
+                list.getEntries().forEach(function(entry) {
+                    if (entry.hadRecentInput) return; // user-triggered, not a UX issue
+                    var firstEntry = clsSessionEntries[0];
+                    var lastEntry = clsSessionEntries[clsSessionEntries.length - 1];
+                    if (
+                        firstEntry &&
+                        (entry.startTime - lastEntry.startTime) < 1000 &&
+                        (entry.startTime - firstEntry.startTime) < 5000
+                    ) {
+                        clsSessionValue += entry.value;
+                        clsSessionEntries.push(entry);
+                    } else {
+                        clsSessionValue = entry.value;
+                        clsSessionEntries = [entry];
+                    }
+                    if (clsSessionValue > clsValue) clsValue = clsSessionValue;
+                });
+            });
+            clsObserver.observe({ type: 'layout-shift', buffered: true });
+        } catch (err) { /* not supported in this browser */ }
+
+        // INP — simplified to the single worst interaction duration
+        // observed. The full spec percentile-ranks across *all*
+        // interactions for highly-interactive pages; this converges to
+        // the same value for a typical page with a handful of
+        // interactions and runs slightly pessimistic otherwise — see
+        // rum.py's docstring.
+        var inpValue = 0;
+        var inpSeen = false;
+        try {
+            var inpObserver = new PerformanceObserver(function(list) {
+                list.getEntries().forEach(function(entry) {
+                    inpSeen = true;
+                    if (entry.duration > inpValue) inpValue = entry.duration;
+                });
+            });
+            inpObserver.observe({ type: 'event', buffered: true, durationThreshold: 40 });
+        } catch (err) { /* not supported in this browser */ }
+
+        function reportAllVitals() {
+            if (lcpValue !== null) reportVital('LCP', Math.round(lcpValue));
+            if (clsSessionEntries.length) reportVital('CLS', clsValue);
+            if (inpSeen) reportVital('INP', Math.round(inpValue));
+        }
+
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') reportAllVitals();
+        });
+        window.addEventListener('pagehide', reportAllVitals);
+    }
+
+    // ─── JS error tracking ──────────────────────────────────────
+    // Sent immediately via fetch(keepalive) rather than batched or
+    // deferred to unload, since the page may keep running for a long
+    // time after an error and a developer wants to know sooner.
+    var JS_ERROR_URL = '/api/analytics/js-error/';
+    var MAX_ERRORS_PER_PAGE = 10; // guard against a runaway error loop
+    var errorsSentCount = 0;
+    var errorsSeen = {}; // per-page-load dedup: same error firing on every
+                          // animation frame shouldn't count as 10 reports
+
+    function reportJsError(message, filename, lineno, colno, stack) {
+        if (errorsSentCount >= MAX_ERRORS_PER_PAGE) return;
+        var key = message + '|' + filename + '|' + lineno;
+        if (errorsSeen[key]) return;
+        errorsSeen[key] = true;
+        errorsSentCount++;
+
+        var payload = {
+            message: String(message || 'Unknown error').slice(0, 500),
+            filename: filename ? String(filename).slice(0, 500) : '',
+            lineno: lineno || null,
+            colno: colno || null,
+            stack: stack ? String(stack).slice(0, 4000) : '',
+            path: window.location.pathname
+        };
+
+        var headers = { 'Content-Type': 'application/json' };
+        var csrfToken = getCsrfToken();
+        if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+
+        fetch(JS_ERROR_URL, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(payload),
+            keepalive: true
+        }).catch(function() { /* silent fail */ });
+    }
+
+    window.addEventListener('error', function(e) {
+        // Resource-load failures (an <img>/<script>/<link> failing to
+        // load) also fire a window 'error' event, but with no message —
+        // filter those out, this is for JS exceptions only.
+        if (!e.message) return;
+        reportJsError(e.message, e.filename, e.lineno, e.colno, e.error && e.error.stack);
+    });
+
+    window.addEventListener('unhandledrejection', function(e) {
+        var reason = e.reason;
+        var reasonMessage = reason && reason.message ? reason.message : String(reason);
+        var stack = reason && reason.stack ? reason.stack : '';
+        reportJsError('Unhandled promise rejection: ' + reasonMessage, '', null, null, stack);
+    });
 })();

@@ -5,6 +5,8 @@ from .views import (
     analytics_export, analytics_geography, analytics_event_api, analytics_events,
     analytics_billing, uploads, releases_page, admin_overview, bots_overview, about
 )
+from .views.events import analytics_js_error_api
+from .views import rum as rum_views
 from .views import server as server_views
 from .views import backup as backup_views
 from .views import security as security_views
@@ -29,6 +31,7 @@ app_name = 'analytics'
 # ─── Public API endpoints (no hardcoded path prefix) ──────────────
 api_urlpatterns = [
     path('event/', analytics_event_api, name='event_api'),
+    path('js-error/', analytics_js_error_api, name='js_error_api'),
     path('realtime/data/', analytics_realtime_data, name='realtime_data'),
     path('server/metrics/', server_views.api_server_metrics, name='api_server_metrics'),
     path('server/history/', server_views.api_server_history, name='api_server_history'),
@@ -60,6 +63,7 @@ dashboard_urlpatterns = [
     path('export/<str:export_type>/', analytics_export, name='export'),
     path('geography/', analytics_geography, name='geography'),
     path('events/', analytics_events, name='events'),
+    path('rum/', rum_views.rum_overview, name='rum'),
     path('billing/', analytics_billing, name='billing'),
     path('bots/', bots_overview, name='bots'),
 

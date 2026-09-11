@@ -1,0 +1,61 @@
+.vitals-card .stat-value {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.vitals-rating {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: var(--font-size-xs, 0.7rem);
+    font-weight: 600;
+    text-transform: capitalize;
+    letter-spacing: 0.02em;
+}
+
+.vitals-rating-good {
+    background: rgba(46, 160, 67, 0.15);
+    color: #2ea043;
+}
+
+.vitals-rating-needs-improvement {
+    background: rgba(230, 160, 30, 0.15);
+    color: #c9861f;
+}
+
+.vitals-rating-poor {
+    background: rgba(220, 60, 60, 0.15);
+    color: #dc3c3c;
+}
+
+.vitals-breakdown {
+    margin-top: 0.5rem;
+}
+
+.vitals-breakdown-bar {
+    display: flex;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    margin-bottom: 0.3rem;
+}
+
+.vitals-seg {
+    height: 100%;
+    display: block;
+}
+
+.vitals-seg-good { background: #2ea043; }
+.vitals-seg-needs-improvement { background: #c9861f; }
+.vitals-seg-poor { background: #dc3c3c; }
+
+.rum-error-message {
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
