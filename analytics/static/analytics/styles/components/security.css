@@ -2,18 +2,6 @@
    Analytics Dashboard – Security Center
    ============================================ */
 
-/* .security-page is the generic "stack of table-cards" wrapper reused
-   by every page that isn't chart-grid-based (Security Center, Uptime,
-   Compliance, Data Import, Scorecard, ...). Before this rule it had
-   no layout of its own — just a namespacing prefix for the selectors
-   below — so its children (.table-card, stat-grid, etc.) stacked with
-   zero space between them. */
-.security-page {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gap-lg);
-}
-
 .security-page .card-title {
     font-size: var(--font-size-md, 1rem);
     font-weight: 600;
@@ -153,45 +141,10 @@
     color: var(--analytics-text);
 }
 
-/* Minimal button set (self-contained so this page doesn't depend on
-   backup.css / about.css being loaded) */
-.btn {
-    display: inline-block;
-    border: 1px solid var(--analytics-border);
-    background: var(--analytics-surface);
-    color: var(--analytics-text);
-    border-radius: var(--radius-sm, 4px);
-    padding: 0.5rem 1rem;
-    font-size: var(--font-size-sm, 0.875rem);
-    cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.btn:hover {
-    border-color: var(--analytics-gold, var(--analytics-border));
-}
-
-.btn-sm {
-    padding: 0.3rem 0.65rem;
-    font-size: var(--font-size-xs, 0.75rem);
-}
-
-.btn-primary {
-    background: var(--analytics-gold, var(--analytics-surface));
-    color: var(--analytics-bg, #111);
-    border-color: transparent;
-}
-
-.btn-danger {
-    background: rgba(220, 60, 60, 0.12);
-    color: #dc3c3c;
-    border-color: rgba(220, 60, 60, 0.4);
-}
-
-.btn-danger:hover {
-    background: rgba(220, 60, 60, 0.22);
-}
-
-.btn-secondary {
-    background: transparent;
-}
+/* Button set moved to the shared analytics/styles/components/buttons.css,
+   loaded globally in base.html — this used to be a self-contained
+   copy (deliberately, per the old comment here) specifically so this
+   page didn't depend on backup.css/about.css being loaded. Now every
+   page loads buttons.css directly, so the duplication (and the color
+   drift it caused — this copy's .btn-danger was a different red than
+   backup.css's) is gone. */

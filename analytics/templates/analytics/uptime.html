@@ -127,3 +127,7 @@
 
 </div>
 {% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/security.js' %}"></script>
+{% endblock %}

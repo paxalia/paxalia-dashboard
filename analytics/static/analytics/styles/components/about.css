@@ -87,38 +87,8 @@
     justify-content: center;
 }
 
-.btn {
-    padding: var(--padding-sm) var(--padding-md);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium);
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--gap-xs);
-    transition: background 0.2s, border-color 0.2s;
-}
-
-.btn-primary {
-    background: var(--analytics-gold);
-    color: #000;
-    border: 1px solid var(--analytics-gold);
-}
-
-.btn-primary:hover {
-    background: var(--analytics-gold-hover);
-    border-color: var(--analytics-gold-hover);
-}
-
-.btn-secondary {
-    background: var(--analytics-surface);
-    color: var(--analytics-text);
-    border: 1px solid var(--analytics-border);
-}
-
-.btn-secondary:hover {
-    background: var(--analytics-border);
-}
+/* .btn/.btn-primary/.btn-secondary moved to the shared
+   analytics/styles/components/buttons.css, loaded globally. */
 
 .about-footer {
     margin-top: var(--margin-lg);
