@@ -1,3 +1,11 @@
+/* .rum-page had no layout rule of its own — its stat-grid/table-card
+   children stacked with zero gap between them. */
+.rum-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-lg);
+}
+
 .vitals-card .stat-value {
     display: flex;
     align-items: baseline;

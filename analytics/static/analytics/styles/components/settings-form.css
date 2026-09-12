@@ -54,8 +54,12 @@
 
 /* Success / info messages */
 .analytics-messages {
+    margin-top: var(--margin-md);
     margin-bottom: var(--margin-md);
     padding: 0 var(--padding-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm, 0.5rem);
 }
 
 .analytics-message {

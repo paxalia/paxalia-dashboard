@@ -2,6 +2,18 @@
    Analytics Dashboard – Security Center
    ============================================ */
 
+/* .security-page is the generic "stack of table-cards" wrapper reused
+   by every page that isn't chart-grid-based (Security Center, Uptime,
+   Compliance, Data Import, Scorecard, ...). Before this rule it had
+   no layout of its own — just a namespacing prefix for the selectors
+   below — so its children (.table-card, stat-grid, etc.) stacked with
+   zero space between them. */
+.security-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-lg);
+}
+
 .security-page .card-title {
     font-size: var(--font-size-md, 1rem);
     font-weight: 600;

@@ -109,3 +109,13 @@
     color: var(--analytics-text);
     margin-right: var(--gap-sm);
 }
+
+/* Same "stack of table-cards with no gap" bug as .security-page/.rum-page —
+   these three Phase 13 sub-pages never got a layout rule either. */
+.server-slow-queries,
+.server-queues,
+.server-deployments {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-lg);
+}

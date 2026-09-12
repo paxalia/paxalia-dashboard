@@ -149,7 +149,23 @@ class DailySiteStats(models.Model):
         verbose_name = "Daily Site Stats"
         verbose_name_plural = "Daily Site Stats"
         ordering = ['-date']
-        unique_together = [('site', 'date')]
+        # NOT unique_together=[('site','date')] — that never actually
+        # protected the site=NULL case (SQL treats every NULL as
+        # distinct from every other NULL for uniqueness), which is
+        # exactly what caused the "MultipleObjectsReturned" bug fixed
+        # in migration 0018. Two partial unique indexes replicate the
+        # intended rule correctly for both a real site and the
+        # NULL/unassigned bucket.
+        constraints = [
+            models.UniqueConstraint(
+                fields=['site', 'date'], condition=models.Q(site__isnull=False),
+                name='unique_dailysitestats_site_date',
+            ),
+            models.UniqueConstraint(
+                fields=['date'], condition=models.Q(site__isnull=True),
+                name='unique_dailysitestats_date_when_site_null',
+            ),
+        ]
 
     def __str__(self):
         return f"Stats for {self.site or 'all sites'} on {self.date}"
