@@ -1,0 +1,570 @@
+.stat-grid {
+    margin-bottom: var(--margin-lg) !important
+}
+
+.stat-grid + .chart-grid, .stat-grid + .table-card, .stat-grid + .setting-table-grid {
+    margin-top: 0 !important
+}
+
+.chart-grid, .table-card, .setting-table-grid {
+    min-width: 0
+}
+
+.chart-grid + .table-card, .chart-grid + .setting-table-grid, .table-card + .table-card, .setting-table-grid + .table-card {
+    margin-top: 0
+}
+
+.management-form {
+    display: grid !important;
+    width: 100%;
+    align-items: end;
+    gap: var(--gap-md)
+}
+
+.management-form--goal {
+    grid-template-columns:minmax(0, 2fr) minmax(180px, .9fr) minmax(0, 2fr) auto
+}
+
+.management-form--annotation {
+    grid-template-columns:minmax(160px, .7fr) minmax(0, 3fr) auto
+}
+
+.management-form--uptime {
+    grid-template-columns:minmax(180px, 1.4fr) minmax(250px, 2.2fr) 110px 130px 120px 120px auto
+}
+
+.management-form input:not([type="hidden"]), .management-form select, .management-form textarea {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box
+}
+
+.management-form .btn {
+    min-width: 96px;
+    width: 100%
+}
+
+.release-center-shell {
+    margin: 0
+}
+
+.release-center-shell + .upload-dropzone-card {
+    margin-top: 0
+}
+
+.upload-dropzone-card + .uploads-card {
+    margin-top: 0
+}
+
+@media (max-width: 1200px) {
+    .management-form--uptime {
+        grid-template-columns:repeat(3, minmax(0, 1fr))
+    }
+
+    .management-form--uptime .btn {
+        grid-column: 1/-1;
+        max-width: 160px
+    }
+
+    .management-form--goal {
+        grid-template-columns:repeat(2, minmax(0, 1fr))
+    }
+
+    .management-form--goal .btn {
+        grid-column: 1/-1;
+        max-width: 140px
+    }
+
+    .management-form--annotation {
+        grid-template-columns:1fr 2fr auto
+    }
+}
+
+@media (max-width: 760px) {
+    .management-form--uptime, .management-form--goal, .management-form--annotation {
+        grid-template-columns:1fr
+    }
+
+    .management-form--uptime .btn, .management-form--goal .btn, .management-form--annotation .btn {
+        grid-column: auto;
+        max-width: none
+    }
+
+    .stat-grid {
+        grid-template-columns:repeat(2, minmax(0, 1fr))
+    }
+}
+
+@media (max-width: 480px) {
+    .stat-grid {
+        grid-template-columns:1fr
+    }
+}
+
+/* -------------------------------------------------------------------------
+   Layout rhythm
+   ------------------------------------------------------------------------- */
+
+.analytics-container {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 28px 32px 40px;
+}
+
+.dashboard-content,
+.analytics-content,
+.dashboard-page,
+.security-page,
+.rum-page,
+.server-page,
+.settings-page {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.analytics-container > * + *,
+.dashboard-content > * + *,
+.analytics-content > * + *,
+.dashboard-page > * + *,
+.security-page > * + *,
+.rum-page > * + *,
+.server-page > * + *,
+.settings-page > * + * {
+    margin-top: 24px;
+}
+
+/* Filter bars should sit against the page rhythm, not double it. */
+.analytics-container > .filter-bar,
+.dashboard-content > .filter-bar,
+.security-page > .filter-bar {
+    margin-bottom: 24px;
+}
+
+/* -------------------------------------------------------------------------
+   Shared vertical stacks
+   ------------------------------------------------------------------------- */
+
+.analytics-stack,
+.security-stack,
+.server-stack,
+.rum-stack,
+.card-stack,
+.form-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.analytics-grid,
+.settings-table-grid,
+.setting-table-grid {
+    gap: 20px !important;
+}
+
+/* -------------------------------------------------------------------------
+   Stat cards
+   ------------------------------------------------------------------------- */
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px !important;
+}
+
+.stat-card {
+    min-width: 0;
+    margin: 0 !important;
+}
+
+/* Always create separation before the next major component. */
+.stat-grid + .chart-grid,
+.stat-grid + .table-card,
+.stat-grid + .table-grid,
+.stat-grid + .analytics-grid,
+.stat-grid + .security-grid,
+.stat-grid + .setting-table-grid,
+.stat-grid + .server-grid {
+    margin-top: 24px !important;
+}
+
+/* -------------------------------------------------------------------------
+   Charts
+   ------------------------------------------------------------------------- */
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px !important;
+}
+
+.chart-card + .chart-card {
+    margin-top: 0 !important;
+}
+
+.chart-title,
+.card-title {
+    margin-top: 0 !important;
+}
+
+.chart-wrap {
+    min-height: 260px;
+    margin-top: 16px !important;
+}
+
+.chart-empty,
+.chart-placeholder {
+    min-height: 180px;
+    display: grid;
+    place-items: center;
+    margin-top: 12px;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+/* -------------------------------------------------------------------------
+   Tables / table cards
+   ------------------------------------------------------------------------- */
+
+.table-card {
+    margin: 0 !important;
+}
+
+.table-card + .table-card {
+    margin-top: 0 !important;
+}
+
+.table-card > .card-title + .form-hint,
+.table-card > .card-title + p {
+    margin-top: 8px;
+}
+
+.analytics-table {
+    margin-top: 16px !important;
+}
+
+.analytics-table th,
+.analytics-table td {
+    vertical-align: middle;
+}
+
+.analytics-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.security-empty,
+.analytics-empty,
+.empty-state {
+    margin-top: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    border: 1px dashed var(--analytics-border);
+    border-radius: var(--radius-md);
+    background: var(--analytics-bg);
+}
+
+/* -------------------------------------------------------------------------
+   Forms: inputs, selects, textareas, checkboxes
+   ------------------------------------------------------------------------- */
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 40px;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    background: var(--analytics-bg);
+    color: var(--analytics-text);
+    font: inherit;
+    transition: border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select {
+    padding: 9px 12px;
+}
+
+textarea {
+    padding: 10px 12px;
+    resize: vertical;
+}
+
+select {
+    appearance: auto;
+    cursor: pointer;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):hover,
+select:hover,
+textarea:hover {
+    border-color: var(--analytics-text-dim);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--analytics-gold);
+    box-shadow: 0 0 0 3px color-mix(
+            in srgb,
+            var(--analytics-gold) 14%,
+            transparent
+    );
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--analytics-text-dim);
+    opacity: 0.8;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--analytics-gold);
+}
+
+label {
+    line-height: 1.35;
+}
+
+/* Common form layout selectors found throughout the dashboard. */
+.form-row,
+.form-group,
+.form-field,
+.settings-form-row,
+.filter-bar__field {
+    min-width: 0;
+}
+
+.form-row + .form-row,
+.form-group + .form-group,
+.form-field + .form-field {
+    margin-top: 16px;
+}
+
+.form-hint {
+    display: block;
+    margin-top: 6px !important;
+}
+
+/* -------------------------------------------------------------------------
+   Buttons
+   ------------------------------------------------------------------------- */
+
+.btn,
+button,
+input[type="submit"],
+input[type="button"] {
+    box-sizing: border-box;
+}
+
+button:not(.icon-button),
+.btn {
+    min-height: 38px;
+}
+
+.btn + .btn,
+button + .btn,
+.btn + button {
+    margin-left: 6px;
+}
+
+/* -------------------------------------------------------------------------
+   Filter bars
+   ------------------------------------------------------------------------- */
+
+.filter-bar {
+    margin: 0 !important;
+}
+
+.filter-bar__inner {
+    min-height: 44px;
+}
+
+.filter-bar__dates,
+.filter-bar__controls,
+.filter-bar__search {
+    min-width: 0;
+}
+
+.filter-bar__date,
+.filter-bar__search-input,
+.filter-bar select,
+.filter-bar input[type="text"],
+.filter-bar input[type="date"] {
+    min-height: 40px;
+}
+
+/* -------------------------------------------------------------------------
+   Topbar
+   ------------------------------------------------------------------------- */
+
+.dashboard-topbar {
+    box-sizing: border-box;
+    min-height: 76px;
+    padding: 16px 28px !important;
+}
+
+.dashboard-topbar__title {
+    min-width: 0;
+    gap: 4px !important;
+}
+
+.dashboard-page-title {
+    line-height: 1.2;
+}
+
+.dashboard-page-subtitle {
+    line-height: 1.45;
+}
+
+.topbar {
+    min-width: 0;
+}
+
+/* -------------------------------------------------------------------------
+   Sidebar
+   ------------------------------------------------------------------------- */
+
+.analytics-sidebar {
+    flex: 0 0 248px;
+    width: 248px;
+    max-width: 248px;
+    box-sizing: border-box;
+}
+
+.analytics-sidebar-link {
+    box-sizing: border-box;
+    min-height: 42px;
+    padding: 9px 12px;
+}
+
+.analytics-sidebar-section {
+    margin-bottom: 16px;
+}
+
+.analytics-sidebar-section + .analytics-sidebar-section {
+    margin-top: 12px;
+}
+
+/* Do not let compact nav icons determine the sidebar width. */
+.analytics-sidebar .icon {
+    flex: 0 0 20px;
+}
+
+.analytics-sidebar .icon svg {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* -------------------------------------------------------------------------
+   Server / security / operations pages
+   ------------------------------------------------------------------------- */
+
+.server-slow-queries,
+.server-queues,
+.server-deployments,
+.server-services,
+.server-processes,
+.server-network,
+.server-disk,
+.server-memory,
+.server-cpu,
+.security-panels {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.security-panel {
+    margin: 0 !important;
+}
+
+.security-page .setting-table-grid,
+.security-page .stat-grid {
+    margin: 0 !important;
+}
+
+.security-tabs,
+.security-tab-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.security-tab,
+.security-tab-button {
+    min-height: 38px;
+}
+
+/* -------------------------------------------------------------------------
+   Responsive
+   ------------------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+    .analytics-container {
+        padding: 24px 32px;
+    }
+
+    .analytics-sidebar {
+        flex-basis: 224px;
+        width: 224px;
+        max-width: 224px;
+    }
+
+    .chart-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .analytics-container {
+        padding: 16px 28px;
+    }
+
+    .dashboard-topbar {
+        min-height: auto;
+        padding: 14px 16px !important;
+    }
+
+    .analytics-sidebar {
+        flex-basis: 0;
+        width: auto;
+        max-width: none;
+    }
+
+    .stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .analytics-container > * + *,
+    .dashboard-content > * + *,
+    .analytics-content > * + *,
+    .security-page > * + *,
+    .server-page > * + * {
+        margin-top: 20px;
+    }
+}
+
+@media (max-width: 520px) {
+    .stat-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .btn + .btn,
+    button + .btn,
+    .btn + button {
+        margin-left: 0;
+        margin-top: 6px;
+    }
+}
+

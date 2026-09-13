@@ -1,6 +1,6 @@
 # paxalia-dashboard
 
-![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
 ![Django](https://img.shields.io/badge/django-5.0+-green.svg)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
@@ -35,27 +35,100 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 - [Project Structure](#project-structure)
 - [Contributing](#contributing)
 - [License](#license)
+- [Security Center](#security-center)
+- [Advanced Analytics](#advanced-analytics)
+- [Reporting & Sharing](#reporting--sharing)
+- [Paxalia API](#paxalia-api)
+- [Dependency Health](#dependency-health)
+- [Notifications & Alerts](#notifications--alerts)
+- [Multi-Site Analytics](#multi-site-analytics)
+- [Release Center](#release-center)
+- [Operational Commands](#operational-commands)
+- [Security & Privacy Model](#security--privacy-model)
 - [Credits](#credits)
 
 ---
 
 ## Why paxalia-dashboard
 
-|                        | Google Analytics | Other Django packages | **paxalia-dashboard**             |
-|------------------------|------------------|-----------------------|-----------------------------------|
-| Self‑hosted            | ❌                | ✅                     | ✅                                 |
-| No third‑party sharing | ❌                | ❌ (basic)             | ✅ (data never leaves your server) |
-| Full dashboard         | ✅                | ❌ (basic counters)    | ✅                                 |
-| World map              | ✅                | ❌                     | ✅                                 |
-| Event tracking         | ✅                | ❌                     | ✅                                 |
-| Billing dashboard      | ❌                | ❌                     | ✅                                 |
-| Server monitoring      | ❌                | ❌                     | ✅                                 |
-| Bot detection          | ❌                | ❌                     | ✅                                 |
-| Backup management      | ❌                | ❌                     | ✅                                 |
-| Themes                 | ❌                | ❌                     | ✅ (12 luxury themes)              |
-| Multi‑language + RTL   | ❌                | ❌                     | ✅ (5 languages, RTL support)      |
-| Offline map            | ❌                | ❌                     | ✅ (no CDN calls)                  |
-| One‑click CSV/JSON     | ❌                | ❌                     | ✅                                 |
+`paxalia-dashboard` is designed as a privacy-first, self-hosted analytics and operational observability layer for Django
+applications. It is broader than a simple page-view counter: the v3 platform combines product analytics, behavioral
+analysis, security visibility, server/runtime monitoring, uptime checks, release/deployment context, compliance tooling,
+reporting, sharing, API access, and operational utilities in one Django-native package.
+
+The comparison below keeps the original high-level positioning while making the breadth of the current platform
+explicit. Availability of features from competing products varies by product tier, plan, add-on, or deployment
+configuration.
+
+| Capability                                  | Google Analytics | Typical lightweight Django analytics package | **paxalia-dashboard** |
+|---------------------------------------------|-----------------:|---------------------------------------------:|----------------------:|
+| Self-hosted                                 |                ❌ |                                            ✅ |                     ✅ |
+| First-party data storage                    |                ❌ |                                            ✅ |                     ✅ |
+| No required third-party analytics collector |                ❌ |                                            ✅ |                     ✅ |
+| Django-native integration                   |                ❌ |                                            ✅ |                     ✅ |
+| Page views & sessions                       |                ✅ |                                            ✅ |                     ✅ |
+| Date-range analysis                         |                ✅ |                                            ✅ |                     ✅ |
+| Previous-period comparison                  |                ✅ |                                       Varies |                     ✅ |
+| Traffic sources / referrers                 |                ✅ |                                       Varies |                     ✅ |
+| Browser / OS / device breakdown             |                ✅ |                                       Varies |                     ✅ |
+| Offline GeoIP world map                     |                ❌ |                                         Rare |                     ✅ |
+| Country and city drill-down                 |                ✅ |                                         Rare |                     ✅ |
+| Custom events                               |                ✅ |                                       Varies |                     ✅ |
+| API traffic separation                      |           Varies |                                         Rare |                     ✅ |
+| API endpoint analytics                      |           Varies |                                         Rare |                     ✅ |
+| Real-time visitor monitoring                |                ✅ |                                         Rare |                     ✅ |
+| Broken-link analysis                        |           Varies |                                         Rare |                     ✅ |
+| Bot traffic classification                  |           Varies |                                         Rare |                     ✅ |
+| Search-engine crawler classification        |           Varies |                                         Rare |                     ✅ |
+| AI crawler classification                   |           Varies |                                         Rare |                     ✅ |
+| Social-preview bot classification           |           Varies |                                         Rare |                     ✅ |
+| Malicious/scanner classification            |           Varies |                                         Rare |                     ✅ |
+| Goals                                       |                ✅ |                                         Rare |                     ✅ |
+| Funnel analysis                             |                ✅ |                                         Rare |                     ✅ |
+| Behavioral segments                         |                ✅ |                                         Rare |                     ✅ |
+| Campaign / UTM analysis                     |                ✅ |                                         Rare |                     ✅ |
+| Cohort retention                            |                ✅ |                                         Rare |                     ✅ |
+| Chart annotations                           |           Varies |                                         Rare |                     ✅ |
+| Core Web Vitals / RUM                       |                ✅ |                                         Rare |                     ✅ |
+| JavaScript error tracking                   |                ✅ |                                         Rare |                     ✅ |
+| Scheduled uptime checks                     |           Varies |                                         Rare |                     ✅ |
+| Incident history                            |           Varies |                                         Rare |                     ✅ |
+| Server CPU monitoring                       |                ❌ |                                            ❌ |                     ✅ |
+| Server memory monitoring                    |                ❌ |                                            ❌ |                     ✅ |
+| Server disk monitoring                      |                ❌ |                                            ❌ |                     ✅ |
+| Server network monitoring                   |                ❌ |                                            ❌ |                     ✅ |
+| System service monitoring                   |                ❌ |                                            ❌ |                     ✅ |
+| Process monitoring                          |                ❌ |                                            ❌ |                     ✅ |
+| Slow-query monitoring                       |                ❌ |                                            ❌ |                     ✅ |
+| Celery queue monitoring                     |                ❌ |                                            ❌ |                     ✅ |
+| Deployment tracking                         |                ❌ |                                            ❌ |                     ✅ |
+| Security Center                             |                ❌ |                                         Rare |                     ✅ |
+| Login activity monitoring                   |           Varies |                                         Rare |                     ✅ |
+| Active-session visibility                   |           Varies |                                         Rare |                     ✅ |
+| IP blocklist                                |                ❌ |                                            ❌ |                     ✅ |
+| CSP violation reporting                     |                ❌ |                                         Rare |                     ✅ |
+| Security scorecard                          |                ❌ |                                            ❌ |                     ✅ |
+| Dependency health                           |                ❌ |                                            ❌ |                     ✅ |
+| MFA / 2FA dashboard integration             |           Varies |                                         Rare |                     ✅ |
+| Consent mode                                |           Varies |                                         Rare |                     ✅ |
+| Data-retention controls                     |           Varies |                                         Rare |                     ✅ |
+| Forget-this-visitor deletion                |           Varies |                                         Rare |                     ✅ |
+| Historical GA/Plausible import              |           Varies |                                         Rare |                     ✅ |
+| Scheduled email reports                     |           Varies |                                         Rare |                     ✅ |
+| PDF report delivery                         |           Varies |                                         Rare |                     ✅ |
+| Public read-only share links                |           Varies |                                         Rare |                     ✅ |
+| Scoped read API keys                        |                ✅ |                                         Rare |                     ✅ |
+| Documented API reference                    |                ✅ |                                         Rare |                     ✅ |
+| Slack / Discord command surface             |           Varies |                                         Rare |                     ✅ |
+| Backup management                           |                ❌ |                                            ❌ |                     ✅ |
+| Chunked upload/download support             |                ❌ |                                            ❌ |                     ✅ |
+| Multi-site analytics                        |           Varies |                                         Rare |                     ✅ |
+| Five-language UI + RTL support              |           Varies |                                         Rare |                     ✅ |
+| Bundled/offline charts and map assets       |                ❌ |                                         Rare |                     ✅ |
+
+The goal is not to replace every capability of a large analytics suite. The goal is to give a Django team a **single,
+inspectable, self-hosted operational analytics surface** where product analytics and application/server context can live
+together without making third-party analytics infrastructure mandatory.
 
 ---
 
@@ -71,7 +144,9 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
 - **Real‑time Monitoring** – watch visitors arrive live with a configurable refresh interval.
 - **Server Monitoring** – real‑time system metrics: CPU, memory, disk, network, services, processes – all directly from
   your server, no external agents.
-- **Bot Traffic Detection** – automatically identify and separate scanner/malicious traffic *and* known crawlers (search engines, AI crawlers, social-preview bots, SEO tools) from real user visits; view them broken out by category on a dedicated
+- **Bot Traffic Detection** – automatically identify and separate scanner/malicious traffic *and* known crawlers (search
+  engines, AI crawlers, social-preview bots, SEO tools) from real user visits; view them broken out by category on a
+  dedicated
   Bots page with its own analytics.
 - **Backup Management** – configure paths to back up, set a schedule, and create/restore backups from the dashboard.
   Chunked download for large archives.
@@ -89,6 +164,35 @@ Drop it into any Django project and get a beautiful, full‑featured analytics d
   `PAXALIA_DASHBOARD` dict.
 - **Configurable Data Handling** – IP address storage (raw by default, or SHA256-hashed if you turn on anonymization),
   and the anonymous session cookie, are both configurable in Settings; all data stays on your server regardless.
+- **Goals, Funnels & Segments** – define conversion goals, multi-step funnels, and reusable behavioral segments for
+  deeper product analysis.
+- **Campaign & UTM Analysis** – capture campaign parameters and compare traffic and conversion behavior by campaign
+  source, medium, and campaign.
+- **Cohort Retention** – analyze visitor retention cohorts over time instead of looking only at aggregate traffic.
+- **Chart Annotations** – mark deployments, campaigns, incidents, and other important dates directly on the analytics
+  timeline.
+- **Broken Links** – identify paths returning 404 responses, their frequency, and referring pages when available.
+- **Real User Monitoring (RUM)** – collect LCP, CLS, and INP field data plus browser-side JavaScript errors without a
+  separate tracking product.
+- **Uptime Monitoring** – schedule HTTP checks, track status history, and keep transition-based incident records.
+- **Security Center** – inspect login activity, active sessions, IP blocklists, audit/security signals, CSP violations,
+  and security posture.
+- **Security Scorecard** – surface security findings and configuration posture in one dashboard.
+- **Dependency Health** – inspect the package's direct/transitive runtime dependency closure and progressively compare
+  installed versions with upstream releases.
+- **Compliance Controls** – optional consent gating, configurable retention periods, and visitor-deletion tooling.
+- **Reporting & Sharing** – schedule report delivery and create protected public share links for selected dashboard
+  views.
+- **Paxalia API** – use scoped API keys for ingestion and read access to summaries, page views, and events.
+- **Slack / Discord Commands** – query high-level analytics summaries from supported chat platforms.
+- **Historical Data Import** – import aggregate GA/Plausible CSV history without requiring OAuth credentials or
+  vendor-specific API clients.
+- **Multi-site Analytics** – track multiple configured domains/sites within one dashboard and filter analytics by site.
+- **Release Center** – manage release artifacts and connect deployment activity with analytics annotations.
+- **Server Operations** – monitor CPU, memory, disk, network, services, processes, slow queries, Celery queues, and
+  deployments directly from the host.
+- **Operational Automation** – management commands cover aggregation, anomaly detection, backups, cleanup, retention,
+  deployment tracking, server snapshots, uptime checks, and scheduled reports.
 - **Self‑Contained** – no external CDN calls for maps, charts, or fonts – everything is bundled.
 
 ---
@@ -121,7 +225,7 @@ pip install paxalia-dashboard
 ```python
 INSTALLED_APPS = [
     # ...
-    'analytics',
+    'paxalia',
 ]
 ```
 
@@ -135,7 +239,7 @@ In your project’s root `urls.py`:
 ```python
 from django.urls import path, include
 from django.views.i18n import set_language
-from analytics.views.events import analytics_event_api
+from paxalia.views.events import analytics_event_api
 
 # Choose a secret path for your dashboard
 DASHBOARD_URL = 'insights/'  # or a random string
@@ -143,10 +247,10 @@ DASHBOARD_URL = 'insights/'  # or a random string
 urlpatterns = [
     # ...
     # Public event API (hardcoded path, matches JavaScript)
-    path('api/analytics/event/', analytics_event_api, name='event_api'),
+    path('api/paxalia/event/', analytics_event_api, name='event_api'),
 
     # Secret dashboard (everything else)
-    path(DASHBOARD_URL, include('analytics.urls')),
+    path(DASHBOARD_URL, include('paxalia.urls')),
 
     # Required for language switching
     path('i18n/setlang/', set_language, name='set_language'),
@@ -155,12 +259,12 @@ urlpatterns = [
 
 ### 4. Add the analytics middleware
 
-In `settings.py`, add `analytics.middleware.AnalyticsMiddleware` to the bottom of `MIDDLEWARE`:
+In `settings.py`, add `paxalia.middleware.AnalyticsMiddleware` to the bottom of `MIDDLEWARE`:
 
 ```python
 MIDDLEWARE = [
     # ...
-    'analytics.middleware.AnalyticsMiddleware',
+    'paxalia.middleware.AnalyticsMiddleware',
 ]
 ```
 
@@ -170,11 +274,11 @@ Without it, no data will appear in the dashboard.
 ### 5. Run migrations
 
 ```bash
-python manage.py migrate analytics
+python manage.py migrate paxalia
 ```
 
 > **Note:** The package includes a clean `0001_initial.py` migration. If you're upgrading from an older version,
-> you should run `python manage.py migrate analytics` to apply the latest schema. The migration is
+> you should run `python manage.py migrate paxalia` to apply the latest schema. The migration is
 > database-agnostic and works with SQLite, PostgreSQL, MySQL, and others.
 
 ### 6. Update your base.html for CSP compliance
@@ -190,7 +294,7 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 # ...
-                'analytics.context_processors.analytics_config',
+                'paxalia.context_processors.analytics_config',
                 'csp.context_processors.nonce',
             ],
         },
@@ -230,7 +334,7 @@ CONTENT_SECURITY_POLICY = {
 ```python
 < script
 nonce = "{{ request.csp_nonce }}"
-src = "{% static 'analytics/scripts/analytics-events.js' %}" > < / script >
+src = "{% static 'paxalia/scripts/paxalia-events.js' %}" > < / script >
 ```
 
 ### 7. Compile translations (optional)
@@ -242,7 +346,7 @@ python manage.py compilemessages -l es -l ar -l zh-hans -l pt-br
 ### 8. Download the GeoIP database (required for the geography page)
 
 Download GeoLite2‑City.mmdb (free) from MaxMind
-and place it in the directory specified by GEOIP_PATH (default: analytics/geoip/ inside the package).
+and place it in the directory specified by GEOIP_PATH (default: paxalia/geoip/ inside the package).
 
 ### 9. Start the server
 
@@ -274,45 +378,130 @@ python manage.py create_backup
 
 ## Configuration
 
-All settings go into your settings.py under a single PAXALIA_DASHBOARD dictionary.
+All dashboard behavior is configured through a single `PAXALIA_DASHBOARD` dictionary in the host project's
+`settings.py`. The package reads this dictionary, merges it with its built-in defaults, and keeps optional integrations
+disabled unless you explicitly enable/configure them.
+
+The complete current configuration surface is:
 
 ```python
 PAXALIA_DASHBOARD = {
-    # Sidebar sections to show (order matters)
+    # ── Navigation ───────────────────────────────────────────────
     'SIDEBAR_SECTIONS': [
-        'overview', 'pages', 'api', 'traffic', 'realtime',
-        'geography', 'events', 'billing', 'releases', 'settings',
-        'bots', 'backups'
+        'overview', 'pages', 'api', 'traffic', 'realtime', 'bots',
+        'geography', 'events', 'billing', 'releases', 'backups', 'security',
+        'sites', 'broken_links', 'goals', 'funnels', 'segments', 'campaigns',
+        'annotations', 'cohorts', 'api_keys', 'reports', 'share_links',
+        'notifications', 'rum', 'uptime', 'compliance', 'data_import', 'settings',
     ],
 
-    # Prefix used to identify API calls (used in stats)
+    # ── Analytics / GeoIP ───────────────────────────────────────
     'API_PATH_PREFIX': '/api/',
+    'GEOIP_PATH': None,
+    'DEFAULT_ANONYMIZE_IP': False,
+    'DEFAULT_IGNORED_PREFIXES': ['/admin/', '/static/', '/media/'],
+    'DEFAULT_IGNORED_EXTENSIONS': [
+        '.css', '.js', '.png', '.jpg', '.svg', '.ico', '.woff2',
+    ],
+    'DEFAULT_REALTIME_REFRESH': 30,
+    'DEFAULT_SEARCH_QUERY_PARAMS': ['q', 'search', 'query'],
 
-    # Path to the MaxMind GeoLite2‑City.mmdb file
-    'GEOIP_PATH': None,  # None = use analytics/geoip/ inside the package
-
-    # Billing models (optional – enable 'billing' in SIDEBAR_SECTIONS)
+    # ── Billing integration ────────────────────────────────────
     'BILLING_INVOICE_MODEL': 'billing.BillingInvoice',
     'BILLING_USER_PLAN_MODEL': 'billing.UserBilling',
     'BILLING_DONATION_MODEL': 'billing.Donation',
 
-    # Default middleware fallbacks (when no AnalyticsSettings row exists)
-    'DEFAULT_ANONYMIZE_IP': False,
-    'DEFAULT_IGNORED_PREFIXES': ['/admin/', '/static/', '/media/'],
-    'DEFAULT_IGNORED_EXTENSIONS': ['.css', '.js', '.png', '.jpg', '.svg', '.ico', '.woff2'],
-    'DEFAULT_REALTIME_REFRESH': 30,
-
+    # ── Uploads / imports ───────────────────────────────────────
     'UPLOADS_INCOMING_ROOT': None,
-    'UPLOAD_CHUNK_SIZE_MB': 5,  # optional, default 5
-    'UPLOAD_MAX_FILE_SIZE_MB': 2048,  # optional, default 2048 (2GB)
+    'UPLOAD_CHUNK_SIZE_MB': 5,
+    'UPLOAD_MAX_FILE_SIZE_MB': 2048,
+    'DATA_IMPORT_MAX_FILE_SIZE_MB': 100,
+    'UPLOAD_SESSION_TTL_HOURS': 24,
+
+    # ── Security / IP resolution ───────────────────────────────
+    'TRUST_X_FORWARDED_FOR': False,
+    'TRUSTED_PROXY_COUNT': 1,
+
+    # ── Security Center ────────────────────────────────────────
+    'SECURITY_TRACK_ONLY_STAFF': True,
+    'SECURITY_LOG_RETENTION_DAYS': 180,
+    'SECURITY_FAILED_LOGIN_THRESHOLD': 5,
+    'SECURITY_FAILED_LOGIN_WINDOW_MINUTES': 15,
+    'SECURITY_ALERT_EMAILS': [],
+    'SECURITY_ALERT_WEBHOOK_URL': None,
+    'BACKUP_REAUTH_MINUTES': 15,
+
+    # ── Server / operations ─────────────────────────────────────
+    'SERVER_METRIC_RETENTION_DAYS': 7,
+    'SLOW_QUERY_THRESHOLD_MS': 100,
+    'CELERY_APP_PATH': None,
+
+    # ── Compliance ──────────────────────────────────────────────
+    'CONSENT_MODE_ENABLED': False,
+    'CONSENT_COOKIE_NAME': 'analytics_consent',
+    'CONSENT_COOKIE_GRANTED_VALUE': 'granted',
+    'DATA_RETENTION_DAYS': {},
+
+    # ── Slack / Discord ────────────────────────────────────────
+    'SLACK_SIGNING_SECRET': None,
+    'DISCORD_PUBLIC_KEY': None,
+
+    # ── Multi-site ──────────────────────────────────────────────
+    'AUTO_CREATE_SITES': False,
+
+    # ── Anomaly detection ──────────────────────────────────────
+    'ANOMALY_ALERT_THRESHOLD_PERCENT': 30,
 }
 ```
 
-Important: If you enable the 'billing' section, the corresponding models must exist and be importable.
+### Configuration groups
+
+**Navigation:** `SIDEBAR_SECTIONS` controls which dashboard areas are exposed and in what order. Keep a section disabled
+when the corresponding integration is not configured, especially optional billing.
+
+**Analytics:** `API_PATH_PREFIX` identifies API traffic, `GEOIP_PATH` points to the MaxMind GeoLite2-City database, the
+default ignored prefixes/extensions prevent static/admin traffic from polluting analytics, `DEFAULT_REALTIME_REFRESH`
+controls the live page refresh interval, and `DEFAULT_SEARCH_QUERY_PARAMS` controls common search-query parameter names.
+
+**Billing:** `BILLING_INVOICE_MODEL`, `BILLING_USER_PLAN_MODEL`, and `BILLING_DONATION_MODEL` point to models in the
+host project. The dashboard does not own your billing data model.
+
+**Uploads/imports:** `UPLOADS_INCOMING_ROOT` controls the staging location; `UPLOAD_CHUNK_SIZE_MB` and
+`UPLOAD_MAX_FILE_SIZE_MB` control upload behavior; `DATA_IMPORT_MAX_FILE_SIZE_MB` limits historical CSV imports;
+`UPLOAD_SESSION_TTL_HOURS` controls how long incomplete upload sessions are retained.
+
+**Proxy/IP trust:** only enable `TRUST_X_FORWARDED_FOR` when a reverse proxy you control sets `X-Forwarded-For`.
+`TRUSTED_PROXY_COUNT` controls the trusted hop count. Do not blindly trust client-supplied forwarding headers.
+
+**Security:** login tracking defaults to privileged accounts only; failed-login thresholds, retention, security alert
+destinations, and backup re-authentication are configurable.
+
+**Operations:** `SERVER_METRIC_RETENTION_DAYS` controls historical server snapshots, `SLOW_QUERY_THRESHOLD_MS` controls
+slow-query capture, and `CELERY_APP_PATH` points to the host application's Celery instance when queue monitoring is
+enabled.
+
+**Compliance:** consent mode is disabled by default. When enabled, tracking waits for the configured consent cookie.
+`DATA_RETENTION_DAYS` is empty by default; specify only the data types you explicitly want automatically pruned.
+
+**Chat integrations:** Slack signing secrets and the Discord public key are optional. Endpoints remain unavailable until
+their credentials are configured.
+
+**Multi-site:** `AUTO_CREATE_SITES` is disabled by default so unknown hostnames do not silently create database rows.
+
+**Anomaly detection:** a traffic change larger than `ANOMALY_ALERT_THRESHOLD_PERCENT` versus the comparable prior-week
+day produces an anomaly alert.
+
+### Host-project settings beyond `PAXALIA_DASHBOARD`
+
+The package also integrates with standard Django settings for: `INSTALLED_APPS`, `MIDDLEWARE`, `TEMPLATES`,
+database/cache configuration, email delivery, `CSRF_TRUSTED_ORIGINS`, CORS, CSP, session/cookie security, and ASGI/WSGI.
+Those settings belong to the host project rather than the package's `PAXALIA_DASHBOARD` dict.
+
+---
 
 ### Event API Path
 
-The event API is hardcoded in JavaScript at `/api/analytics/event/`. This is intentional:
+The event API is hardcoded in JavaScript at `/api/paxalia/event/`. This is intentional:
 
 - **The dashboard URL stays secret** – never exposed in client code.
 - **The event API is public** – accepts anonymous data only.
@@ -321,42 +510,105 @@ The event API is hardcoded in JavaScript at `/api/analytics/event/`. This is int
 If you want to change the event API path, you must update:
 
 1. The URL pattern in your project's `urls.py`
-2. The `EVENT_URL` variable in `analytics/static/analytics/scripts/analytics-events.js`
+2. The `EVENT_URL` variable in `paxalia/static/paxalia/scripts/analytics-events.js`
+
+---
+
+## Middleware Integration
+
+The package provides three middleware classes. They are deliberately split by responsibility so you can enable the
+minimum set required by your deployment.
+
+### Required: AnalyticsMiddleware
+
+```python
+MIDDLEWARE = [
+    # ...
+    'paxalia.middleware.AnalyticsMiddleware',
+]
+```
+
+`AnalyticsMiddleware` records page views, resolves sites, classifies bot/API traffic, applies configured ignore rules,
+and feeds the dashboard's daily and session analytics.
+
+### Optional: SecurityBlockMiddleware
+
+Place this **before** `AnalyticsMiddleware` if you want blocked IPs rejected before they are recorded as analytics
+traffic:
+
+```python
+MIDDLEWARE = [
+    # ...
+    'paxalia.middleware.SecurityBlockMiddleware',
+    'paxalia.middleware.AnalyticsMiddleware',
+]
+```
+
+Blocked-IP lookups are briefly cached so the blocklist does not add an uncached database query to every request.
+
+### Optional: SlowQueryMiddleware
+
+```python
+MIDDLEWARE = [
+    # ...
+    'paxalia.middleware.SlowQueryMiddleware',
+    'paxalia.middleware.AnalyticsMiddleware',
+]
+```
+
+Queries at or above `SLOW_QUERY_THRESHOLD_MS` are recorded in `SlowQuery`. The middleware uses Django's query execution
+wrapper and guards its own insert so it does not recursively record itself.
+
+### Recommended ordering
+
+When both optional middleware classes are enabled, the package's intended ordering is:
+
+```python
+MIDDLEWARE = [
+    # security / proxy / Django middleware ...
+    'paxalia.middleware.SecurityBlockMiddleware',
+    'paxalia.middleware.SlowQueryMiddleware',
+    'paxalia.middleware.AnalyticsMiddleware',
+]
+```
+
+`SecurityBlockMiddleware` should run before analytics so denied traffic never becomes a page-view record.
+`SlowQueryMiddleware` can wrap the request independently of analytics tracking.
 
 ---
 
 ## Dashboard Pages
 
-| Page             | URL                  | What it shows                                                                                                                                            |
-|------------------|----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Overview         | `/`                  | Today/yesterday views, unique visitors, sessions, bounce rate, pages/session, API calls, top page, 30‑day trend chart, top‑10 bar chart, top pages table |
-| Pages            | `/pages/`            | All tracked pages with view counts, search by path, pagination, links to per‑page detail                                                                 |
-| Page Detail      | `/pages/…/`          | 30‑day view chart for a single page with compare toggle                                                                                                  |
-| API              | `/api/`              | API call counts today/yesterday, 30‑day API chart, top endpoints, status‑code distribution                                                               |
-| Traffic          | `/traffic/`          | Top referrers, browsers, operating systems, device types                                                                                                 |
-| Geography        | `/geography/`        | Offline world map with drill‑down, country table, top cities (click a country to filter cities)                                                          |
-| Events           | `/events/`           | Custom events: today/yesterday counts, daily chart, top categories, top actions, top labels, events by page, recent events feed                          |
-| Real User Monitoring | `/rum/`          | Core Web Vitals (LCP/CLS/INP) at the 75th percentile with good/needs-improvement/poor breakdown, top JavaScript errors |
-| Uptime Monitoring | `/uptime/`          | Monitor list with current status and uptime %, add/pause/delete monitors, recent incident log |
-| Compliance       | `/compliance/`       | Consent-mode and retention status, "forget this visitor" deletion tool                                                                                   |
-| Data Import      | `/import/`           | Upload a GA/Plausible CSV export to backfill DailySiteStats for dates before you started tracking                                                       |
-| Billing          | `/billing/`          | (optional) Total revenue, today/month revenue, active subscriptions, donations, daily income chart, top plans, recent transactions, MRR/ARR trend, churn, failed-payment tracking |
-| Real‑time        | `/realtime/`         | Live visitor count (last 5 min), unique IPs, recent page views table with configurable refresh                                                           |
-| Server Overview  | `/server/overview/`  | System health snapshot: CPU, memory, disk, network usage with live charts                                                                                |
-| Server CPU       | `/server/cpu/`       | Detailed CPU usage per core, historical chart, load average                                                                                              |
-| Server Memory    | `/server/memory/`    | RAM and swap usage with doughnut chart                                                                                                                   |
-| Server Disk      | `/server/disk/`      | Partition usage bars and I/O history                                                                                                                     |
-| Server Network   | `/server/network/`   | Interface statistics and network traffic chart                                                                                                           |
-| Server Services  | `/server/services/`  | List of running systemd services                                                                                                                         |
-| Server Processes | `/server/processes/` | Active process list sorted by CPU usage                                                                                                                  |
-| Server Slow Queries | `/server/slow-queries/` | Queries recorded by the opt-in SlowQueryMiddleware, over a configurable threshold |
-| Server Queues    | `/server/queues/`    | Celery worker and task status (if CELERY_APP_PATH is configured)                                                                                         |
-| Server Deployments | `/server/deployments/` | Log of recorded deployments (manage.py record_deployment), each creating a matching Overview chart annotation |
-| Settings         | `/settings/`         | IP anonymisation, ignored paths/extensions, refresh interval, theme selector, language selector                                                          |
-| Admin Overview   | `/admin-overview/`   | User registrations, content creation, and login activity charts                                                                                          |
-| Bot Traffic      | `/bots/`             | Total bot requests, daily bot charts, top bot paths, bot requests by country, bot category breakdown (search engine/AI crawler/social preview/SEO tool/unknown/malicious) |
-| Backups          | `/backups/`          | Configure backup paths, storage, schedule, and retention; create, download, and delete backups                                                           |
-| About            | `/about/`            | The story behind the project, the developer, and support options                                                                                         |
+| Page                 | URL                     | What it shows                                                                                                                                                                     |
+|----------------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Overview             | `/`                     | Today/yesterday views, unique visitors, sessions, bounce rate, pages/session, API calls, top page, 30‑day trend chart, top‑10 bar chart, top pages table                          |
+| Pages                | `/pages/`               | All tracked pages with view counts, search by path, pagination, links to per‑page detail                                                                                          |
+| Page Detail          | `/pages/…/`             | 30‑day view chart for a single page with compare toggle                                                                                                                           |
+| API                  | `/api/`                 | API call counts today/yesterday, 30‑day API chart, top endpoints, status‑code distribution                                                                                        |
+| Traffic              | `/traffic/`             | Top referrers, browsers, operating systems, device types                                                                                                                          |
+| Geography            | `/geography/`           | Offline world map with drill‑down, country table, top cities (click a country to filter cities)                                                                                   |
+| Events               | `/events/`              | Custom events: today/yesterday counts, daily chart, top categories, top actions, top labels, events by page, recent events feed                                                   |
+| Real User Monitoring | `/rum/`                 | Core Web Vitals (LCP/CLS/INP) at the 75th percentile with good/needs-improvement/poor breakdown, top JavaScript errors                                                            |
+| Uptime Monitoring    | `/uptime/`              | Monitor list with current status and uptime %, add/pause/delete monitors, recent incident log                                                                                     |
+| Compliance           | `/compliance/`          | Consent-mode and retention status, "forget this visitor" deletion tool                                                                                                            |
+| Data Import          | `/import/`              | Upload a GA/Plausible CSV export to backfill DailySiteStats for dates before you started tracking                                                                                 |
+| Billing              | `/billing/`             | (optional) Total revenue, today/month revenue, active subscriptions, donations, daily income chart, top plans, recent transactions, MRR/ARR trend, churn, failed-payment tracking |
+| Real‑time            | `/realtime/`            | Live visitor count (last 5 min), unique IPs, recent page views table with configurable refresh                                                                                    |
+| Server Overview      | `/server/overview/`     | System health snapshot: CPU, memory, disk, network usage with live charts                                                                                                         |
+| Server CPU           | `/server/cpu/`          | Detailed CPU usage per core, historical chart, load average                                                                                                                       |
+| Server Memory        | `/server/memory/`       | RAM and swap usage with doughnut chart                                                                                                                                            |
+| Server Disk          | `/server/disk/`         | Partition usage bars and I/O history                                                                                                                                              |
+| Server Network       | `/server/network/`      | Interface statistics and network traffic chart                                                                                                                                    |
+| Server Services      | `/server/services/`     | List of running systemd services                                                                                                                                                  |
+| Server Processes     | `/server/processes/`    | Active process list sorted by CPU usage                                                                                                                                           |
+| Server Slow Queries  | `/server/slow-queries/` | Queries recorded by the opt-in SlowQueryMiddleware, over a configurable threshold                                                                                                 |
+| Server Queues        | `/server/queues/`       | Celery worker and task status (if CELERY_APP_PATH is configured)                                                                                                                  |
+| Server Deployments   | `/server/deployments/`  | Log of recorded deployments (manage.py record_deployment), each creating a matching Overview chart annotation                                                                     |
+| Settings             | `/settings/`            | IP anonymisation, ignored paths/extensions, refresh interval, theme selector, language selector                                                                                   |
+| Admin Overview       | `/admin-overview/`      | User registrations, content creation, and login activity charts                                                                                                                   |
+| Bot Traffic          | `/bots/`                | Total bot requests, daily bot charts, top bot paths, bot requests by country, bot category breakdown (search engine/AI crawler/social preview/SEO tool/unknown/malicious)         |
+| Backups              | `/backups/`             | Configure backup paths, storage, schedule, and retention; create, download, and delete backups                                                                                    |
+| About                | `/about/`               | The story behind the project, the developer, and support options                                                                                                                  |
 
 All pages support date‑range filtering with one‑click presets (Today, Yesterday, Last 7 days, Last 30 days, This
 month).  
@@ -378,7 +630,7 @@ code directly into your project.
 
 ```html
 
-<script src="{% static 'analytics/scripts/analytics-events.js' %}"></script>
+<script src="{% static 'paxalia/scripts/analytics-events.js' %}"></script>
 ```
 
 **Note:** The default prefix is `/insights/`. If you changed it in your `urls.py`, replace `YOUR_PREFIX` in the script
@@ -421,7 +673,8 @@ All events appear in the Events dashboard with full date‑range filtering, comp
 
 ### Event API Path
 
-The event tracking script uses **hardcoded** URLs: `/api/analytics/event/` and (since Real User Monitoring, below) `/api/analytics/js-error/`. This is intentional:
+The event tracking script uses **hardcoded** URLs: `/api/paxalia/event/` and (since Real User Monitoring, below)
+`/api/paxalia/js-error/`. This is intentional:
 
 - It keeps the dashboard URL secret.
 - It makes the JavaScript simple and fast.
@@ -430,7 +683,7 @@ The event tracking script uses **hardcoded** URLs: `/api/analytics/event/` and (
 If you need to change these paths, update:
 
 1. The URL patterns in your project's `urls.py`
-2. The `EVENT_URL` and `JS_ERROR_URL` variables in `analytics/static/analytics/scripts/analytics-events.js`
+2. The `EVENT_URL` and `JS_ERROR_URL` variables in `paxalia/static/paxalia/scripts/analytics-events.js`
 
 ---
 
@@ -542,7 +795,7 @@ Then, on the pages you track, include the new template tag immediately before th
 ```html
 {% load analytics_tags %}
 {% analytics_consent_config %}
-<script src="{% static 'analytics/scripts/analytics-events.js' %}"></script>
+<script src="{% static 'paxalia/scripts/analytics-events.js' %}"></script>
 ```
 
 Your own consent-banner/CMP JavaScript is responsible for setting the cookie once a visitor accepts — this package
@@ -580,7 +833,7 @@ Empty by default — nothing is deleted unless you explicitly opt a data type in
 others:
 
 ```bash
-0 3 * * * cd /path/to/project && python manage.py prune_analytics_data >> /var/log/prune-analytics.log 2>&1
+0 3 * * * cd /path/to/project && python manage.py prune_analytics_data >> /var/log/prune-paxalia.log 2>&1
 ```
 
 ### Forget This Visitor
@@ -634,12 +887,12 @@ hits from an aggregate export.
 
 Metric mapping (documented, not guessed silently):
 
-| Export column | Lands in |
-|---|---|
-| views / pageviews | `total_views` |
-| visitors / users | `unique_ips` (closest available field — not literally an IP count, see below) |
-| sessions | `total_sessions` |
-| bounce rate (%) | `bounces`, computed as `round(bounce_rate / 100 * sessions)` when both are present |
+| Export column     | Lands in                                                                           |
+|-------------------|------------------------------------------------------------------------------------|
+| views / pageviews | `total_views`                                                                      |
+| visitors / users  | `unique_ips` (closest available field — not literally an IP count, see below)      |
+| sessions          | `total_sessions`                                                                   |
+| bounce rate (%)   | `bounces`, computed as `round(bounce_rate / 100 * sessions)` when both are present |
 
 Anything this package can't derive from a generic aggregate export — `unique_users` as distinct from `unique_ips`,
 `api_calls`, `top_pages`, `bot_views` — is left at 0/empty on imported rows rather than guessed.
@@ -660,7 +913,7 @@ direction: a slash command that *asks* for data on demand — `/analytics today`
 ### Slack setup
 
 1. Create a Slack app at [api.slack.com/apps](https://api.slack.com/apps) and add a **Slash Command** (e.g.
-   `/analytics`) pointing at `https://yourdomain.com/api/analytics/slack/command/`.
+   `/analytics`) pointing at `https://yourdomain.com/api/paxalia/slack/command/`.
 2. Copy the app's **Signing Secret** into your settings:
    ```python
    PAXALIA_DASHBOARD = {
@@ -675,7 +928,7 @@ direction: a slash command that *asks* for data on demand — `/analytics today`
 
 1. Create a Discord application at [discord.com/developers/applications](https://discord.com/developers/applications),
    register a slash command (e.g. `/analytics` with an optional `period` choice: today/yesterday/week/month), and
-   set the **Interactions Endpoint URL** to `https://yourdomain.com/api/analytics/discord/interactions/`.
+   set the **Interactions Endpoint URL** to `https://yourdomain.com/api/paxalia/discord/interactions/`.
 2. Copy the application's **Public Key** into your settings:
    ```python
    PAXALIA_DASHBOARD = {
@@ -754,7 +1007,7 @@ Add the middleware to your project's `MIDDLEWARE`, the same way `AnalyticsMiddle
 ```python
 MIDDLEWARE = [
     ...
-    'analytics.middleware.SlowQueryMiddleware',
+    'paxalia.middleware.SlowQueryMiddleware',
 ]
 ```
 
@@ -818,11 +1071,26 @@ analytics clean and provides a dedicated view for security monitoring.
 - The middleware checks each incoming request: if the path matches any bot path, it:
     - Marks the `PageView` with `is_bot=True` and `bot_category='malicious'`
     - Increments `DailySiteStats.bot_views` (not `total_views`)
-- **In addition**, every request's User-Agent is checked against a maintained pattern list (`analytics/bot_classification.py`) for known search engines (Googlebot, Bingbot, ...), AI crawlers (GPTBot, ClaudeBot, CCBot, ...), social-preview bots (facebookexternalhit, Twitterbot, Slackbot, ...), and SEO tools (AhrefsBot, SemrushBot, ...) — any match also sets `is_bot=True`, with `bot_category` set to the matching category. A generic bot-like User-Agent that doesn't match a known list (`curl/...`, `python-requests/...`, a bare "bot"/"crawler"/"spider" token, or no User-Agent at all) is categorized `'unknown'`.
+- **In addition**, every request's User-Agent is checked against a maintained pattern list (
+  `paxalia/bot_classification.py`) for known search engines (Googlebot, Bingbot, ...), AI crawlers (GPTBot, ClaudeBot,
+  CCBot, ...), social-preview bots (facebookexternalhit, Twitterbot, Slackbot, ...), and SEO tools (AhrefsBot,
+  SemrushBot, ...) — any match also sets `is_bot=True`, with `bot_category` set to the matching category. A generic
+  bot-like User-Agent that doesn't match a known list (`curl/...`, `python-requests/...`, a bare "bot"/"crawler"/"
+  spider" token, or no User-Agent at all) is categorized `'unknown'`.
 
-> **⚠️ Breaking change:** `is_bot` used to be set *only* from the path match above — a real crawler (Googlebot, a social-media link-preview fetch, etc.) visiting an ordinary page was previously counted as regular human traffic in Overview/Traffic/Cohorts/Funnels/Goals and everywhere else that filters `is_bot=False`. That was never actually correct, but it means upgrading will change your numbers: "human" page-view counts will drop and Bot Traffic counts will rise on any site that gets real crawler traffic (which is nearly every public site). Existing rows are **not** reclassified automatically — run `python manage.py backfill_pageview_bot_category` once after upgrading to apply the new classification to history (safe to re-run any time `bot_paths` changes or the pattern list is extended). Add `--dry-run` to preview the counts first.
+> **⚠️ Breaking change:** `is_bot` used to be set *only* from the path match above — a real crawler (Googlebot, a
+> social-media link-preview fetch, etc.) visiting an ordinary page was previously counted as regular human traffic in
+> Overview/Traffic/Cohorts/Funnels/Goals and everywhere else that filters `is_bot=False`. That was never actually correct,
+> but it means upgrading will change your numbers: "human" page-view counts will drop and Bot Traffic counts will rise on
+> any site that gets real crawler traffic (which is nearly every public site). Existing rows are **not** reclassified
+> automatically — run `python manage.py backfill_pageview_bot_category` once after upgrading to apply the new
+> classification to history (safe to re-run any time `bot_paths` changes or the pattern list is extended). Add `--dry-run`
+> to preview the counts first.
 >
-> User-Agent is exactly what the request claims to be — nothing here verifies it against the crawler's published IP ranges (that would require a network call this package doesn't make). A path match on a known attack-probe path always overrides a UA claim, precisely because scanners sometimes spoof "Googlebot" to bypass filtering — but a spoofed UA hitting an ordinary page will be misclassified as the real thing.
+> User-Agent is exactly what the request claims to be — nothing here verifies it against the crawler's published IP
+> ranges (that would require a network call this package doesn't make). A path match on a known attack-probe path always
+> overrides a UA claim, precisely because scanners sometimes spoof "Googlebot" to bypass filtering — but a spoofed UA
+> hitting an ordinary page will be misclassified as the real thing.
 
 - Bot requests are **excluded** from all main analytics (overview, pages, geography, traffic, real‑time, events, API).
 - They are **only** visible on the dedicated **Bot Traffic** page, which shows:
@@ -830,7 +1098,8 @@ analytics clean and provides a dedicated view for security monitoring.
     - Daily bot requests chart (last 30 days)
     - Top 20 bot paths (horizontal bar chart)
     - Bot requests by country (doughnut chart)
-    - **Bot category breakdown** (search engine / AI crawler / social preview / SEO tool / unknown / malicious), last 30 days
+    - **Bot category breakdown** (search engine / AI crawler / social preview / SEO tool / unknown / malicious), last 30
+      days
 
 ### Importing a large bot path list
 
@@ -907,10 +1176,10 @@ middleware or configuration is required.
 
 ### Adding a new language
 
-1. Copy `analytics/locale/en/LC_MESSAGES/django.po` to `analytics/locale/<code>/LC_MESSAGES/`.
+1. Copy `paxalia/locale/en/LC_MESSAGES/django.po` to `paxalia/locale/<code>/LC_MESSAGES/`.
 2. Translate every `msgstr` line.
 3. Run `python manage.py compilemessages -l <code>`.
-4. Add the language to the `languages` list in `analytics/views/settings.py` (or override the view).
+4. Add the language to the `languages` list in `paxalia/views/settings.py` (or override the view).
 
 All translatable strings use Django's `{% trans %}` and `{% blocktrans %}` tags, so the dashboard can scale to any
 number of languages without template changes.
@@ -946,7 +1215,7 @@ border, text, dim text, accent, accent‑hover, and comparison colour.
 
 ### Creating a custom theme
 
-Add a new `[data-analytics-theme="your-slug"]` block in `analytics/static/analytics/styles/themes.css`:
+Add a new `[data-analytics-theme="your-slug"]` block in `paxalia/static/paxalia/styles/themes.css`:
 
 ```css
 [data-analytics-theme="your-slug"] {
@@ -962,7 +1231,7 @@ Add a new `[data-analytics-theme="your-slug"]` block in `analytics/static/analyt
 }
 ```
 
-Then add {'slug': 'your-slug', 'label': 'Your Theme'} to the themes list in analytics/views/settings.py. The theme will
+Then add {'slug': 'your-slug', 'label': 'Your Theme'} to the themes list in paxalia/views/settings.py. The theme will
 appear in the dropdown automatically.
 
 
@@ -987,25 +1256,25 @@ No additional configuration is needed. The export buttons appear automatically o
 
 ### Available exports
 
-| Export              | What it contains                       |
-|---------------------|----------------------------------------|
-| Top Pages           | Top 10 pages with view counts          |
-| All Pages           | Every tracked page with view counts    |
-| Top API Endpoints   | Endpoint paths with call counts        |
-| API Status Codes    | Status code distribution               |
-| Top Referrers       | Referring URLs with visit counts       |
-| Browsers            | Browser names with view counts         |
-| Operating Systems   | OS names with view counts              |
-| Device Types        | Device categories with view counts     |
-| Countries           | Country names with visitor counts      |
-| Top Cities          | City, country, and visitor counts      |
-| Events Categories   | Category names with event counts       |
-| Events Actions      | Category, action, and event counts     |
-| Events Labels       | Label values with event counts         |
-| Events by Page      | Page paths with event counts           |
-| Recent Events       | Last 50 events with timestamps         |
-| Billing Plans       | Plan slugs with user counts            |
-| Recent Transactions | Invoice number, user, amount, and date |
+| Export                    | What it contains                                                                         |
+|---------------------------|------------------------------------------------------------------------------------------|
+| Top Pages                 | Top 10 pages with view counts                                                            |
+| All Pages                 | Every tracked page with view counts                                                      |
+| Top API Endpoints         | Endpoint paths with call counts                                                          |
+| API Status Codes          | Status code distribution                                                                 |
+| Top Referrers             | Referring URLs with visit counts                                                         |
+| Browsers                  | Browser names with view counts                                                           |
+| Operating Systems         | OS names with view counts                                                                |
+| Device Types              | Device categories with view counts                                                       |
+| Countries                 | Country names with visitor counts                                                        |
+| Top Cities                | City, country, and visitor counts                                                        |
+| Events Categories         | Category names with event counts                                                         |
+| Events Actions            | Category, action, and event counts                                                       |
+| Events Labels             | Label values with event counts                                                           |
+| Events by Page            | Page paths with event counts                                                             |
+| Recent Events             | Last 50 events with timestamps                                                           |
+| Billing Plans             | Plan slugs with user counts                                                              |
+| Recent Transactions       | Invoice number, user, amount, and date                                                   |
 | Failed Payments (Dunning) | Invoice number, user, amount, date, and status for non-paid invoices in the last 90 days |
 
 ---
@@ -1048,29 +1317,293 @@ PAXALIA_DASHBOARD = {
 - Daily income chart with compare toggle
 - Plan distribution table
 - Recent transactions table
-- **Monthly revenue trend, last 12 months, plus a projected ARR run-rate** (an invoice-based proxy for MRR — see the note below)
+- **Monthly revenue trend, last 12 months, plus a projected ARR run-rate** (an invoice-based proxy for MRR — see the
+  note below)
 - **Churn** (customer and revenue), computed from the last two fully-completed calendar months of invoice history
-- **Failed/pending payments** ("dunning"), grouped by whatever status values your `Invoice.status` field actually uses, with CSV/JSON export
+- **Failed/pending payments** ("dunning"), grouped by whatever status values your `Invoice.status` field actually uses,
+  with CSV/JSON export
 
 If the models don't exist or aren't configured, the billing section simply doesn't appear — no errors, no broken pages.
 
-> **Why "MRR proxy" and not MRR:** this package doesn't require a Plan/price field in its documented contract above, only `current_plan.slug`. So "MRR" here is the sum of `'paid'` invoices in a calendar month — a reasonable stand-in when there's genuine month-to-month billing, but it will differ from true subscription MRR if your billing cycles aren't monthly, or if a Plan's price ever changed after an invoice was cut. Likewise, churn is computed from invoice history (paid last month, not paid this month) since there's no subscription start/cancel timestamp in the documented contract — it won't catch a customer who churns and resubscribes within the same window, and works best for regular (e.g. monthly) billing cycles.
+> **Why "MRR proxy" and not MRR:** this package doesn't require a Plan/price field in its documented contract above,
+> only `current_plan.slug`. So "MRR" here is the sum of `'paid'` invoices in a calendar month — a reasonable stand-in when
+> there's genuine month-to-month billing, but it will differ from true subscription MRR if your billing cycles aren't
+> monthly, or if a Plan's price ever changed after an invoice was cut. Likewise, churn is computed from invoice history (
+> paid last month, not paid this month) since there's no subscription start/cancel timestamp in the documented contract —
+> it won't catch a customer who churns and resubscribes within the same window, and works best for regular (e.g. monthly)
+> billing cycles.
+
+---
+
+## Security Center
+
+The Security Center is a first-class dashboard surface for privileged operational visibility. It is designed to
+complement, not replace, your host operating system's security controls.
+
+### Login and session visibility
+
+The package records authentication activity through Django's authentication signals. By default, successful-login
+tracking is limited to staff/superuser accounts to preserve the privacy-first posture; failed-login attempts remain
+visible for brute-force detection.
+
+The Security Center can show login results, location/device context, active sessions, session revocation, and logout
+information when the host application exposes the required Django authentication/session data.
+
+### IP blocklist
+
+Staff can add an IP to the dashboard blocklist. When `SecurityBlockMiddleware` is installed, subsequent requests from
+active blocked addresses are rejected before the analytics middleware records them.
+
+### Brute-force alerting
+
+`SECURITY_FAILED_LOGIN_THRESHOLD` and `SECURITY_FAILED_LOGIN_WINDOW_MINUTES` define the threshold used to surface
+repeated failed logins as a possible brute-force event. Alerts can be sent through configured email/webhook
+destinations.
+
+### CSP violation reporting
+
+The dashboard can collect Content Security Policy violations and surface them for investigation. This is especially
+useful during deployment hardening because blocked resources, inline-script violations, and unexpected origins can be
+examined from the same operational interface.
+
+### Security scorecard
+
+The scorecard summarizes selected security findings and hardening checks so operational teams can identify outstanding
+configuration issues without inspecting several Django settings modules manually.
+
+### MFA / 2FA
+
+The package includes a dashboard enrollment surface for authenticator-based two-factor authentication when the host
+project has the required `django-otp` / two-factor stack installed and configured.
+
+### Backup re-authentication
+
+Backup downloads can require recent password authentication through `BACKUP_REAUTH_MINUTES`, reducing the risk of an
+already-authenticated staff browser becoming an unattended archive download point.
+
+---
+
+## Advanced Analytics
+
+### Goals
+
+Goals let a deployment define meaningful conversion targets rather than only tracking traffic volume. Goals can be used
+as reusable inputs to conversion-oriented analysis.
+
+### Funnels
+
+Funnels model ordered steps and expose drop-off between stages. A typical flow is landing page → signup → activation →
+checkout.
+
+### Segments
+
+Segments provide reusable behavioral filters so the same audience definition can be applied across analytics views
+rather than rebuilding filters manually each time.
+
+### Campaigns
+
+Campaign tracking captures UTM-style campaign context and exposes traffic performance by source, medium, and campaign.
+
+### Cohorts
+
+Cohort retention groups visitors by an initial activity period and follows subsequent activity over time, making repeat
+engagement visible rather than hiding it inside aggregate counts.
+
+### Annotations
+
+Annotations place contextual markers on charts for deployments, campaigns, incidents, migrations, and other events that
+may explain traffic changes.
+
+---
+
+## Reporting & Sharing
+
+### Scheduled reports
+
+Reports can be generated from the same analytics snapshot used by the dashboard and other integrations. Scheduled
+delivery can use the host project's email configuration and optional PDF support.
+
+### Public share links
+
+Share links provide a controlled, read-only presentation of selected dashboard information for external stakeholders.
+Password-protected links use a one-way password hash rather than storing the clear-text password, with the current
+migration represented by `0019_sharelink_password_hash`.
+
+### Exports
+
+The dashboard provides CSV/JSON exports for supported tables, respecting applicable filters such as date range, path
+search, and geography selection.
+
+---
+
+## Paxalia API
+
+The package exposes a versioned, key-authenticated API surface in addition to its browser event endpoint. Scoped API
+keys can be used for ingestion and read access without exposing staff dashboard credentials.
+
+Current API capabilities include:
+
+- event/data ingestion
+- summary statistics
+- page-view reads
+- analytics-event reads
+- API documentation through the dashboard's API Reference surface
+
+The host application is responsible for securely storing API keys and selecting the appropriate scope.
+
+### Browser event API
+
+The public browser event endpoint is intentionally separate from the secret dashboard URL. This allows the tracking
+script to remain functional without embedding the dashboard's private route in client-side code.
+
+---
+
+## Dependency Health
+
+The Dependency Health page is intended for runtime maintenance rather than package installation. It starts from the
+installed `paxalia-dashboard` distribution and resolves its runtime dependency closure, while also recognizing direct
+requirements declared by the package.
+
+The page can progressively check upstream package releases after the local inventory is rendered, so opening the page
+does not need to wait for every external version lookup.
+
+Dependency states distinguish current packages, packages with a newer upstream release, missing packages, and packages
+whose upstream check could not be completed. The page does not automatically upgrade packages.
+
+Decorative README separators such as `---`, `===`, and other non-requirement lines are ignored by the requirement parser
+rather than treated as package names.
+
+---
+
+## Notifications & Alerts
+
+Notifications provide an in-dashboard event surface for security, anomaly, uptime, and other supported alert categories.
+
+Optional alert destinations include email and webhook delivery, while the in-dashboard notification center provides the
+local operational history without requiring an external notification platform.
+
+Alerting is intentionally best-effort: a notification delivery failure should not turn the underlying analytics or
+security event into an application failure.
+
+---
+
+## Multi-Site Analytics
+
+Multiple domains can be represented by `Site` records and tracked through the same dashboard. Requests are resolved by
+hostname, cached briefly, and associated with the matching active site.
+
+`AUTO_CREATE_SITES` is disabled by default. Enable it only when automatically registering unknown hostnames is an
+explicit part of your deployment model.
+
+---
+
+## Release Center
+
+The Release Center provides a dashboard surface for release artifacts and release context. Deployment tracking is
+separate from artifact storage: CI/CD can call `record_deployment` after a successful deploy, which records the
+deployment and creates a corresponding chart annotation so traffic changes can be interpreted against release events.
+
+Example:
+
+```bash
+python manage.py record_deployment \
+    --version "$(git rev-parse --short HEAD)" \
+    --notes "Deploy from main"
+```
+
+---
+
+## Operational Commands
+
+The v3 package includes management commands for ongoing operations:
+
+```bash
+python manage.py aggregate_daily_stats
+python manage.py backfill_pageview_bot_category
+python manage.py backfill_pageview_is_api
+python manage.py check_uptime
+python manage.py cleanup_uploads
+python manage.py create_backup
+python manage.py detect_anomalies
+python manage.py import_bot_paths /path/to/bot_paths.txt
+python manage.py prune_analytics_data
+python manage.py prune_security_logs
+python manage.py record_deployment --version "$(git rev-parse --short HEAD)"
+python manage.py record_server_metrics
+python manage.py seed_analytics
+python manage.py send_scheduled_reports
+```
+
+Typical scheduled jobs are:
+
+```cron
+# Daily analytics aggregation
+0 0 * * * cd /path/to/project && python manage.py aggregate_daily_stats
+
+# Server history snapshot
+* * * * * cd /path/to/project && python manage.py record_server_metrics
+
+# Uptime checks
+* * * * * cd /path/to/project && python manage.py check_uptime
+
+# Anomaly detection
+10 * * * * cd /path/to/project && python manage.py detect_anomalies
+
+# Analytics data retention
+0 3 * * * cd /path/to/project && python manage.py prune_analytics_data
+
+# Security log retention
+20 3 * * * cd /path/to/project && python manage.py prune_security_logs
+```
+
+Adapt schedules and log destinations to the host operating system.
+
+---
+
+## Security & Privacy Model
+
+The package is designed around keeping analytics data on the host server. IP storage/anonymization behavior is
+configurable, consent mode can prevent tracking until a visitor has consented, and data-retention commands allow a
+deployment to define how long different categories are retained.
+
+### What the package does not do
+
+- It does not provide a cookie-consent banner; your CMP/banner is responsible for collecting consent and setting the
+  configured cookie.
+- It does not verify crawler identity against published crawler IP ranges; bot classification is based on request path
+  and user-agent patterns.
+- It does not automatically rotate credentials or install OS firewall rules.
+- It does not automatically upgrade Python packages from the Dependency Health page.
+- It does not make the host project's Celery, billing, Redis, PostgreSQL, SMTP, or reverse-proxy configuration on your
+  behalf.
+
+### Production principle
+
+Use the dashboard as an observability and application-level security layer alongside normal OS, database, reverse-proxy,
+backup, network, and identity controls.
 
 ---
 
 ## Project Structure
 
 ```text
-├── analytics
+paxalia-dashboard
+├── paxalia
 │   ├── admin.py
+│   ├── alerts.py
+│   ├── anomalies.py
+│   ├── api_keys.py
 │   ├── apps.py
+│   ├── bot_classification.py
 │   ├── bots_paths.txt
+│   ├── chat_ops.py
+│   ├── cohorts.py
+│   ├── compliance.py
 │   ├── conf_uploads.py
 │   ├── context_processors.py
+│   ├── conversions.py
+│   ├── data_import.py
 │   ├── geoip
-│   │   ├── GeoLite2-ASN.mmdb
-│   │   ├── GeoLite2-City.mmdb
-│   │   └── GeoLite2-Country.mmdb
 │   ├── __init__.py
 │   ├── locale
 │   │   ├── ar
@@ -1095,18 +1628,56 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   ├── management
 │   │   └── commands
 │   │       ├── aggregate_daily_stats.py
+│   │       ├── backfill_pageview_bot_category.py
+│   │       ├── backfill_pageview_is_api.py
+│   │       ├── check_uptime.py
+│   │       ├── cleanup_uploads.py
 │   │       ├── create_backup.py
+│   │       ├── detect_anomalies.py
 │   │       ├── import_bot_paths.py
-│   │       └── seed_analytics.py
+│   │       ├── prune_analytics_data.py
+│   │       ├── prune_security_logs.py
+│   │       ├── record_deployment.py
+│   │       ├── record_server_metrics.py
+│   │       ├── seed_analytics.py
+│   │       └── send_scheduled_reports.py
 │   ├── middleware.py
 │   ├── migrations
 │   │   ├── 0001_initial.py
+│   │   ├── 0002_security_center.py
+│   │   ├── 0003_csp_violations.py
+│   │   ├── 0004_pageview_is_api.py
+│   │   ├── 0005_flip_anonymize_ip_default.py
+│   │   ├── 0006_multisite.py
+│   │   ├── 0007_goals_funnels_segments_annotations.py
+│   │   ├── 0008_dashboard_access_permissions.py
+│   │   ├── 0009_paxalia_api_key.py
+│   │   ├── 0010_reporting_sharing.py
+│   │   ├── 0011_notifications.py
+│   │   ├── 0012_bot_category.py
+│   │   ├── 0013_js_error.py
+│   │   ├── 0014_uptime_monitoring.py
+│   │   ├── 0015_ops_monitoring.py
+│   │   ├── 0016_compliance_permission.py
+│   │   ├── 0017_data_import.py
+│   │   ├── 0018_fix_dailysitestats_duplicates.py
+│   │   ├── 0019_sharelink_password_hash.py
 │   │   └── __init__.py
 │   ├── models.py
+│   ├── permissions.py
+│   ├── queue_monitor.py
+│   ├── report_delivery.py
+│   ├── reporting.py
 │   ├── requirements.txt
+│   ├── revenue.py
+│   ├── rum.py
+│   ├── security_audit.py
+│   ├── security_scorecard.py
+│   ├── segments.py
 │   ├── settings.py
+│   ├── signals.py
 │   ├── static
-│   │   └── analytics
+│   │   └── paxalia
 │   │       ├── icons
 │   │       │   ├── archive
 │   │       │   │   ├── icon-file-text.svg
@@ -1114,9 +1685,7 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   │       │   │   └── icon-time-spendin.svg
 │   │       │   ├── brand
 │   │       │   │   ├── icon-brand.png
-│   │       │   │   ├── icon-brand.svg
-│   │       │   │   ├── icon-brand-transparent.png
-│   │       │   │   └── icon-brand-transparent.svg
+│   │       │   │   └── icon-brand.svg
 │   │       │   ├── ui
 │   │       │   │   ├── icon-bar-chart.svg
 │   │       │   │   ├── icon-bot.svg
@@ -1142,6 +1711,7 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   │       │   ├── chart.umd.js
 │   │       │   ├── d3.v3.min.js
 │   │       │   ├── datamaps.world.min.js
+│   │       │   ├── dependencies.js
 │   │       │   ├── events-chart.js
 │   │       │   ├── filter-bar.js
 │   │       │   ├── geography-map.js
@@ -1149,6 +1719,7 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   │       │   ├── overview.js
 │   │       │   ├── page-detail.js
 │   │       │   ├── realtime.js
+│   │       │   ├── security.js
 │   │       │   ├── server
 │   │       │   │   ├── cpu.js
 │   │       │   │   ├── disk.js
@@ -1166,11 +1737,17 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   │           ├── components
 │   │           │   ├── about.css
 │   │           │   ├── backup.css
+│   │           │   ├── buttons.css
 │   │           │   ├── charts.css
+│   │           │   ├── dependencies.css
 │   │           │   ├── export-btn.css
 │   │           │   ├── filter-bar.css
 │   │           │   ├── icon.css
 │   │           │   ├── menu.css
+│   │           │   ├── notifications.css
+│   │           │   ├── release-center.css
+│   │           │   ├── rum.css
+│   │           │   ├── security.css
 │   │           │   ├── server.css
 │   │           │   ├── settings-form.css
 │   │           │   ├── sidebar.css
@@ -1179,61 +1756,112 @@ If the models don't exist or aren't configured, the billing section simply doesn
 │   │           │   ├── topbar.css
 │   │           │   ├── typography.css
 │   │           │   └── upload.css
+│   │           ├── dashboard-refinements.css
 │   │           ├── layout.css
 │   │           ├── themes.css
 │   │           └── tokens.css
 │   ├── templates
-│   │   └── analytics
+│   │   └── paxalia
 │   │       ├── about.html
 │   │       ├── admin_overview.html
+│   │       ├── annotations.html
+│   │       ├── api_docs.html
 │   │       ├── api.html
+│   │       ├── api_keys.html
+│   │       ├── backup_reauth.html
 │   │       ├── backups.html
 │   │       ├── base.html
 │   │       ├── billing.html
 │   │       ├── bots.html
+│   │       ├── broken_links.html
+│   │       ├── campaigns.html
+│   │       ├── cohorts.html
+│   │       ├── compliance.html
 │   │       ├── dashboard.html
+│   │       ├── data_import.html
+│   │       ├── dependencies.html
+│   │       ├── email
+│   │       │   └── report_digest.html
 │   │       ├── events.html
+│   │       ├── funnels.html
 │   │       ├── geography.html
+│   │       ├── goals.html
 │   │       ├── includes
 │   │       │   └── filter_bar.html
+│   │       ├── mfa_enroll.html
+│   │       ├── notifications.html
 │   │       ├── page_detail.html
 │   │       ├── pages.html
 │   │       ├── realtime.html
 │   │       ├── releases.html
+│   │       ├── reports.html
+│   │       ├── rum.html
+│   │       ├── security.html
+│   │       ├── segments.html
 │   │       ├── server_cpu.html
+│   │       ├── server_deployments.html
 │   │       ├── server_disk.html
 │   │       ├── server_memory.html
 │   │       ├── server_network.html
 │   │       ├── server_overview.html
 │   │       ├── server_processes.html
+│   │       ├── server_queues.html
 │   │       ├── server_services.html
+│   │       ├── server_slow_queries.html
 │   │       ├── settings.html
-│   │       └── traffic.html
+│   │       ├── shared_dashboard.html
+│   │       ├── share_links.html
+│   │       ├── sites.html
+│   │       ├── traffic.html
+│   │       └── uptime.html
 │   ├── templatetags
 │   │   ├── analytics_tags.py
 │   │   └── __init__.py
 │   ├── tests.py
+│   ├── uptime.py
 │   ├── urls.py
 │   └── views
 │       ├── about.py
 │       ├── admin_overview.py
+│       ├── annotations.py
+│       ├── api_docs.py
+│       ├── api_keys.py
 │       ├── api.py
 │       ├── backup.py
 │       ├── billing.py
 │       ├── bots.py
+│       ├── broken_links.py
+│       ├── campaigns.py
+│       ├── chat_ops.py
+│       ├── cohorts.py
+│       ├── compliance.py
+│       ├── csp_reports.py
 │       ├── dashboard.py
+│       ├── data_import.py
+│       ├── dependencies.py
 │       ├── events.py
 │       ├── export.py
 │       ├── geography.py
+│       ├── goals.py
 │       ├── __init__.py
+│       ├── mfa.py
+│       ├── notifications.py
 │       ├── page_detail.py
 │       ├── pages.py
+│       ├── paxalia_api.py
 │       ├── realtime.py
 │       ├── releases.py
+│       ├── reports.py
+│       ├── rum.py
+│       ├── security.py
+│       ├── segments.py
 │       ├── server.py
 │       ├── settings.py
+│       ├── share_links.py
+│       ├── sites.py
 │       ├── traffic.py
 │       ├── uploads.py
+│       ├── uptime.py
 │       └── utils.py
 ├── LICENSE
 ├── MANIFEST.in
@@ -1246,7 +1874,7 @@ If the models don't exist or aren't configured, the billing section simply doesn
 
 > **Note:** The `.mmdb` GeoIP database files are **not** included in the Git repository because of their size.  
 > Download them separately from [MaxMind](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data) and place them
-> in `analytics/geoip/`.
+> in `paxalia/geoip/`.
 
 ---
 
@@ -1321,9 +1949,9 @@ example:
 feat(analytics): add world map with drill‑down to cities
 
 Scope:
-- analytics/views/geography.py (modified)
-- analytics/static/analytics/scripts/geography-map.js (new)
-- analytics/templates/analytics/geography.html (new)
+- paxalia/views/geography.py (modified)
+- paxalia/static/paxalia/scripts/geography-map.js (new)
+- paxalia/templates/paxalia/geography.html (new)
 
 Changes:
 - Created a geography page with an offline Datamaps world map
@@ -1355,6 +1983,9 @@ while remaining fully privacy‑first and self‑hosted
 ---
 
 ### Ideas for contribution
+
+> The table below is retained as a forward-looking roadmap. Several items that were originally future ideas have since
+> been implemented in v3; the list remains useful for potential extensions and contributors.
 
 If you’re looking for a bigger feature to build, here are some ideas that would make the analytics dashboard even
 better.  

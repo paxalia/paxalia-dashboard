@@ -1,0 +1,56 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Deployments" %}{% endblock %}
+{% block page_subtitle %}{% trans "Recorded via manage.py record_deployment" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/server.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/tables.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="server-deployments">
+    <div class="ops-grid">
+        <div class="ops-card"><span class="ops-label">{% trans "Current release" %}</span><span class="ops-value">{{ runtime_release.version|default:"unknown" }}</span><span class="ops-help">{% trans "Installed application version or runtime release identifier." %}</span></div>
+        <div class="ops-card"><span class="ops-label">{% trans "Environment" %}</span><span class="ops-value">{{ runtime_release.environment|default:"unknown" }}</span><span class="ops-help">{% trans "Runtime environment reported by Django settings." %}</span></div>
+        <div class="ops-card"><span class="ops-label">{% trans "Host" %}</span><span class="ops-value">{{ runtime_release.hostname|default:"unknown" }}</span><span class="ops-help">{% trans "Server currently rendering this dashboard." %}</span></div>
+        <div class="ops-card"><span class="ops-label">{% trans "Recorded history" %}</span><span class="ops-value">{{ deployments|length }}</span><span class="ops-help">{% trans "Persisted deployment records available to this dashboard." %}</span></div>
+    </div>
+    <div class="table-card">
+        <div class="chart-title-wrapper">
+            <h2 class="chart-title">{% trans "Recent Deployments" %}</h2>
+        </div>
+        <p class="form-hint">
+            {% trans "Each deployment recorded here also creates a matching annotation on the Overview traffic chart." %}
+        </p>
+        {% if deployments %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Version" %}</th>
+                    <th>{% trans "Site" %}</th>
+                    <th>{% trans "Notes" %}</th>
+                    <th>{% trans "Deployed" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in deployments %}
+                <tr>
+                    <td>{{ d.version|default:"—" }}</td>
+                    <td>{{ d.site.name|default:"All sites" }}</td>
+                    <td class="table-cell-truncate" title="{{ d.notes }}">{{ d.notes|truncatechars:100|default:"—" }}</td>
+                    <td>{{ d.deployed_at|date:"M d, H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="chart-empty">
+            <strong>{% trans "No deployment history has been recorded." %}</strong>
+            <span>{% trans "The live release information above is still available. For historical deploy annotations, call record_deployment from CI/CD after each successful release." %}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

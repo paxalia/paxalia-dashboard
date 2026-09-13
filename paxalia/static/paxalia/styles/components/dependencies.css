@@ -1,0 +1,175 @@
+/* Paxalia Dashboard — dependency health */
+.dependencies-page {
+    gap: 24px
+}
+
+.dependencies-summary {
+    margin: 0
+}
+
+.dependencies-summary .stat-card {
+    min-height: 124px
+}
+
+.dependency-heading {
+    align-items: center
+}
+
+.dependency-progress {
+    height: 3px;
+    margin-top: 16px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--analytics-bg)
+}
+
+.dependency-progress span {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--analytics-gold);
+    transition: width .2s ease
+}
+
+.dependency-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 18px
+}
+
+.dependency-table {
+    min-width: 1030px;
+    margin: 0
+}
+
+.dependency-table th:nth-child(1) {
+    min-width: 210px
+}
+
+.dependency-table th:nth-child(3) {
+    min-width: 140px
+}
+
+.dependency-table th:nth-child(4), .dependency-table th:nth-child(5) {
+    min-width: 120px
+}
+
+.dependency-source {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap
+}
+
+.dependency-source--direct {
+    background: var(--analytics-gold-dim);
+    color: var(--analytics-gold)
+}
+
+.dependency-source--transitive, .dependency-source--pending {
+    background: var(--analytics-bg);
+    color: var(--analytics-text-dim)
+}
+
+.dependency-source--pypi {
+    background: rgba(87, 116, 210, .13);
+    color: var(--analytics-compare)
+}
+
+.dependency-latest {
+    white-space: nowrap
+}
+
+.dependency-pending {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs)
+}
+
+.dependency-spinner {
+    width: 11px;
+    height: 11px;
+    border: 2px solid var(--analytics-border);
+    border-top-color: var(--analytics-gold);
+    border-radius: 50%;
+    animation: dependency-spin .75s linear infinite
+}
+
+.dependency-check-fail {
+    color: #dc4b5c;
+    font-weight: var(--font-weight-medium)
+}
+
+.dependency-row-current {
+}
+
+.dependency-row-update {
+    background: rgba(217, 154, 53, .055)
+}
+
+.dependency-row-missing, .dependency-row-error {
+    background: rgba(220, 75, 92, .05)
+}
+
+.status-pill--success {
+    background: var(--analytics-gold-dim);
+    color: var(--analytics-gold)
+}
+
+.status-pill--warning {
+    background: rgba(217, 154, 53, .14);
+    color: #d99a35
+}
+
+.status-pill--danger {
+    background: rgba(220, 75, 92, .14);
+    color: #dc4b5c
+}
+
+.status-pill--neutral {
+    background: var(--analytics-bg);
+    color: var(--analytics-text-dim)
+}
+
+@keyframes dependency-spin {
+    to {
+        transform: rotate(360deg)
+    }
+}
+
+@media (max-width: 768px) {
+    .dependency-heading {
+        align-items: flex-start;
+        gap: 12px
+    }
+
+    .dependency-heading .btn {
+        width: 100%
+    }
+
+    .dependencies-summary {
+        grid-template-columns:repeat(2, minmax(0, 1fr))
+    }
+
+    .dependencies-summary .stat-card {
+        min-height: 112px
+    }
+
+    .dependency-table-wrap {
+        margin-top: 14px
+    }
+}
+
+@media (max-width: 480px) {
+    .dependencies-summary {
+        grid-template-columns:1fr
+    }
+}

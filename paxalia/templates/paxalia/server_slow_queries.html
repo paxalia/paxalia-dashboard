@@ -1,0 +1,53 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Slow Queries" %}{% endblock %}
+{% block page_subtitle %}{% trans "Database queries recorded by SlowQueryMiddleware" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/server.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/tables.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="server-slow-queries">
+    <div class="ops-grid">
+        <div class="ops-card"><span class="ops-label">{% trans "Threshold" %}</span><span class="ops-value">{{ slow_query_threshold_ms|default:100 }} ms</span><span class="ops-help">{% trans "Queries at or above this duration are recorded." %}</span></div>
+        <div class="ops-card"><span class="ops-label">{% trans "Recorded" %}</span><span class="ops-value">{{ slow_queries|length }}</span><span class="ops-help">{% trans "Recent records shown on this page." %}</span></div>
+        <div class="ops-card"><span class="ops-label">{% trans "Capture" %}</span><span class="ops-value">{% if slow_query_enabled %}{% trans "Active" %}{% else %}{% trans "Not active" %}{% endif %}</span><span class="ops-help">{% trans "Capture status is determined by dashboard configuration." %}</span></div>
+        <div class="ops-card"><span class="ops-label">{% trans "Database" %}</span><span class="ops-value">{{ database_vendor|default:"unknown" }}</span><span class="ops-help">{% trans "Current Django database backend." %}</span></div>
+    </div>
+    <div class="table-card">
+        <div class="chart-title-wrapper">
+            <h2 class="chart-title">{% trans "Recent Slow Queries" %}</h2>
+        </div>
+        {% if slow_queries %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Duration" %}</th>
+                    <th>{% trans "SQL" %}</th>
+                    <th>{% trans "Path" %}</th>
+                    <th>{% trans "When" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in slow_queries %}
+                <tr>
+                    <td>{{ q.duration_ms|floatformat:0 }}ms</td>
+                    <td class="table-cell-truncate" title="{{ q.sql }}"><code>{{ q.sql|truncatechars:140 }}</code></td>
+                    <td>{{ q.path|default:"—" }}</td>
+                    <td>{{ q.created_at|date:"M d, H:i:s" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="chart-empty">
+            <strong>{% trans "No slow queries recorded in the current retention window." %}</strong>
+            <span>{% if slow_query_enabled %}{% trans "Capture is enabled. Generate representative application traffic and this view will populate when a query crosses the threshold." %}{% else %}{% trans "Enable slow-query capture in the dashboard middleware configuration to start recording queries." %}{% endif %}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

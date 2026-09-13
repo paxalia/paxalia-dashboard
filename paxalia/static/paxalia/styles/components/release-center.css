@@ -1,0 +1,29 @@
+/* Paxalia Dashboard — Release Center */
+.release-center-shell {
+    margin: 0
+}
+
+.release-center-shell h1 {
+    margin: 0
+}
+
+.release-center-shell .page-subtitle {
+    margin-top: 6px
+}
+
+.upload-dropzone-card {
+    margin: 0
+}
+
+.upload-dropzone {
+    min-height: 180px
+}
+
+.uploads-card {
+    margin: 0
+}
+
+.uploads-card h2 {
+    margin: 0 0 var(--margin-md);
+    font-size: var(--font-size-md)
+}

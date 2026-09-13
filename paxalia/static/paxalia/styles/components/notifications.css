@@ -1,0 +1,27 @@
+/* Paxalia Dashboard — notifications */
+.notification-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--gap-md)
+}
+
+.notification-row--unread {
+    background: var(--analytics-gold-dim)
+}
+
+.notification-row--unread td:first-child {
+    border-left: 3px solid var(--analytics-gold)
+}
+
+.notification-action-form {
+    margin: 0
+}
+
+.notification-empty {
+    min-height: 130px
+}
+
+.notification-toolbar form {
+    margin: 0
+}

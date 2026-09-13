@@ -1,0 +1,44 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+
+{% block page_title %}{% trans "Services" %}{% endblock %}
+{% block page_subtitle %}{% trans "Running system services and daemons" %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'paxalia/styles/components/server.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="server-services">
+    <div class="table-card">
+        <div class="chart-title-wrapper">
+            <h2 class="chart-title">{% trans "Active Services" %}</h2>
+        </div>
+        <table class="analytics-table">
+            <thead>
+            <tr>
+                <th>{% trans "Service" %}</th>
+                <th>{% trans "Load" %}</th>
+                <th>{% trans "Active" %}</th>
+                <th>{% trans "Sub" %}</th>
+                <th>{% trans "Description" %}</th>
+            </tr>
+            </thead>
+            <tbody id="services-list">
+            <tr>
+                <td colspan="5">{% trans "Loading services..." %}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ request.csp_nonce }}">
+    window.SERVER_API_METRICS_URL = "{% url 'paxalia:api_server_metrics' %}";
+    window.SERVER_API_HISTORY_URL = "{% url 'paxalia:api_server_history' %}";
+</script>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/server/services.js' %}"></script>
+{% endblock %}
+

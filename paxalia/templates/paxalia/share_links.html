@@ -1,0 +1,86 @@
+{% extends 'paxalia/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Share Links" %} – Paxalia Analytics{% endblock %}
+{% block page_title %}{% trans "Share Links" %}{% endblock %}
+{% block page_subtitle %}{% trans "Public, read-only links to a traffic snapshot — no login required to view" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Create a Share Link" %}</h2>
+        <form method="post" class="analytics-settings-form security-inline-form">
+            {% csrf_token %}
+            <input type="hidden" name="save_link" value="1">
+            <input type="text" name="name" placeholder="{% trans 'Label (e.g. Q1 client report)' %}" required>
+            <input type="password" name="password" placeholder="{% trans 'Password (optional)' %}" autocomplete="new-password">
+            <input type="number" name="expires_days" placeholder="{% trans 'Expires in N days (optional)' %}" min="1">
+            <button type="submit" class="btn btn-primary">{% trans "Create" %}</button>
+        </form>
+        <p class="form-hint">
+            {% trans "Shows a 30-day traffic snapshot (views, unique visitors, top pages, top referrers) — not the full dashboard. Anyone with the link (and password, if set) can view it without logging in." %}
+        </p>
+    </div>
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Links" %}</h2>
+        {% if links %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Name" %}</th>
+                    <th>{% trans "Link" %}</th>
+                    <th>{% trans "Password" %}</th>
+                    <th>{% trans "Expires" %}</th>
+                    <th>{% trans "Status" %}</th>
+                    <th>{% trans "Last viewed" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for link in links %}
+                <tr>
+                    <td>{{ link.name }}</td>
+                    <td>
+                        <code style="word-break: break-all;">{{ request.scheme }}://{{ request.get_host }}{% url 'paxalia:shared_dashboard' link.id %}</code>
+                    </td>
+                    <td>{% if link.has_password %}{% trans "Yes" %}{% else %}{% trans "No" %}{% endif %}</td>
+                    <td>{{ link.expires_at|date:"Y-m-d"|default:"—" }}</td>
+                    <td>
+                        <span class="security-status-badge {% if link.is_usable %}security-status-ok{% else %}security-status-bad{% endif %}">
+                            {% if link.is_expired %}{% trans "Expired" %}{% elif link.is_active %}{% trans "Active" %}{% else %}{% trans "Revoked" %}{% endif %}
+                        </span>
+                    </td>
+                    <td>{{ link.last_viewed_at|date:"Y-m-d H:i"|default:"—" }}</td>
+                    <td>
+                        {% if link.is_active %}
+                        <form method="post" action="{% url 'paxalia:share_link_revoke' link.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-secondary" data-confirm="{% trans 'Revoke this link? It will stop working immediately.' %}">{% trans "Revoke" %}</button>
+                        </form>
+                        {% endif %}
+                        <form method="post" action="{% url 'paxalia:share_link_delete' link.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Delete this link permanently?' %}">{% trans "Delete" %}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No share links yet." %}</div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/security.js' %}"></script>
+{% endblock %}

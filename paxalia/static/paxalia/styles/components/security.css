@@ -1,0 +1,257 @@
+/* Paxalia Dashboard — Security / Operations components */
+.security-page .card-title {
+    margin-top: 0;
+    font-size: var(--font-size-md);
+    line-height: 1.35
+}
+
+.scorecard-tab-badge--fail{
+    background: rgba(220, 75, 92, .14);
+    color: #dc4b5c;
+    padding: var(--padding-xs);
+    border-radius: var(--radius-pill) ;
+}
+
+.security-banner {
+    padding: 12px 14px;
+    border: 1px solid var(--analytics-border);
+    border-left: 3px solid var(--analytics-gold);
+    border-radius: var(--radius-sm);
+    background: var(--analytics-surface);
+    color: var(--analytics-text);
+    line-height: 1.55
+}
+
+.security-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 4px;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    background: var(--analytics-surface);
+    box-shadow: var(--shadow-sm)
+}
+
+.security-tab {
+    min-height: 36px;
+    padding: 7px 11px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--analytics-text-dim);
+    font: inherit;
+    font-size: var(--font-size-xs);
+    cursor: pointer
+}
+
+.security-tab:hover, .security-tab.active {
+    background: var(--analytics-gold-dim);
+    border-color: var(--analytics-gold);
+    color: var(--analytics-gold)
+}
+
+.security-panel {
+    min-width: 0
+}
+
+.security-inline-form {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-md);
+    width: 100%;
+    flex-wrap: wrap
+}
+
+.security-inline-form > * {
+    min-width: 0
+}
+
+.security-inline-form input:not([type="hidden"]), .security-inline-form select, .security-inline-form textarea {
+    flex: 1 1 220px;
+    width: auto;
+    min-width: 0
+}
+
+.security-inline-form .btn {
+    flex: 0 0 auto
+}
+
+.security-runtime-grid {
+    display: grid;
+    grid-template-columns:1.2fr 1fr;
+    gap: 20px
+}
+
+.security-runtime-list {
+    display: grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap: 10px
+}
+
+.security-runtime-item {
+    padding: 12px 14px;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    background: var(--analytics-surface)
+}
+
+.security-runtime-item .label {
+    display: block;
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: .04em
+}
+
+.security-runtime-item .value {
+    display: block;
+    margin-top: 4px;
+    color: var(--analytics-text);
+    font-weight: var(--font-weight-medium);
+    overflow-wrap: anywhere
+}
+
+.security-runtime-warning {
+    border-color: var(--analytics-gold)
+}
+
+.security-empty {
+    min-height: 112px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 22px;
+    border: 1px dashed var(--analytics-border);
+    border-radius: var(--radius-sm);
+    color: var(--analytics-text-dim);
+    text-align: center
+}
+
+.security-empty strong {
+    color: var(--analytics-text)
+}
+
+.security-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: var(--radius-pill);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold)
+}
+
+.security-status-ok {
+    background: var(--analytics-gold-dim);
+    color: var(--analytics-gold)
+}
+
+.security-status-warn {
+    background: rgba(217, 154, 53, .14);
+    color: #d99a35
+}
+
+.security-status-bad {
+    background: rgba(220, 75, 92, .14);
+    color: #dc4b5c
+}
+
+.api-reference-grid {
+    display: grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap: 20px
+}
+
+.api-reference-purpose {
+    display: grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap: 12px
+}
+
+.api-purpose {
+    padding: 14px;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    background: var(--analytics-surface)
+}
+
+.api-purpose strong {
+    display: block;
+    margin-bottom: 5px
+}
+
+.api-purpose span {
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-sm);
+    line-height: 1.5
+}
+
+.api-reference-code {
+    margin-top: var(--margin-md);
+    padding: 14px;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    background: var(--analytics-bg);
+    overflow: auto
+}
+
+@media (max-width: 1000px) {
+    .security-runtime-grid, .api-reference-grid {
+        grid-template-columns:1fr
+    }
+
+    .api-reference-purpose {
+        grid-template-columns:1fr
+    }
+}
+
+@media (max-width: 650px) {
+    .security-runtime-list {
+        grid-template-columns:1fr
+    }
+
+    .security-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap
+    }
+
+    .security-tab {
+        white-space: nowrap;
+        flex: 0 0 auto
+    }
+}
+
+/* Failure states: these are explicit error/failure semantics, so they must
+   never inherit the neutral/OK presentation. */
+.security-status-badge.security-status-fail,
+.security-status-badge.security-status-error,
+.security-status-badge.security-status-danger,
+.security-status-badge.security-status-down,
+.status-pill.status-pill--danger,
+.status-pill.status-pill--error {
+    background: rgba(220, 75, 92, .14);
+    border-color: rgba(220, 75, 92, .28);
+    color: #dc4b5c;
+}
+
+.security-empty--error,
+.security-empty.security-empty--danger,
+.chart-empty--error,
+.chart-empty.chart-empty--danger,
+.ops-card--error,
+.ops-status--error {
+    border-color: rgba(220, 75, 92, .38);
+    color: #dc4b5c;
+}
+
+.security-empty--error strong,
+.security-empty.security-empty--danger strong,
+.chart-empty--error strong,
+.chart-empty.chart-empty--danger strong,
+.ops-card--error .ops-value {
+    color: #dc4b5c;
+}
