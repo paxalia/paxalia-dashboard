@@ -1,0 +1,60 @@
+{% load i18n %}<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{ report.name }}</title>
+</head>
+<body style="margin:0; padding:0; background:#f5f5f5; font-family: -apple-system, Helvetica, Arial, sans-serif;">
+<div style="max-width:600px; margin:0 auto; padding:24px; background:#ffffff;">
+
+    <h1 style="font-size:20px; margin:0 0 4px;">{{ report.name }}</h1>
+    <p style="color:#666; font-size:13px; margin:0 0 24px;">
+        {{ snapshot.start_date }} – {{ snapshot.end_date }}
+        {% if snapshot.site %}&middot; {{ snapshot.site.name }}{% endif %}
+    </p>
+
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+        <tr>
+            <td style="padding:12px; background:#f0f0f0; border-radius:6px; text-align:center; width:50%;">
+                <div style="font-size:24px; font-weight:bold;">{{ snapshot.total_views }}</div>
+                <div style="font-size:12px; color:#666;">{% trans "Total Views" %}</div>
+            </td>
+            <td style="width:12px;"></td>
+            <td style="padding:12px; background:#f0f0f0; border-radius:6px; text-align:center; width:50%;">
+                <div style="font-size:24px; font-weight:bold;">{{ snapshot.unique_visitors }}</div>
+                <div style="font-size:12px; color:#666;">{% trans "Unique Visitors" %}</div>
+            </td>
+        </tr>
+    </table>
+
+    <h2 style="font-size:15px; margin:0 0 8px;">{% trans "Top Pages" %}</h2>
+    <table cellpadding="6" cellspacing="0" width="100%" style="font-size:13px; margin-bottom:24px; border-collapse:collapse;">
+        {% for row in snapshot.top_pages %}
+        <tr style="border-bottom:1px solid #eee;">
+            <td>{{ row.path }}</td>
+            <td style="text-align:right; color:#666;">{{ row.count }}</td>
+        </tr>
+        {% empty %}
+        <tr><td style="color:#999;">{% trans "No page views in this period." %}</td></tr>
+        {% endfor %}
+    </table>
+
+    {% if snapshot.top_referrers %}
+    <h2 style="font-size:15px; margin:0 0 8px;">{% trans "Top Referrers" %}</h2>
+    <table cellpadding="6" cellspacing="0" width="100%" style="font-size:13px; margin-bottom:24px; border-collapse:collapse;">
+        {% for row in snapshot.top_referrers %}
+        <tr style="border-bottom:1px solid #eee;">
+            <td>{{ row.referrer }}</td>
+            <td style="text-align:right; color:#666;">{{ row.count }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    <p style="font-size:11px; color:#999; margin-top:32px;">
+        {% trans "Sent by Paxalia Analytics." %}
+    </p>
+
+</div>
+</body>
+</html>

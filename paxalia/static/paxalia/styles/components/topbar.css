@@ -1,0 +1,110 @@
+/* Paxalia Dashboard — topbar */
+.topbar.dashboard-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 850;
+    min-height: 76px;
+    display: flex;
+    align-items: center;
+    gap: var(--gap-md);
+    padding: 15px 28px;
+    margin: 0 0 2px;
+    border-bottom: 1px solid var(--analytics-border);
+    background: var(--analytics-bg);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .05)
+}
+
+.topbar__menu-toggle, .topbar__meu-toggle {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    background: var(--analytics-surface);
+    color: var(--analytics-text-dim);
+    cursor: pointer
+}
+
+.topbar__menu-toggle:hover, .topbar__meu-toggle:hover {
+    border-color: var(--analytics-gold);
+    background: var(--analytics-gold-dim);
+    color: var(--analytics-gold)
+}
+
+.dashboard-topbar__title {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding-inline: 3px
+}
+
+.dashboard-page-title {
+    margin: 0;
+    color: var(--analytics-text);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.dashboard-page-subtitle {
+    margin: 0;
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+    line-height: 1.45;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.analytics-notification-bell {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    background: var(--analytics-surface);
+    color: var(--analytics-text-dim);
+    text-decoration: none
+}
+
+.analytics-notification-bell:hover {
+    border-color: var(--analytics-gold);
+    background: var(--analytics-gold-dim);
+    color: var(--analytics-gold)
+}
+
+@media (max-width: 767px) {
+    .topbar.dashboard-topbar {
+        min-height: 64px;
+        padding: 10px 14px;
+        gap: 10px;
+        margin-bottom: 1px
+    }
+
+    .topbar__menu-toggle, .topbar__meu-toggle, .analytics-notification-bell {
+        width: 36px;
+        height: 36px;
+        flex-basis: 36px
+    }
+
+    .dashboard-page-title {
+        font-size: var(--font-size-md)
+    }
+
+    .dashboard-page-subtitle {
+        display: none
+    }
+}

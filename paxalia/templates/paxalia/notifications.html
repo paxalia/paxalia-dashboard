@@ -1,0 +1,59 @@
+{% extends 'paxalia/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Notifications" %} – Paxalia Analytics{% endblock %}
+{% block page_title %}{% trans "Notifications" %}{% endblock %}
+{% block page_subtitle %}{% trans "Anomalies, security events, and report activity" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+
+    <div class="table-card notification-toolbar">
+        <form method="post" action="{% url 'paxalia:notifications_mark_all_read' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary">{% trans "Mark all as read" %}</button>
+        </form>
+    </div>
+
+    <div class="table-card">
+        {% if notifications %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "When" %}</th>
+                    <th>{% trans "Category" %}</th>
+                    <th>{% trans "Subject" %}</th>
+                    <th>{% trans "Message" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for n in notifications %}
+                <tr class="notification-row{% if not n.is_read %} notification-row--unread{% endif %}">
+                    <td>{{ n.created_at|date:"Y-m-d H:i" }}</td>
+                    <td><span class="security-status-badge security-status-ok">{{ n.get_category_display }}</span></td>
+                    <td>{{ n.subject }}</td>
+                    <td>{{ n.message|truncatewords:20 }}</td>
+                    <td>
+                        {% if not n.is_read %}
+                        <form method="post" action="{% url 'paxalia:notification_mark_read' n.id %}" class="notification-action-form">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-secondary">{% trans "Mark read" %}</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty notification-empty"><strong>{% trans "No notifications yet." %}</strong><span>{% trans "Anomaly alerts, security events, and scheduled-report activity will appear here." %}</span></div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

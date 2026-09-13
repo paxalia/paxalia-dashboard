@@ -1,30 +1,30 @@
 # MANIFEST.in – include all static assets, templates, and locale files
 
 # Source code
-include analytics/*.py
-include analytics/views/*.py
-include analytics/templatetags/*.py
-recursive-include analytics/management *.py
-recursive-include analytics/migrations *.py
-include analytics/requirements.txt
+include paxalia/*.py
+include paxalia/views/*.py
+include paxalia/templatetags/*.py
+recursive-include paxalia/management *.py
+recursive-include paxalia/migrations *.py
+include paxalia/requirements.txt
 
 # Additional data file
-include analytics/bots_paths.txt
+include paxalia/bots_paths.txt
 
 # Templates
-recursive-include analytics/templates *
+recursive-include paxalia/templates *
 
 # Static files (CSS, JS, icons)
-recursive-include analytics/static *
+recursive-include paxalia/static *
 
 # Translations (source .po files only – .mo is compiled by the user)
-include analytics/locale/en/LC_MESSAGES/django.po
-include analytics/locale/es/LC_MESSAGES/django.po
-include analytics/locale/ar/LC_MESSAGES/django.po
-include analytics/locale/zh-hans/LC_MESSAGES/django.po
-include analytics/locale/pt-br/LC_MESSAGES/django.po
+include paxalia/locale/en/LC_MESSAGES/django.po
+include paxalia/locale/es/LC_MESSAGES/django.po
+include paxalia/locale/ar/LC_MESSAGES/django.po
+include paxalia/locale/zh-hans/LC_MESSAGES/django.po
+include paxalia/locale/pt-br/LC_MESSAGES/django.po
 
 # Exclude what shouldn't be shipped
-exclude analytics/geoip/*.mmdb
+exclude paxalia/geoip/*.mmdb
 global-exclude *.pyc *.pyo __pycache__
 global-exclude *.mo

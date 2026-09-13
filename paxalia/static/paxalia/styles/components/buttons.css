@@ -1,0 +1,65 @@
+/* ============================================
+   Analytics Dashboard – Shared Buttons
+   ============================================
+*/
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-xs);
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm, 4px);
+    background: var(--analytics-surface);
+    color: var(--analytics-text);
+    font-size: var(--font-size-sm, 0.875rem);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:hover {
+    border-color: var(--analytics-gold, var(--analytics-border));
+    background: var(--analytics-border);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-sm {
+    padding: 0.3rem 0.65rem;
+    font-size: var(--font-size-xs, 0.75rem);
+}
+
+.btn-primary {
+    background: var(--analytics-gold);
+    color: var(--analytics-bg, #111);
+    border-color: var(--analytics-gold);
+}
+
+.btn-primary:hover {
+    background: var(--analytics-gold-hover);
+    border-color: var(--analytics-gold-hover);
+}
+
+.btn-secondary {
+    background: var(--analytics-surface);
+    color: var(--analytics-text);
+    border-color: var(--analytics-border);
+}
+
+.btn-secondary:hover {
+    background: var(--analytics-border);
+}
+
+.btn-danger {
+    background: rgba(220, 60, 60, 0.12);
+    color: #dc3c3c;
+    border-color: rgba(220, 60, 60, 0.4);
+}
+
+.btn-danger:hover {
+    background: rgba(220, 60, 60, 0.22);
+}
