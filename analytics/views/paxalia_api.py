@@ -10,9 +10,10 @@ anonymous/unauthenticated on purpose for browser-side use.
 """
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, time, timedelta
 
 from django.core.cache import cache
+from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -35,15 +36,14 @@ RATE_LIMIT_MAX_REQUESTS = 300
 
 def _rate_limited(api_key):
     cache_key = f'analytics:paxalia_api_rl:{api_key.id}'
-    count = cache.get(cache_key, 0)
-    if count >= RATE_LIMIT_MAX_REQUESTS:
-        return True
-    cache.add(cache_key, 0, timeout=RATE_LIMIT_WINDOW_SECONDS)
+    if cache.add(cache_key, 1, timeout=RATE_LIMIT_WINDOW_SECONDS):
+        return False
     try:
-        cache.incr(cache_key)
+        count = cache.incr(cache_key)
     except ValueError:
-        cache.set(cache_key, 1, timeout=RATE_LIMIT_WINDOW_SECONDS)
-    return False
+        cache.add(cache_key, 1, timeout=RATE_LIMIT_WINDOW_SECONDS)
+        count = 1
+    return count > RATE_LIMIT_MAX_REQUESTS
 
 
 def _require_key(request, scope):
@@ -59,21 +59,32 @@ def _require_key(request, scope):
 
 
 def _parse_date_range(request):
-    end_str = request.GET.get('end_date')
-    start_str = request.GET.get('start_date')
-    end_date = timezone.now()
-    if end_str:
+    """Return an inclusive calendar-day range for the read API.
+
+    Explicit ``end_date=YYYY-MM-DD`` includes the full requested day rather
+    than silently ending at midnight.
+    """
+    today = timezone.localdate()
+
+    def parse_date(value):
         try:
-            end_date = timezone.make_aware(datetime.strptime(end_str, '%Y-%m-%d'))
-        except ValueError:
-            pass
-    start_date = end_date - timezone.timedelta(days=30)
-    if start_str:
-        try:
-            start_date = timezone.make_aware(datetime.strptime(start_str, '%Y-%m-%d'))
-        except ValueError:
-            pass
-    return start_date, end_date
+            return datetime.strptime(value, '%Y-%m-%d').date()
+        except (TypeError, ValueError):
+            return None
+
+    end_date = parse_date(request.GET.get('end_date')) or today
+    start_date = parse_date(request.GET.get('start_date'))
+    if start_date is None:
+        start_date = end_date - timedelta(days=30)
+    if start_date > end_date:
+        start_date = end_date
+
+    start_dt = timezone.make_aware(datetime.combine(start_date, time.min))
+    # Use an exclusive next-midnight bound to avoid microsecond precision
+    # assumptions and to match normal analytics range semantics.
+    end_dt = timezone.make_aware(datetime.combine(end_date + timedelta(days=1), time.min))
+    return start_dt, end_dt
+
 
 
 def _paginate(request):
@@ -136,14 +147,17 @@ def paxalia_api_stats_summary(request):
         return error_response
 
     start_dt, end_dt = _parse_date_range(request)
-    qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+    qs = PageView.objects.filter(created_at__gte=start_dt, created_at__lt=end_dt, is_bot=False, is_api=False)
     if api_key.site is not None:
         qs = qs.filter(site=api_key.site)
 
     return JsonResponse({
         'start_date': start_dt.date().isoformat(),
-        'end_date': end_dt.date().isoformat(),
+        'end_date': (end_dt - timedelta(microseconds=1)).date().isoformat(),
         'total_views': qs.count(),
+        'unique_sessions': qs.exclude(session_id='').values('session_id').distinct().count(),
+        # Backward-compatible field name retained for v3 clients; it counts
+        # distinct sessions, not a device/person-level visitor identity.
         'unique_visitors': qs.exclude(session_id='').values('session_id').distinct().count(),
     })
 
@@ -158,7 +172,7 @@ def paxalia_api_pageviews(request):
     start_dt, end_dt = _parse_date_range(request)
     limit, offset = _paginate(request)
 
-    qs = PageView.objects.filter(created_at__range=(start_dt, end_dt), is_bot=False, is_api=False)
+    qs = PageView.objects.filter(created_at__gte=start_dt, created_at__lt=end_dt, is_bot=False, is_api=False)
     if api_key.site is not None:
         qs = qs.filter(site=api_key.site)
     qs = qs.order_by('-created_at')
@@ -197,7 +211,7 @@ def paxalia_api_events(request):
     start_dt, end_dt = _parse_date_range(request)
     limit, offset = _paginate(request)
 
-    qs = AnalyticsEvent.objects.filter(created_at__range=(start_dt, end_dt))
+    qs = AnalyticsEvent.objects.filter(created_at__gte=start_dt, created_at__lt=end_dt)
     if api_key.site is not None:
         qs = qs.filter(site=api_key.site)
     category_filter = request.GET.get('category')
@@ -224,3 +238,4 @@ def paxalia_api_events(request):
             for e in page
         ],
     })
+

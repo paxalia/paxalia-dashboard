@@ -12,7 +12,7 @@
 {% block dashboard_content %}
 <div class="security-page">
 
-    <div class="table-card">
+    <div class="table-card notification-toolbar">
         <form method="post" action="{% url 'analytics:notifications_mark_all_read' %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-secondary">{% trans "Mark all as read" %}</button>
@@ -33,14 +33,14 @@
             </thead>
             <tbody>
                 {% for n in notifications %}
-                <tr style="{% if not n.is_read %}font-weight:600;{% endif %}">
+                <tr class="notification-row{% if not n.is_read %} notification-row--unread{% endif %}">
                     <td>{{ n.created_at|date:"Y-m-d H:i" }}</td>
                     <td><span class="security-status-badge security-status-ok">{{ n.get_category_display }}</span></td>
                     <td>{{ n.subject }}</td>
                     <td>{{ n.message|truncatewords:20 }}</td>
                     <td>
                         {% if not n.is_read %}
-                        <form method="post" action="{% url 'analytics:notification_mark_read' n.id %}" style="display:inline;">
+                        <form method="post" action="{% url 'analytics:notification_mark_read' n.id %}" class="notification-action-form">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-secondary">{% trans "Mark read" %}</button>
                         </form>
@@ -51,7 +51,7 @@
             </tbody>
         </table>
         {% else %}
-        <div class="security-empty">{% trans "No notifications yet." %}</div>
+        <div class="security-empty notification-empty"><strong>{% trans "No notifications yet." %}</strong><span>{% trans "Anomaly alerts, security events, and scheduled-report activity will appear here." %}</span></div>
         {% endif %}
     </div>
 

@@ -10,7 +10,7 @@ from analytics.api_keys import generate_key
 from analytics.models import PaxaliaAPIKey
 from analytics.security_audit import log_action
 
-from .utils import section_enabled, get_current_site
+from .utils import section_enabled, get_current_site, scoped_object_or_404
 
 
 @staff_member_required
@@ -56,7 +56,9 @@ def api_keys_management(request):
 @staff_member_required
 @require_POST
 def api_key_revoke(request, key_id):
-    key = get_object_or_404(PaxaliaAPIKey, id=key_id)
+    if not section_enabled('api_keys'):
+        raise Http404
+    key = scoped_object_or_404(PaxaliaAPIKey, request, key_id)
     key.is_active = False
     key.save(update_fields=['is_active'])
     log_action(request, 'api_key.revoked', detail=f'name={key.name} prefix={key.key_prefix}')
@@ -67,9 +69,12 @@ def api_key_revoke(request, key_id):
 @staff_member_required
 @require_POST
 def api_key_delete(request, key_id):
-    key = get_object_or_404(PaxaliaAPIKey, id=key_id)
+    if not section_enabled('api_keys'):
+        raise Http404
+    key = scoped_object_or_404(PaxaliaAPIKey, request, key_id)
     name, prefix = key.name, key.key_prefix
     key.delete()
     log_action(request, 'api_key.deleted', detail=f'name={name} prefix={prefix}')
     messages.success(request, _('API key deleted.'))
     return redirect('analytics:api_keys')
+

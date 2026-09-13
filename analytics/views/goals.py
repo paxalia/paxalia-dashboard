@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 from analytics.conversions import goal_conversion, funnel_dropoff
 from analytics.models import Goal, Funnel, FunnelStep, PageView
 
-from .utils import get_date_range, section_enabled, get_current_site, site_scoped
+from .utils import get_date_range, section_enabled, get_current_site, site_scoped, scoped_object_or_404
 
 
 @staff_member_required
@@ -61,7 +61,9 @@ def goals_management(request):
 @staff_member_required
 @require_POST
 def goal_delete(request, goal_id):
-    goal = get_object_or_404(Goal, id=goal_id)
+    if not section_enabled('goals'):
+        raise Http404
+    goal = scoped_object_or_404(Goal, request, goal_id)
     goal.delete()
     messages.success(request, _('Goal deleted.'))
     return redirect('analytics:goals')
@@ -118,7 +120,10 @@ def funnels_management(request):
 @staff_member_required
 @require_POST
 def funnel_delete(request, funnel_id):
-    funnel = get_object_or_404(Funnel, id=funnel_id)
+    if not section_enabled('funnels'):
+        raise Http404
+    funnel = scoped_object_or_404(Funnel, request, funnel_id)
     funnel.delete()
     messages.success(request, _('Funnel deleted.'))
     return redirect('analytics:funnels')
+

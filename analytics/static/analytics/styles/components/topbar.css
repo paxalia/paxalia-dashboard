@@ -1,95 +1,110 @@
-/* ============================================
-   Analytics Topbar – Shared topbar inside main content
-   ============================================ */
-
-.topbar {
+/* Paxalia Dashboard — topbar */
+.topbar.dashboard-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 850;
+    min-height: 76px;
     display: flex;
     align-items: center;
     gap: var(--gap-md);
+    padding: 15px 28px;
+    margin: 0 0 2px;
     border-bottom: 1px solid var(--analytics-border);
-    background: transparent;
+    background: var(--analytics-bg);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .05)
 }
 
-.topbar__meu-toggle {
+.topbar__menu-toggle, .topbar__meu-toggle {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-md);
-    background: transparent;
     border: 1px solid var(--analytics-border);
-    cursor: pointer;
+    border-radius: var(--radius-sm);
+    background: var(--analytics-surface);
     color: var(--analytics-text-dim);
-    transition: color 0.15s, border-color 0.15s;
+    cursor: pointer
 }
 
-.topbar__meu-toggle:hover {
-    color: var(--analytics-text);
-    border-color: var(--analytics-text-dim);
-}
-
-.dashboard-topbar {
-    padding: var(--padding-md) var(--padding-lg);
+.topbar__menu-toggle:hover, .topbar__meu-toggle:hover {
+    border-color: var(--analytics-gold);
+    background: var(--analytics-gold-dim);
+    color: var(--analytics-gold)
 }
 
 .dashboard-topbar__title {
+    min-width: 0;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    flex-wrap: wrap;
-    gap: var(--gap-sm);
+    justify-content: center;
+    gap: 4px;
+    padding-inline: 3px
 }
 
 .dashboard-page-title {
     margin: 0;
+    color: var(--analytics-text);
     font-size: var(--font-size-lg);
     font-weight: var(--font-weight-bold);
-    color: var(--analytics-gold);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
 }
 
 .dashboard-page-subtitle {
     margin: 0;
-    font-size: var(--font-size-md);
     color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+    line-height: 1.45;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
 }
 
-/* ─── Notification bell ──────────────────────────────────────────
-   Was entirely inline-styled (including a hardcoded #c0392b red) —
-   moved here to actually use the theme's design tokens, same as
-   every other topbar element. */
 .analytics-notification-bell {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     margin-left: auto;
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--padding-sm, 0.5rem);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    background: var(--analytics-surface);
     color: var(--analytics-text-dim);
-    text-decoration: none;
-    transition: color 0.15s, background-color 0.15s;
+    text-decoration: none
 }
 
-.analytics-notification-bell:hover,
-.analytics-notification-bell:focus-visible {
-    color: var(--analytics-gold);
-    background: var(--analytics-surface-hover, rgba(255, 255, 255, 0.05));
+.analytics-notification-bell:hover {
+    border-color: var(--analytics-gold);
+    background: var(--analytics-gold-dim);
+    color: var(--analytics-gold)
 }
 
-.analytics-notification-badge {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 4px;
-    border-radius: 999px;
-    background: var(--analytics-danger, #dc3c3c);
-    color: #fff;
-    font-size: 10px;
-    line-height: 1;
-    font-weight: 600;
+@media (max-width: 767px) {
+    .topbar.dashboard-topbar {
+        min-height: 64px;
+        padding: 10px 14px;
+        gap: 10px;
+        margin-bottom: 1px
+    }
+
+    .topbar__menu-toggle, .topbar__meu-toggle, .analytics-notification-bell {
+        width: 36px;
+        height: 36px;
+        flex-basis: 36px
+    }
+
+    .dashboard-page-title {
+        font-size: var(--font-size-md)
+    }
+
+    .dashboard-page-subtitle {
+        display: none
+    }
 }

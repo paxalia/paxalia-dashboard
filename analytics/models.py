@@ -1,6 +1,5 @@
 import os
 import uuid
-import hashlib
 
 from django.conf import settings
 from django.db import models
@@ -843,7 +842,7 @@ class ShareLink(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True, related_name='share_links')
     name = models.CharField(max_length=255)
-    password_hash = models.CharField(max_length=64, blank=True, help_text="SHA-256. Blank means no password required.")
+    password_hash = models.CharField(max_length=128, blank=True, help_text="Django password hash. Blank means no password required.")
     expires_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -1083,3 +1082,4 @@ class Deployment(models.Model):
 
     def __str__(self):
         return self.version or f"deployment @ {self.deployed_at}"
+

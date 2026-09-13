@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
@@ -13,11 +14,22 @@ from analytics.models import ShareLink
 from analytics.reporting import compute_overview_snapshot
 from analytics.security_audit import log_action
 
-from .utils import section_enabled, get_current_site
+from .utils import section_enabled, get_current_site, scoped_object_or_404
 
 
 def _hash_password(raw):
-    return hashlib.sha256(raw.encode()).hexdigest()
+    return make_password(raw)
+
+
+def _check_password(raw, encoded):
+    if not encoded:
+        return not raw
+    if check_password(raw, encoded):
+        return True, False
+    # Backward compatibility for v3 hashes created before the secure hash
+    # migration.  Upgrade the stored hash after a successful legacy match.
+    legacy = hashlib.sha256(raw.encode()).hexdigest()
+    return legacy == encoded, legacy == encoded
 
 
 # ─── Staff-side management ─────────────────────────────────────────
@@ -69,7 +81,7 @@ def share_links_management(request):
 @staff_member_required
 @require_POST
 def share_link_revoke(request, link_id):
-    link = get_object_or_404(ShareLink, id=link_id)
+    link = scoped_object_or_404(ShareLink, request, link_id)
     link.is_active = False
     link.save(update_fields=['is_active'])
     log_action(request, 'share_link.revoked', detail=f'name={link.name} id={link.id}')
@@ -80,7 +92,7 @@ def share_link_revoke(request, link_id):
 @staff_member_required
 @require_POST
 def share_link_delete(request, link_id):
-    link = get_object_or_404(ShareLink, id=link_id)
+    link = scoped_object_or_404(ShareLink, request, link_id)
     name = link.name
     link.delete()
     log_action(request, 'share_link.deleted', detail=f'name={name}')
@@ -105,8 +117,13 @@ def shared_dashboard_view(request, token):
     if link.has_password and not request.session.get(session_key):
         if request.method == 'POST':
             password = request.POST.get('password', '')
-            if _hash_password(password) == link.password_hash:
+            valid, legacy_match = _check_password(password, link.password_hash)
+            if valid:
                 request.session[session_key] = True
+                if legacy_match:
+                    ShareLink.objects.filter(pk=link.pk).update(
+                        password_hash=_hash_password(password)
+                    )
             else:
                 return render(request, 'analytics/shared_dashboard.html', {
                     'link': link, 'needs_password': True, 'error': True,
@@ -125,3 +142,4 @@ def shared_dashboard_view(request, token):
     return render(request, 'analytics/shared_dashboard.html', {
         'link': link, 'needs_password': False, 'snapshot': snapshot,
     })
+

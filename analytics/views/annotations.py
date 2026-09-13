@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from analytics.models import ChartAnnotation
 
-from .utils import section_enabled, get_current_site
+from .utils import section_enabled, get_current_site, scoped_object_or_404
 
 
 @staff_member_required
@@ -47,7 +47,10 @@ def annotations_management(request):
 @staff_member_required
 @require_POST
 def annotation_delete(request, annotation_id):
-    annotation = get_object_or_404(ChartAnnotation, id=annotation_id)
+    if not section_enabled('annotations'):
+        raise Http404
+    annotation = scoped_object_or_404(ChartAnnotation, request, annotation_id)
     annotation.delete()
     messages.success(request, _('Annotation deleted.'))
     return redirect('analytics:annotations')
+

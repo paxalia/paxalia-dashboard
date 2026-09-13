@@ -1,95 +1,34 @@
-/* ============================================
-   Server – additional components (partition bars, network interfaces)
-   ============================================ */
-
-/* Disk partition bars */
+/* Paxalia Dashboard — server monitoring components */
 .disk-partition {
-    margin-bottom: var(--gap-md);
+    margin-bottom: var(--gap-md)
 }
 
 .partition-label {
     font-weight: var(--font-weight-medium);
     font-size: var(--font-size-sm);
-    color: var(--analytics-text);
+    color: var(--analytics-text)
 }
 
-.partition-bar {
-    height: 20px;
-    background: var(--analytics-border);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    margin: var(--gap-xs) 0;
-}
-
-.partition-fill {
-    height: 100%;
-    border-radius: var(--radius-sm);
-    transition: width 0.3s ease;
-}
-
-.partition-stats {
-    font-size: var(--font-size-xs);
-    color: var(--analytics-text-dim);
-}
-
-/* Network interfaces list */
-.network-interface {
-    background: var(--analytics-surface);
-    padding: var(--padding-sm) var(--padding-md);
-    border-radius: var(--radius-sm);
-    margin-bottom: var(--gap-sm);
-    border: 1px solid var(--analytics-border);
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.network-interface > div {
-    font-size: var(--font-size-sm);
-    color: var(--analytics-text);
-}
-
-.network-interface strong {
-    color: var(--analytics-text);
-}
-
-/* Responsive tweaks */
-@media (max-width: 768px) {
-    .network-interface {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--gap-xs);
-    }
-}
-
-/* Already in your server.css – ensure these styles exist */
-
-/* Partition bars – more polished */
 .partition-bar {
     height: 22px;
     background: var(--analytics-surface);
     border: 1px solid var(--analytics-border);
     border-radius: var(--radius-sm);
     overflow: hidden;
-    margin: 0.25rem 0;
+    margin: .25rem 0
 }
+
 .partition-fill {
     height: 100%;
     border-radius: var(--radius-sm);
-    transition: width 0.4s ease;
-}
-.partition-label {
-    font-weight: var(--font-weight-medium);
-    font-size: var(--font-size-sm);
-    color: var(--analytics-text);
-}
-.partition-stats {
-    font-size: var(--font-size-xs);
-    color: var(--analytics-text-dim);
+    transition: width .4s ease
 }
 
-/* Network interfaces */
+.partition-stats {
+    font-size: var(--font-size-xs);
+    color: var(--analytics-text-dim)
+}
+
 .network-interface {
     background: var(--analytics-surface);
     padding: var(--padding-sm) var(--padding-md);
@@ -100,22 +39,28 @@
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    color: var(--analytics-text);
-}
-.network-interface > div {
-    font-size: var(--font-size-sm);
-}
-.network-interface strong {
-    color: var(--analytics-text);
-    margin-right: var(--gap-sm);
+    color: var(--analytics-text)
 }
 
-/* Same "stack of table-cards with no gap" bug as .security-page/.rum-page —
-   these three Phase 13 sub-pages never got a layout rule either. */
-.server-slow-queries,
-.server-queues,
-.server-deployments {
+.network-interface > div {
+    font-size: var(--font-size-sm)
+}
+
+.network-interface strong {
+    color: var(--analytics-text);
+    margin-right: var(--gap-sm)
+}
+
+.server-slow-queries, .server-queues, .server-deployments {
     display: flex;
     flex-direction: column;
-    gap: var(--gap-lg);
+    gap: var(--gap-lg)
+}
+
+@media (max-width: 768px) {
+    .network-interface {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--gap-xs)
+    }
 }

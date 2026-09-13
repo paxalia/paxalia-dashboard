@@ -170,6 +170,45 @@ def _check_upload_extension_validation():
                   f'{len(blocked)} known-dangerous extension(s) are blocked on upload; configure UPLOAD_ALLOWED_EXTENSIONS for a stricter allowlist.')
 
 
+def _middleware_has(suffix):
+    return any(m.rsplit('.', 1)[-1] == suffix for m in (getattr(settings, 'MIDDLEWARE', []) or []))
+
+
+def _check_hsts():
+    max_age = int(getattr(settings, 'SECURE_HSTS_SECONDS', 0) or 0)
+    if max_age >= 31536000:
+        return _check('hsts', 'HSTS policy', 'pass', f'SECURE_HSTS_SECONDS is {max_age}.')
+    if max_age > 0:
+        return _check('hsts', 'HSTS policy', 'warn', f'HSTS is enabled for only {max_age} seconds; production sites normally use a long-lived policy.')
+    return _check('hsts', 'HSTS policy', 'warn', 'No Django HSTS policy is configured; enforce HSTS at the trusted proxy/load balancer if that is where TLS terminates.')
+
+
+def _check_frame_options():
+    value = getattr(settings, 'X_FRAME_OPTIONS', 'DENY')
+    if value == 'DENY':
+        return _check('frame_options', 'Clickjacking protection', 'pass', 'X_FRAME_OPTIONS is DENY.')
+    return _check('frame_options', 'Clickjacking protection', 'warn', f'X_FRAME_OPTIONS is {value!r}; review whether framing is required.')
+
+
+def _check_cors():
+    allow_all = bool(getattr(settings, 'CORS_ALLOW_ALL_ORIGINS', False))
+    if allow_all:
+        return _check('cors', 'CORS origins restricted', 'fail', 'CORS_ALLOW_ALL_ORIGINS is True.')
+    return _check('cors', 'CORS origins restricted', 'pass', 'CORS is not globally open.')
+
+
+def _check_security_block_middleware():
+    if _middleware_has('SecurityBlockMiddleware'):
+        return _check('blocked_ip_enforcement', 'IP block enforcement', 'pass', 'SecurityBlockMiddleware is active.')
+    return _check('blocked_ip_enforcement', 'IP block enforcement', 'warn', 'BlockedIP entries are stored but SecurityBlockMiddleware is not active; the blocklist will not reject requests until enforcement is enabled.')
+
+
+def _check_slow_query_middleware():
+    if _middleware_has('SlowQueryMiddleware'):
+        return _check('slow_query_capture', 'Slow-query capture', 'pass', 'SlowQueryMiddleware is active.')
+    return _check('slow_query_capture', 'Slow-query capture', 'warn', 'Slow-query records are not being captured because SlowQueryMiddleware is not active.')
+
+
 def run_scorecard_checks():
     """Return {'django': [...], 'package': [...], 'summary': {...}}."""
     django_checks = [
@@ -180,6 +219,11 @@ def run_scorecard_checks():
         _check_secret_key(),
         _check_allowed_hosts(),
         _check_csp_enforced(),
+        _check_hsts(),
+        _check_frame_options(),
+        _check_cors(),
+        _check_security_block_middleware(),
+        _check_slow_query_middleware(),
     ]
     package_checks = [
         _check_backup_encryption(),

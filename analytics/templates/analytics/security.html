@@ -4,14 +4,14 @@
 {% block title %}{% trans "Security Center" %} – Paxalia Analytics{% endblock %}
 
 {% block page_title %}{% trans "Security Center" %}{% endblock %}
-{% block page_subtitle %}{% trans "Login activity, sessions, and admin audit log" %}{% endblock %}
+{% block page_subtitle %}{% trans "Application posture, server runtime, authentication, and audit evidence" %}{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="security-page">
+<div class="security-page analytics-page-stack">
 
     {% if not dependency_health.django_supported %}
     <div class="security-banner security-banner--warn">
@@ -52,6 +52,42 @@
         {% if mfa_status is not None %}
         <button type="button" class="security-tab" data-tab="mfa" role="tab">{% trans "MFA Status" %}</button>
         {% endif %}
+        <button type="button" class="security-tab" data-tab="runtime" role="tab">{% trans "Server Runtime" %}</button>
+    </div>
+
+    <!-- ── Server Runtime ── -->
+    <div class="security-panel" data-panel="runtime" hidden>
+        <div class="security-runtime-grid">
+            <div class="table-card">
+                <h2 class="card-title">{% trans "Runtime posture" %}</h2>
+                <div class="security-runtime-list">
+                    <div class="security-runtime-item"><span class="label">{% trans "Dashboard version" %}</span><span class="value">{{ runtime_security.dashboard_version }}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Django" %}</span><span class="value">{{ runtime_security.django }}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Python" %}</span><span class="value">{{ runtime_security.python }}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Database" %}</span><span class="value">{{ runtime_security.db_vendor }}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Environment" %}</span><span class="value">{{ runtime_security.environment }}</span></div>
+                    <div class="security-runtime-item {% if runtime_security.debug %}security-runtime-warning{% endif %}"><span class="label">{% trans "DEBUG" %}</span><span class="value">{% if runtime_security.debug %}{% trans "Enabled" %}{% else %}{% trans "Disabled" %}{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "HTTPS redirect" %}</span><span class="value">{% if runtime_security.secure_ssl_redirect %}{% trans "Enabled" %}{% else %}{% trans "Proxy/application dependent" %}{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "IP block enforcement" %}</span><span class="value">{% if runtime_security.security_block_middleware %}{% trans "Active" %}{% else %}{% trans "Not active" %}{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Slow query capture" %}</span><span class="value">{% if runtime_security.slow_query_middleware %}{% trans "Active" %}{% else %}{% trans "Not active" %}{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Memory used" %}</span><span class="value">{% if runtime_security.memory_percent != None %}{{ runtime_security.memory_percent }}%{% else %}—{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Root disk used" %}</span><span class="value">{% if runtime_security.disk_percent != None %}{{ runtime_security.disk_percent }}%{% else %}—{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Host" %}</span><span class="value">{{ runtime_security.hostname }}</span></div>
+                </div>
+                <p class="form-hint" style="margin-top:14px!important;">{% trans "This view reports the runtime visible to the Django process. It is intentionally not a network vulnerability scanner and does not execute arbitrary remote probes." %}</p>
+            </div>
+            <div class="table-card">
+                <h2 class="card-title">{% trans "Operating-system login sessions" %}</h2>
+                {% if runtime_security.os_users %}
+                <table class="analytics-table">
+                    <thead><tr><th>{% trans "User" %}</th><th>{% trans "Terminal" %}</th><th>{% trans "Host" %}</th><th>{% trans "Since" %}</th></tr></thead>
+                    <tbody>{% for u in runtime_security.os_users %}<tr><td>{{ u.name }}</td><td>{{ u.terminal }}</td><td>{{ u.host }}</td><td>{{ u.started|date:"Y-m-d H:i" }}</td></tr>{% endfor %}</tbody>
+                </table>
+                {% else %}
+                <div class="security-empty"><strong>{% trans "No operating-system users are currently visible." %}</strong><span>{% trans "psutil may return no interactive sessions for a headless server or container." %}</span></div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     <!-- ── Login Activity ── -->

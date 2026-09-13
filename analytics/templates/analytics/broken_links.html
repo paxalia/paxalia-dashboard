@@ -8,10 +8,12 @@
     <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
 {% endblock %}
 
-{% block dashboard_content %}
-<div class="security-page">
+{% block filter_bar %}
     {% include 'analytics/includes/filter_bar.html' %}
+{% endblock %}
 
+{% block dashboard_content %}
+<div class="security-page analytics-page-stack">
     <div class="stat-grid">
         <div class="stat-card {% if total_404s > 0 %}stat-card--highlight{% endif %}">
             <span class="stat-label">{% trans "Total 404s" %}</span>
@@ -68,7 +70,10 @@
             </tbody>
         </table>
         {% else %}
-        <div class="security-empty">{% trans "No referred 404s in this date range." %}</div>
+        <div class="security-empty">
+            <strong>{% trans "No referred 404s in this date range." %}</strong>
+            <span>{% trans "This means the recorded 404 requests did not include a usable HTTP referrer. Check the Broken Paths table for scanners, stale bookmarks, or direct requests." %}</span>
+        </div>
         {% endif %}
     </div>
 </div>

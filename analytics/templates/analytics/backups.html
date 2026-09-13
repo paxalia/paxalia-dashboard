@@ -7,13 +7,12 @@
     <link rel="stylesheet" href="{% static 'analytics/styles/components/backup.css' %}">
 {% endblock %}
 
+{% block page_title %}{% trans "Backups" %}{% endblock %}
+{% block page_subtitle %}{% trans "Configure backup settings and manage archives." %}{% endblock %}
+
+
 {% block dashboard_content %}
 <div class="backup-page">
-    <div class="page-header">
-        <h1>{% trans "Backups" %}</h1>
-        <p class="page-subtitle">{% trans "Configure backup settings and manage archives." %}</p>
-    </div>
-
     <!-- Configuration card – full width, on top -->
     <div class="backup-config-card">
         <h2 class="card-title">{% trans "Settings" %}</h2>

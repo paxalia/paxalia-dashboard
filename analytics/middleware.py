@@ -9,6 +9,7 @@ from .models import PageView, AnalyticsSettings, DailySiteStats, AnalyticsEvent
 from .settings import get_config
 from .bot_classification import classify_bot
 from django.utils import timezone
+from django.db import IntegrityError, transaction
 
 logger = logging.getLogger('analytics')
 
@@ -249,22 +250,47 @@ class AnalyticsMiddleware:
                         )
                         break  # one search event per request is enough
 
-            # Update daily stats – aggregate total/bot/api views incrementally
-            today = timezone.now().date()
-            stats, _ = DailySiteStats.objects.get_or_create(site_id=site_id, date=today)
+            # Update daily counters without a read/modify/write race.  The
+            # 0018 migration gives us the uniqueness invariant; this helper
+            # handles the concurrent first-row creation and uses a row lock for
+            # subsequent increments.
+            self._increment_daily_stats(site_id, timezone.now().date(), is_bot, is_api)
+
+        except Exception:
+            logger.exception("Failed to log page view")
+
+        return response
+
+    @staticmethod
+    def _increment_daily_stats(site_id, today, is_bot, is_api):
+        """Atomically create/update one DailySiteStats row."""
+        with transaction.atomic():
+            try:
+                stats = (
+                    DailySiteStats.objects.select_for_update().get(
+                        site_id=site_id, date=today
+                    )
+                )
+            except DailySiteStats.DoesNotExist:
+                try:
+                    stats = DailySiteStats.objects.create(
+                        site_id=site_id, date=today
+                    )
+                except IntegrityError:
+                    stats = (
+                        DailySiteStats.objects.select_for_update().get(
+                            site_id=site_id, date=today
+                        )
+                    )
+
             if is_bot:
                 stats.bot_views += 1
             elif is_api:
                 stats.api_calls += 1
             else:
                 stats.total_views += 1
-            # (Other aggregations like unique_ips, sessions, etc. can be updated later via a separate cron)
-            stats.save()
+            stats.save(update_fields=['total_views', 'api_calls', 'bot_views'])
 
-        except Exception:
-            logger.exception("Failed to log page view")
-
-        return response
 
     @staticmethod
     def _get_ip(request):
@@ -390,3 +416,4 @@ class SlowQueryMiddleware:
 
         with connection.execute_wrapper(wrapper):
             return self.get_response(request)
+

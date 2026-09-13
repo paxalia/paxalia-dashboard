@@ -1,13 +1,7 @@
 /* ============================================
    Analytics Dashboard – Shared Buttons
    ============================================
-   Before this file, .btn/.btn-primary/.btn-secondary/.btn-danger/.btn-sm
-   were each defined 2-3 times independently (backup.css, security.css,
-   about.css) — each with slightly different colors, most visibly
-   .btn-danger (a pink-red #ff6384 on Backups, a muted red on Security
-   Center). Loaded globally in base.html now, same as tables.css/
-   stat-cards.css/charts.css, so every page renders the same button
-   regardless of which page-specific stylesheet it also loads. */
+*/
 
 .btn {
     display: inline-flex;

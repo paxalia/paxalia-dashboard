@@ -1,18 +1,33 @@
-/* ============================================
-   Analytics Dashboard – Base
-   ============================================ */
+/* Analytics Dashboard — base */
+*, *::before, *::after {
+    box-sizing: border-box
+}
 
-*,
-*::before,
-*::after {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+html {
+    min-width: 320px
 }
 
 body {
+    margin: 0;
+    min-height: 100vh;
     font-family: var(--font-family-sans);
     background: var(--analytics-bg);
-    color: var(--analytics-text);
-    min-height: 100vh;
+    color: var(--analytics-text)
+}
+
+button, input, select, textarea {
+    font: inherit
+}
+
+a {
+    color: inherit
+}
+
+img, svg, canvas {
+    max-width: 100%
+}
+
+:focus-visible {
+    outline: 2px solid var(--analytics-gold);
+    outline-offset: 2px
 }

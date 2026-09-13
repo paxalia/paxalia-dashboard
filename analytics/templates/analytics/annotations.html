@@ -14,7 +14,7 @@
 
     <div class="table-card">
         <h2 class="card-title">{% trans "Add an Annotation" %}</h2>
-        <form method="post" class="analytics-settings-form security-inline-form">
+        <form method="post" class="analytics-settings-form security-inline-form management-form management-form--annotation">
             {% csrf_token %}
             <input type="hidden" name="save_annotation" value="1">
             <input type="date" name="date" required>

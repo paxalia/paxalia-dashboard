@@ -1,77 +1,125 @@
-/* ============================================
-   Analytics Dashboard – Settings Form
-   ============================================ */
-
-.analytics-settings-form label {
-    display: block;
-    color: var(--analytics-text);
-    font-size: var(--font-size-md);
-    margin-bottom: var(--margin-xs);
-}
-
-.analytics-settings-form textarea,
-.analytics-settings-form input[type="number"],
-.analytics-settings-form input[type="text"] {
+/* Analytics Dashboard — unified management forms */
+.analytics-settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
     width: 100%;
-    background: var(--analytics-bg);
-    border: 1px solid var(--analytics-border);
-    border-radius: var(--radius-md);
-    padding: var(--padding-sm);
-    color: var(--analytics-text);
-    font-family: var(--font-family-mono);
-    font-size: var(--font-size-md);
-}
-
-.analytics-settings-form input[type="number"] {
-    width: 100px;
-    font-family: var(--font-family-sans);
 }
 
 .analytics-settings-form .form-row {
-    margin-bottom: var(--margin-md);
+    margin: 0 0 16px;
 }
 
-.analytics-settings-form .form-row-checkbox {
-    display: flex;
-    align-items: center;
-    gap: var(--gap-sm);
+.analytics-settings-form .form-row:last-child {
+    margin-bottom: 0
 }
 
-.analytics-settings-form button[type="submit"] {
-    background: var(--analytics-gold);
-    color: var(--analytics-bg);
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: var(--padding-sm) var(--padding-lg);
-    font-weight: var(--font-weight-bold);
-    cursor: pointer;
-    font-size: var(--font-size-lg);
-}
-
-.analytics-settings-form button[type="submit"]:hover {
-    background: var(--analytics-gold-hover);
-}
-
-/* Success / info messages */
-.analytics-messages {
-    margin-top: var(--margin-md);
-    margin-bottom: var(--margin-md);
-    padding: 0 var(--padding-lg);
-    display: flex;
-    flex-direction: column;
-    gap: var(--gap-sm, 0.5rem);
-}
-
-.analytics-message {
-    padding: var(--padding-sm) var(--padding-md);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-sm);
-    background: var(--analytics-surface);
-    border: 1px solid var(--analytics-border);
+.analytics-settings-form label {
+    display: block;
+    margin: 0 0 6px;
     color: var(--analytics-text);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
 }
 
-.analytics-message--success {
+.analytics-settings-form input:not([type="checkbox"]):not([type="radio"]),
+.analytics-settings-form select,
+.analytics-settings-form textarea {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    background: var(--analytics-surface);
+    color: var(--analytics-text);
+    font: inherit;
+    line-height: 1.35;
+}
+
+.analytics-settings-form input[type="checkbox"],
+.analytics-settings-form input[type="radio"] {
+    width: auto;
+    min-height: 0;
+    padding: 0;
+}
+
+.analytics-settings-form select {
+    cursor: pointer
+}
+
+.analytics-settings-form textarea {
+    min-height: 110px;
+    resize: vertical
+}
+
+.analytics-settings-form input:focus,
+.analytics-settings-form select:focus,
+.analytics-settings-form textarea:focus {
+    outline: none;
     border-color: var(--analytics-gold);
-    color: var(--analytics-gold);
+    box-shadow: 0 0 0 3px var(--analytics-gold-dim);
+}
+
+.analytics-settings-form .btn {
+    width: 100%;
+    min-height: 40px;
+    margin: 0;
+}
+
+/* The management screens are intentionally one field per row. This makes
+   the available width predictable and avoids cramped controls. */
+.management-form {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    width: 100%;
+}
+
+.management-form > input:not([type="hidden"]),
+.management-form > select,
+.management-form > textarea,
+.management-form > .btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: none !important;
+    margin: 0 0 14px !important;
+}
+
+.management-form > .btn {
+    margin-bottom: 0 !important;
+}
+
+.management-form textarea {
+    min-height: 110px
+}
+
+/* Compact numeric controls stay visually lighter while still taking the full
+   column width requested by the management screens. */
+.management-form input[type="number"] {
+    min-height: 40px
+}
+
+/* Uptime uses the same one-column form instead of the old oversized matrix. */
+.management-form--uptime,
+.management-form--goal,
+.management-form--annotation {
+    grid-template-columns:1fr !important;
+}
+
+@media (max-width: 767px) {
+    .analytics-settings-form .form-row {
+        margin-bottom: 14px
+    }
+
+    .analytics-settings-form input:not([type="checkbox"]):not([type="radio"]),
+    .analytics-settings-form select,
+    .analytics-settings-form textarea,
+    .analytics-settings-form .btn {
+        min-height: 40px;
+    }
 }

@@ -9,13 +9,15 @@
     <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
 {% endblock %}
 
+{% block filter_bar %}
+    {% include 'analytics/includes/filter_bar.html' %}
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="security-page">
-    {% include 'analytics/includes/filter_bar.html' %}
-
     <div class="table-card">
         <h2 class="card-title">{% trans "Add a Goal" %}</h2>
-        <form method="post" class="analytics-settings-form security-inline-form">
+        <form method="post" class="analytics-settings-form security-inline-form management-form management-form--goal">
             {% csrf_token %}
             <input type="hidden" name="save_goal" value="1">
             <input type="text" name="name" placeholder="{% trans 'Goal name (e.g. Newsletter Signup)' %}" required>

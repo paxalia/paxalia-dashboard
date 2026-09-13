@@ -10,11 +10,12 @@
 
 {% block dashboard_content %}
 <div class="server-queues">
+    <div class="ops-card"><span class="ops-label">{% trans "Worker integration" %}</span><span class="ops-value">{% if queue_stats is None %}{% trans "Not configured" %}{% elif queue_stats.reachable %}{% trans "Connected" %}{% else %}{% trans "Configured · offline" %}{% endif %}</span><span class="ops-help">{% trans "This page reports Celery workers; it does not create or control them." %}</span></div>
     {% if queue_stats is None %}
         <div class="table-card">
             <div class="chart-empty">
-                {% trans "Celery isn't configured for this dashboard yet." %}
-                {% trans "Set CELERY_APP_PATH in your PAXALIA_DASHBOARD settings dict to your Celery Application's dotted path (e.g. 'myproject.celery.app') — see the README." %}
+                <strong>{% trans "Celery is not connected to the dashboard." %}</strong>
+                <span>{% trans "If this project uses Celery, set CELERY_APP_PATH to the existing application instance. If this project does not use Celery, this state is expected." %}</span>
             </div>
         </div>
     {% elif not queue_stats.reachable %}

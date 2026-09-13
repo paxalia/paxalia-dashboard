@@ -33,22 +33,21 @@ logger = logging.getLogger(__name__)
 # in front for stronger guarantees.
 EVENT_RATE_LIMIT_WINDOW_SECONDS = 60
 EVENT_RATE_LIMIT_MAX_REQUESTS = 60
+MAX_PUBLIC_JSON_BODY_BYTES = 64 * 1024
 
 
 def _event_rate_limited(request):
     ip = AnalyticsMiddleware._get_ip(request) or 'unknown'
     session_id = getattr(request, 'analytics_session_id', '') or 'no-session'
     cache_key = f'analytics:event_rl:{ip}:{session_id}'
-    count = cache.get(cache_key, 0)
-    if count >= EVENT_RATE_LIMIT_MAX_REQUESTS:
-        return True
-    # incr() requires the key to exist; add() sets it only if absent.
-    cache.add(cache_key, 0, timeout=EVENT_RATE_LIMIT_WINDOW_SECONDS)
+    if cache.add(cache_key, 1, timeout=EVENT_RATE_LIMIT_WINDOW_SECONDS):
+        return False
     try:
-        cache.incr(cache_key)
+        count = cache.incr(cache_key)
     except ValueError:
-        cache.set(cache_key, 1, timeout=EVENT_RATE_LIMIT_WINDOW_SECONDS)
-    return False
+        cache.add(cache_key, 1, timeout=EVENT_RATE_LIMIT_WINDOW_SECONDS)
+        count = 1
+    return count > EVENT_RATE_LIMIT_MAX_REQUESTS
 
 
 def _clean_str(value, max_len):
@@ -92,6 +91,9 @@ def analytics_event_api(request):
 
     if _consent_denied(request):
         return JsonResponse({'status': 'skipped', 'reason': 'consent not granted'})
+
+    if len(request.body) > MAX_PUBLIC_JSON_BODY_BYTES:
+        return JsonResponse({'error': 'Payload too large'}, status=413)
 
     # 1. Parse JSON body
     try:
@@ -163,20 +165,16 @@ def _clean_int(value):
 @honeypot_exempt
 @require_http_methods(["POST"])
 def analytics_js_error_api(request):
-    """
-    Public API endpoint for client-side JS error reports — see
-    analytics-events.js's window.onerror/unhandledrejection handlers.
-    Shares the event endpoint's rate limiter (same cache key scheme,
-    same 60/min-per-IP+session budget) rather than a second, separate
-    budget, so this can't be used to double a single client's total
-    write rate against the two public endpoints combined.
-    """
+    """Record a bounded client-side JavaScript error report."""
     if _event_rate_limited(request):
         logger.warning('Analytics: JS error API rate limit exceeded')
         return JsonResponse({'error': 'Too many requests'}, status=429)
 
     if _consent_denied(request):
         return JsonResponse({'status': 'skipped', 'reason': 'consent not granted'})
+
+    if len(request.body) > MAX_PUBLIC_JSON_BODY_BYTES:
+        return JsonResponse({'error': 'Payload too large'}, status=413)
 
     try:
         body = json.loads(request.body.decode('utf-8'))

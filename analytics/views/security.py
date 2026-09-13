@@ -60,6 +60,79 @@ def _mfa_status():
     return rows
 
 
+def _runtime_security_snapshot():
+    """Best-effort runtime/host posture; never makes the Security Center 500."""
+    import os
+    import platform
+    import socket
+    from importlib.metadata import PackageNotFoundError, version as package_version
+
+    try:
+        import psutil
+    except ImportError:
+        psutil = None
+
+    try:
+        installed_version = package_version('paxalia-dashboard')
+    except PackageNotFoundError:
+        installed_version = 'development/source tree'
+    except Exception:
+        installed_version = 'unknown'
+
+    middleware = list(getattr(__import__('django.conf', fromlist=['settings']).settings, 'MIDDLEWARE', []) or [])
+    middleware_names = {m.rsplit('.', 1)[-1] for m in middleware}
+
+    snapshot = {
+        'hostname': socket.gethostname(),
+        'platform': platform.platform(),
+        'python': platform.python_version(),
+        'django': django.get_version(),
+        'dashboard_version': installed_version,
+        'environment': getattr(__import__('django.conf', fromlist=['settings']).settings, 'ENVIRONMENT', os.environ.get('ENVIRONMENT', 'unknown')),
+        'debug': bool(getattr(__import__('django.conf', fromlist=['settings']).settings, 'DEBUG', False)),
+        'db_vendor': 'unknown',
+        'secure_ssl_redirect': bool(getattr(__import__('django.conf', fromlist=['settings']).settings, 'SECURE_SSL_REDIRECT', False)),
+        'session_cookie_secure': bool(getattr(__import__('django.conf', fromlist=['settings']).settings, 'SESSION_COOKIE_SECURE', False)),
+        'csrf_cookie_secure': bool(getattr(__import__('django.conf', fromlist=['settings']).settings, 'CSRF_COOKIE_SECURE', False)),
+        'security_block_middleware': 'SecurityBlockMiddleware' in middleware_names,
+        'slow_query_middleware': 'SlowQueryMiddleware' in middleware_names,
+        'os_users': [],
+        'memory_percent': None,
+        'disk_percent': None,
+    }
+
+    try:
+        from django.db import connection
+        snapshot['db_vendor'] = connection.vendor
+    except Exception:
+        pass
+
+    if psutil is not None:
+        try:
+            snapshot['memory_percent'] = round(psutil.virtual_memory().percent, 1)
+        except Exception:
+            pass
+        try:
+            root_usage = psutil.disk_usage(os.path.abspath(os.sep))
+            snapshot['disk_percent'] = round(root_usage.percent, 1)
+        except Exception:
+            pass
+        try:
+            # Names and login times only; no terminal/device secrets or commands.
+            snapshot['os_users'] = [
+                {
+                    'name': u.name,
+                    'terminal': u.terminal or '—',
+                    'host': u.host or '—',
+                    'started': timezone.datetime.fromtimestamp(u.started, tz=timezone.get_current_timezone()),
+                }
+                for u in psutil.users()
+            ]
+        except Exception:
+            snapshot['os_users'] = []
+    return snapshot
+
+
 @require_section_permission('security')
 def security_center(request):
     """
@@ -141,6 +214,7 @@ def security_center(request):
         'mfa_status': _mfa_status(),
         'dependency_health': _dependency_health(),
         'scorecard': run_scorecard_checks(),
+        'runtime_security': _runtime_security_snapshot(),
     }
     return render(request, 'analytics/security.html', context)
 

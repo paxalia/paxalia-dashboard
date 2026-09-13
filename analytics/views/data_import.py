@@ -7,8 +7,9 @@ from django.utils.translation import gettext as _
 
 from ..data_import import import_daily_stats, parse_analytics_csv
 from ..models import Site
+from ..settings import get_config
 from ..security_audit import log_action
-from .utils import section_enabled
+from .utils import section_enabled, get_current_site
 
 
 @staff_member_required
@@ -24,7 +25,20 @@ def data_import_page(request):
         source = request.POST.get('source', 'csv')
         overwrite = request.POST.get('overwrite') == 'on'
         site_id = request.POST.get('site') or None
-        site = Site.objects.filter(id=site_id).first() if site_id else None
+        current_site = get_current_site(request)
+        requested_site = Site.objects.filter(id=site_id).first() if site_id else None
+        if current_site is not None and requested_site is not None and requested_site.pk != current_site.pk:
+            requested_site = current_site
+        site = requested_site if site_id else current_site
+
+        if source not in {'ga', 'plausible', 'csv'}:
+            messages.error(request, _('Invalid import source.'))
+            source = None
+
+        max_bytes = int(get_config().get('DATA_IMPORT_MAX_FILE_SIZE_MB', 100) or 0) * 1024 * 1024
+        if upload and max_bytes and upload.size > max_bytes:
+            messages.error(request, _('CSV file exceeds the maximum allowed size (%(mb)d MB).') % {'mb': max_bytes // (1024 * 1024)})
+            upload = None
 
         if not upload:
             messages.error(request, _('Choose a CSV file to upload.'))
@@ -62,3 +76,4 @@ def data_import_page(request):
         'warnings': warnings,
     }
     return render(request, 'analytics/data_import.html', context)
+

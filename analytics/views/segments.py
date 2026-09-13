@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 from analytics.models import Segment
 from analytics.segments import ALLOWED_FILTER_FIELDS
 
-from .utils import section_enabled, get_current_site
+from .utils import section_enabled, get_current_site, scoped_object_or_404
 
 
 @staff_member_required
@@ -54,7 +54,10 @@ def segments_management(request):
 @staff_member_required
 @require_POST
 def segment_delete(request, segment_id):
-    segment = get_object_or_404(Segment, id=segment_id)
+    if not section_enabled('segments'):
+        raise Http404
+    segment = scoped_object_or_404(Segment, request, segment_id)
     segment.delete()
     messages.success(request, _('Segment deleted.'))
     return redirect('analytics:segments')
+

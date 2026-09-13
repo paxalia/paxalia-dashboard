@@ -11,6 +11,12 @@
 
 {% block dashboard_content %}
 <div class="server-slow-queries">
+    <div class="ops-grid">
+        <div class="ops-card"><span class="ops-label">{% trans "Threshold" %}</span><span class="ops-value">{{ slow_query_threshold_ms|default:100 }} ms</span><span class="ops-help">{% trans "Queries at or above this duration are recorded." %}</span></div>
+        <div class="ops-card"><span class="ops-label">{% trans "Recorded" %}</span><span class="ops-value">{{ slow_queries|length }}</span><span class="ops-help">{% trans "Recent records shown on this page." %}</span></div>
+        <div class="ops-card"><span class="ops-label">{% trans "Capture" %}</span><span class="ops-value">{% if slow_query_enabled %}{% trans "Active" %}{% else %}{% trans "Not active" %}{% endif %}</span><span class="ops-help">{% trans "Capture status is determined by dashboard configuration." %}</span></div>
+        <div class="ops-card"><span class="ops-label">{% trans "Database" %}</span><span class="ops-value">{{ database_vendor|default:"unknown" }}</span><span class="ops-help">{% trans "Current Django database backend." %}</span></div>
+    </div>
     <div class="table-card">
         <div class="chart-title-wrapper">
             <h2 class="chart-title">{% trans "Recent Slow Queries" %}</h2>
@@ -38,8 +44,8 @@
         </table>
         {% else %}
         <div class="chart-empty">
-            {% trans "No slow queries recorded yet." %}
-            {% trans "Add analytics.middleware.SlowQueryMiddleware to MIDDLEWARE to start recording — see the README." %}
+            <strong>{% trans "No slow queries recorded in the current retention window." %}</strong>
+            <span>{% if slow_query_enabled %}{% trans "Capture is enabled. Generate representative application traffic and this view will populate when a query crosses the threshold." %}{% else %}{% trans "Enable slow-query capture in the dashboard middleware configuration to start recording queries." %}{% endif %}</span>
         </div>
         {% endif %}
     </div>

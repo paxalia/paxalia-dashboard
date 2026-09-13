@@ -6,10 +6,11 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'analytics/styles/components/upload.css' %}">
+<link rel="stylesheet" href="{% static 'analytics/styles/components/release-center.css' %}">
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="page-header">
+<div class="page-header release-center-shell">
     <h1>{% trans "File Uploads" %}</h1>
     <p class="page-subtitle">{% trans "Upload large build artifacts over HTTPS in chunks. Works even when SSH/rsync is blocked." %}</p>
 </div>

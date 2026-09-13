@@ -27,6 +27,8 @@
     <link rel="stylesheet" href="{% static 'analytics/styles/components/filter-bar.css' %}">
     <link rel="stylesheet" href="{% static 'analytics/styles/components/export-btn.css' %}">
     <link rel="stylesheet" href="{% static 'analytics/styles/components/menu.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/components/notifications.css' %}">
+    <link rel="stylesheet" href="{% static 'analytics/styles/dashboard-refinements.css' %}">
     {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
@@ -464,6 +466,16 @@
                             </span>
                             {% trans "Paxalia API Reference" %}
                         </a>
+                        {% if 'security' in analytics_config.SIDEBAR_SECTIONS and perms.analytics.view_security %}
+                        <a href="{% url 'analytics:dependencies' %}" class="analytics-sidebar-link {% if active_page == 'dependencies' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M10 3a7 7 0 1 0 4.9 11.99L22 22v-4h-3v-3h-3v-2.1A7 7 0 0 0 10 3Zm0 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm0 2a2 2 0 1 0 0 4 2 2 0 0 0-4Z"/>
+                                </svg>
+                            </span>
+                            {% trans "Dependencies" %}
+                        </a>
+                        {% endif %}
                         {% endif %}
 
                         {% if 'reports' in analytics_config.SIDEBAR_SECTIONS %}
@@ -691,7 +703,7 @@
 
         <main class="analytics-main">
             <header class="topbar dashboard-topbar" role="banner">
-                <button class="topbar__meu-toggle sidebar-toggle" aria-controls="analytics-sidebar"
+                <button class="topbar__menu-toggle sidebar-toggle" aria-controls="analytics-sidebar"
                         aria-expanded="false" aria-label="{% trans 'Toggle sidebar' %}">
                     <span class="icon icon--sm" aria-hidden="true">
                         <svg viewBox="0 0 24 24">

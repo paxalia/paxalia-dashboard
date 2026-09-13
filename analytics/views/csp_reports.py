@@ -19,20 +19,20 @@ logger = logging.getLogger('analytics.security')
 # avoid being used to flood the database.
 _RATE_LIMIT_WINDOW_SECONDS = 60
 _RATE_LIMIT_MAX_REQUESTS = 30
+_MAX_BODY_BYTES = 128 * 1024
 
 
 def _rate_limited(request):
     ip = AnalyticsMiddleware._get_ip(request) or 'unknown'
     cache_key = f'analytics:csp_rl:{ip}'
-    count = cache.get(cache_key, 0)
-    if count >= _RATE_LIMIT_MAX_REQUESTS:
-        return True
-    cache.add(cache_key, 0, timeout=_RATE_LIMIT_WINDOW_SECONDS)
+    if cache.add(cache_key, 1, timeout=_RATE_LIMIT_WINDOW_SECONDS):
+        return False
     try:
-        cache.incr(cache_key)
+        count = cache.incr(cache_key)
     except ValueError:
-        cache.set(cache_key, 1, timeout=_RATE_LIMIT_WINDOW_SECONDS)
-    return False
+        cache.add(cache_key, 1, timeout=_RATE_LIMIT_WINDOW_SECONDS)
+        count = 1
+    return count > _RATE_LIMIT_MAX_REQUESTS
 
 
 @csrf_exempt
@@ -51,6 +51,8 @@ def csp_report(request):
     """
     if _rate_limited(request):
         return HttpResponse(status=429)
+    if len(request.body) > _MAX_BODY_BYTES:
+        return HttpResponse(status=413)
 
     try:
         raw = json.loads(request.body.decode('utf-8'))
@@ -83,3 +85,4 @@ def csp_report(request):
 
     # Browsers ignore the response body/status beyond 2xx; 204 is conventional.
     return HttpResponse(status=204)
+

@@ -10,7 +10,16 @@
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="security-page">
+<div class="security-page analytics-page-stack">
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "What this API is for" %}</h2>
+        <div class="api-reference-purpose">
+            <div class="api-purpose"><strong>{% trans "Server-to-server ingest" %}</strong><span>{% trans "Send trusted backend events without exposing an API key to browser JavaScript." %}</span></div>
+            <div class="api-purpose"><strong>{% trans "Read analytics" %}</strong><span>{% trans "Pull summary, page-view, and event data into internal tools, jobs, or reporting systems." %}</span></div>
+            <div class="api-purpose"><strong>{% trans "Automation" %}</strong><span>{% trans "Use scoped keys with CI, scheduled jobs, or integrations where anonymous browser tracking is not appropriate." %}</span></div>
+        </div>
+    </div>
 
     <div class="table-card">
         <h2 class="card-title">{% trans "Authentication" %}</h2>
@@ -18,7 +27,7 @@
             {% trans "Every request needs an" %} <a href="{% url 'analytics:api_keys' %}">{% trans "API key" %}</a>
             {% trans "sent as a Bearer token:" %}
         </p>
-        <pre style="overflow-x:auto;"><code>Authorization: Bearer pxa_...</code></pre>
+        <pre class="api-reference-code"><code>Authorization: Bearer pxa_...</code></pre>
         <p class="form-hint">
             {% trans "A key has one or both scopes: ingest (post events) and read (query data). Requests are rate-limited to 300/minute per key. This is separate from the anonymous, browser-facing event snippet — a secret key should never be embedded in client-side JavaScript." %}
         </p>
@@ -27,7 +36,7 @@
     <div class="table-card">
         <h2 class="card-title">POST /paxalia-api/v1/ingest/</h2>
         <p>{% trans "Requires the ingest scope. Same payload shape as the public event snippet." %}</p>
-        <pre style="overflow-x:auto;"><code>curl -X POST {{ base_url }}ingest/ \
+        <pre class="api-reference-code"><code>curl -X POST {{ base_url }}ingest/ \
   -H "Authorization: Bearer pxa_..." \
   -H "Content-Type: application/json" \
   -d '{"category": "signup", "action": "completed", "label": "referral"}'</code></pre>
@@ -36,7 +45,7 @@
     <div class="table-card">
         <h2 class="card-title">GET /paxalia-api/v1/stats/summary/</h2>
         <p>{% trans "Requires the read scope. Query params: start_date, end_date (YYYY-MM-DD, default: last 30 days)." %}</p>
-        <pre style="overflow-x:auto;"><code>curl {{ base_url }}stats/summary/?start_date=2026-01-01&end_date=2026-01-31 \
+        <pre class="api-reference-code"><code>curl {{ base_url }}stats/summary/?start_date=2026-01-01&end_date=2026-01-31 \
   -H "Authorization: Bearer pxa_..."
 
 {
@@ -50,7 +59,7 @@
     <div class="table-card">
         <h2 class="card-title">GET /paxalia-api/v1/pageviews/</h2>
         <p>{% trans "Requires the read scope. Query params: start_date, end_date, limit (max 500, default 100), offset." %}</p>
-        <pre style="overflow-x:auto;"><code>curl "{{ base_url }}pageviews/?limit=50" \
+        <pre class="api-reference-code"><code>curl "{{ base_url }}pageviews/?limit=50" \
   -H "Authorization: Bearer pxa_..."
 
 {
@@ -67,7 +76,7 @@
     <div class="table-card">
         <h2 class="card-title">GET /paxalia-api/v1/events/</h2>
         <p>{% trans "Requires the read scope. Query params: start_date, end_date, limit, offset, category." %}</p>
-        <pre style="overflow-x:auto;"><code>curl "{{ base_url }}events/?category=signup" \
+        <pre class="api-reference-code"><code>curl "{{ base_url }}events/?category=signup" \
   -H "Authorization: Bearer pxa_..."</code></pre>
     </div>
 

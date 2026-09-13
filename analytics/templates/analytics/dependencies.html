@@ -1,0 +1,87 @@
+{% extends "analytics/base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Dependencies" %} – Paxalia Analytics{% endblock %}
+{% block page_title %}{% trans "Dependencies" %}{% endblock %}
+{% block page_subtitle %}{% trans "Complete runtime dependency inventory and upstream release status" %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
+<link rel="stylesheet" href="{% static 'analytics/styles/components/dependencies.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page dependencies-page"
+     data-status-url-template="{% url 'analytics:dependency_status' 'PACKAGE_NAME' %}">
+
+    <div class="stat-grid dependencies-summary">
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Runtime packages" %}</span>
+            <span class="stat-value">{{ package_count }}</span>
+            <span class="stat-sub">{% trans "Direct + transitive" %}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Direct" %}</span>
+            <span class="stat-value">{{ direct_count }}</span>
+            <span class="stat-sub">{% trans "Declared by Paxalia Dashboard" %}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Transitive" %}</span>
+            <span class="stat-value">{{ transitive_count }}</span>
+            <span class="stat-sub">{% trans "Required by dependencies" %}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Release checks" %}</span>
+            <span class="stat-value"><span id="dependencyChecks">0</span> / {{ package_count }}</span>
+            <span class="stat-sub" id="dependencyCheckState">{% trans "Checking progressively after page load" %}</span>
+        </div>
+    </div>
+
+    <div class="table-card dependency-inventory-card">
+        <div class="card-heading-row dependency-heading">
+            <div>
+                <h2 class="card-title">{% trans "Runtime dependency inventory" %}</h2>
+                <p class="form-hint">{% trans "The local inventory is rendered immediately. Upstream versions are checked progressively, one package at a time." %}</p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="dependencyRefresh">{% trans "Check again" %}</button>
+        </div>
+
+        <div class="dependency-progress" aria-hidden="true"><span id="dependencyProgressBar"></span></div>
+
+        <div class="dependency-table-wrap">
+            <table class="analytics-table dependency-table" id="dependencyTable">
+                <thead>
+                    <tr>
+                        <th>{% trans "Package" %}</th>
+                        <th>{% trans "Source" %}</th>
+                        <th>{% trans "Required" %}</th>
+                        <th>{% trans "Installed" %}</th>
+                        <th>{% trans "Latest" %}</th>
+                        <th>{% trans "Latest source" %}</th>
+                        <th>{% trans "Status" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in dependencies %}
+                    <tr data-package="{{ row.name|escape }}" data-status="pending">
+                        <td><strong>{{ row.name }}</strong></td>
+                        <td><span class="dependency-source dependency-source--{{ row.source }}">{% if row.source == 'direct' %}{% trans "Direct" %}{% else %}{% trans "Transitive" %}{% endif %}</span></td>
+                        <td><code>{{ row.specifier }}</code></td>
+                        <td>{% if row.installed %}<code>{{ row.installed }}</code>{% else %}<span class="dependency-check-fail">{% trans "Not installed" %}</span>{% endif %}</td>
+                        <td class="dependency-latest"><span class="dependency-pending"><span class="dependency-spinner"></span>{% trans "Checking…" %}</span></td>
+                        <td class="dependency-latest-source"><span class="dependency-source dependency-source--pending">{% trans "Pending" %}</span></td>
+                        <td class="dependency-status"><span class="status-pill status-pill--neutral">{% trans "Checking" %}</span></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7"><div class="empty-state">{% trans "No runtime dependencies were found." %}</div></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ request.csp_nonce }}" src="{% static 'analytics/scripts/dependencies.js' %}"></script>
+{% endblock %}

@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from analytics.models import Notification
 
-from .utils import section_enabled, get_current_site
+from .utils import section_enabled, get_current_site, scoped_object_or_404
 
 
 @staff_member_required
@@ -35,7 +35,9 @@ def notifications_list(request):
 @staff_member_required
 @require_POST
 def notification_mark_read(request, notification_id):
-    notification = get_object_or_404(Notification, id=notification_id)
+    if not section_enabled('notifications'):
+        raise Http404
+    notification = scoped_object_or_404(Notification, request, notification_id)
     notification.is_read = True
     notification.save(update_fields=['is_read'])
     return redirect('analytics:notifications')
@@ -47,3 +49,4 @@ def notifications_mark_all_read(request):
     Notification.objects.filter(is_read=False).update(is_read=True)
     messages.success(request, _('All notifications marked as read.'))
     return redirect('analytics:notifications')
+

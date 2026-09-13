@@ -9,10 +9,12 @@
     <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
 {% endblock %}
 
+{% block filter_bar %}
+    {% include 'analytics/includes/filter_bar.html' %}
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="security-page">
-    {% include 'analytics/includes/filter_bar.html' %}
-
     <div class="stat-grid">
         <div class="stat-card">
             <span class="stat-label">{% trans "Views with UTM tags" %}</span>

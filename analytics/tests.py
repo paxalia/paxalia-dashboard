@@ -10,6 +10,7 @@ from .conf_uploads import get_upload_blocked_extensions
 from .chat_ops import format_snapshot_text, resolve_period, verify_discord_signature, verify_slack_signature
 from .compliance import forget_by_ip, forget_by_session
 from .data_import import import_daily_stats, parse_analytics_csv
+from .middleware import AnalyticsMiddleware
 from .models import (
     AnalyticsEvent, BackupConfiguration, DailySiteStats, FileUpload, JSError, PageView,
     ServerMetricSnapshot, UptimeIncident, UptimeMonitor,
@@ -18,7 +19,7 @@ from .queue_monitor import get_celery_app, get_queue_stats
 from .revenue import _month_bounds, _shift_month
 from .rum import _percentile, rate_metric
 from .security_scorecard import run_scorecard_checks
-from .uptime import compute_uptime_percentage, perform_check, record_check
+from .uptime import compute_uptime_percentage, perform_check, record_check, validate_monitor_url
 from .views.events import _clean_int
 
 
@@ -632,3 +633,70 @@ class ChatOpsViewTests(TestCase):
             reverse('discord_interactions'), data='{"type": 1}', content_type='application/json',
         )
         self.assertEqual(response.status_code, 401)
+
+
+
+class V3HardeningRegressionTests(TestCase):
+    """Regression coverage for the v3.0.0 stabilization fixes."""
+
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user(
+            username='v3-staff', password='test-password', is_staff=True
+        )
+        self.client.force_login(self.staff)
+
+    def test_only_intended_0018_is_source_leaf(self):
+        from pathlib import Path
+        migration_dir = Path(__file__).resolve().parent / 'migrations'
+        names = sorted(p.name for p in migration_dir.glob('0018_*.py'))
+        self.assertEqual(names, ['0018_fix_dailysitestats_duplicates.py'])
+
+    def test_daily_stats_increment_helper_preserves_consecutive_increments(self):
+        from django.utils import timezone
+        AnalyticsMiddleware._increment_daily_stats(None, timezone.localdate(), False, False)
+        AnalyticsMiddleware._increment_daily_stats(None, timezone.localdate(), False, False)
+        row = DailySiteStats.objects.get(site=None, date=timezone.localdate())
+        self.assertEqual(row.total_views, 2)
+
+    def test_private_uptime_target_is_rejected(self):
+        valid, reason = validate_monitor_url('http://127.0.0.1:8000/')
+        self.assertFalse(valid)
+        self.assertTrue(reason)
+
+    def test_share_link_uses_secure_hash_and_accepts_legacy_hash(self):
+        from django.contrib.auth.hashers import make_password
+        from analytics.views.share_links import _hash_password, _check_password
+
+        encoded = _hash_password('secret')
+        self.assertNotEqual(len(encoded), 64)
+        self.assertTrue(_check_password('secret', encoded)[0])
+        legacy = __import__('hashlib').sha256(b'secret').hexdigest()
+        self.assertEqual(_check_password('secret', legacy), (True, True))
+
+    def test_upload_chunk_cannot_exceed_declared_chunk_size(self):
+        upload = FileUpload.objects.create(
+            uploaded_by=self.staff, original_filename='build.zip', total_size=4,
+            chunk_size=2, total_chunks=2, status='pending',
+        )
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        response = self.client.post(
+            reverse('upload_chunk', kwargs={'upload_id': upload.id}),
+            {'chunk_index': '0', 'chunk': SimpleUploadedFile('x.bin', b'123')},
+        )
+        self.assertEqual(response.status_code, 413)
+        upload.refresh_from_db()
+        self.assertEqual(upload.bytes_received, 0)
+
+    def test_api_end_date_is_inclusive(self):
+        from django.utils import timezone
+        from datetime import datetime, timedelta
+        from .views.paxalia_api import _parse_date_range
+
+        request = self.client.get('/')
+        request.GET = request.GET.copy()
+        request.GET['start_date'] = '2026-09-12'
+        request.GET['end_date'] = '2026-09-12'
+        start, end = _parse_date_range(request)
+        self.assertEqual(start.date().isoformat(), '2026-09-12')
+        self.assertEqual(end.date().isoformat(), '2026-09-13')
+

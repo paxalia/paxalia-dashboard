@@ -1,12 +1,10 @@
-/* ============================================
-   Analytics Dashboard – Stat Cards
-   ============================================ */
-
+/* Analytics Dashboard – Stat Cards */
 .stat-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
     gap: var(--gap-md);
-    margin-bottom: var(--margin-lg);
+    width: 100%;
+    margin: 0;
 }
 
 .stat-card {
@@ -15,10 +13,12 @@
     border-radius: var(--radius-md);
     padding: var(--padding-lg);
     box-shadow: var(--shadow-sm);
+    min-width: 0;
+    min-height: 112px;
 }
 
 .stat-card--highlight {
-    border-color: var(--analytics-gold);
+    border-color: var(--analytics-gold)
 }
 
 .stat-label {
@@ -26,7 +26,7 @@
     font-size: var(--font-size-xs);
     color: var(--analytics-text-dim);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: .05em;
     margin-bottom: var(--margin-xs);
 }
 
@@ -36,16 +36,40 @@
     font-weight: var(--font-weight-bold);
     color: var(--analytics-gold);
     line-height: var(--line-height-sm);
+    overflow-wrap: anywhere;
 }
 
 .stat-value--small {
     font-size: var(--font-size-lg);
-    word-break: break-all;
+    word-break: break-word
 }
 
 .stat-sub {
     display: block;
     font-size: var(--font-size-xs);
     color: var(--analytics-text-dim);
-    margin-top: var(--margin-xs);
+    margin-top: var(--margin-sm)
+}
+
+/* Explicit section breathing room: stat cards are a major block, so there
+   must always be a visible gap before the following charts/tables. */
+.stat-grid + .chart-grid,
+.stat-grid + .table-card,
+.stat-grid + .setting-table-grid,
+.stat-grid + .analytics-grid,
+.stat-grid + .card {
+    margin-top: 24px !important;
+}
+
+@media (max-width: 767px) {
+    .stat-grid {
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap: 14px
+    }
+}
+
+@media (max-width: 480px) {
+    .stat-grid {
+        grid-template-columns:1fr
+    }
 }

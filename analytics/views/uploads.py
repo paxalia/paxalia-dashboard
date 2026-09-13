@@ -17,6 +17,7 @@ Flow:
 import os
 
 from django.contrib.admin.views.decorators import staff_member_required
+from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -63,6 +64,31 @@ def _extension_error(filename):
     return None
 
 
+
+def _get_owned_upload(request, upload_id, *, lock=False):
+    """Return an upload session the current staff user may manage."""
+    qs = FileUpload.objects.filter(id=upload_id)
+    if not request.user.is_superuser:
+        qs = qs.filter(uploaded_by=request.user)
+    if lock:
+        qs = qs.select_for_update()
+    return qs.first()
+
+
+def _public_upload(upload):
+    """Serialize upload metadata without leaking a server filesystem path."""
+    return {
+        'id': str(upload.id),
+        'filename': upload.original_filename,
+        'status': upload.status,
+        'progress_percent': upload.progress_percent,
+        'total_size': upload.total_size,
+        'created_at': upload.created_at.isoformat(),
+        'completed_at': upload.completed_at.isoformat() if upload.completed_at else None,
+        'uploaded_by': str(upload.uploaded_by) if upload.uploaded_by else None,
+    }
+
+
 @staff_member_required
 @honeypot_exempt
 @require_POST
@@ -100,8 +126,11 @@ def upload_init(request):
     else:
         chunk_size = get_upload_chunk_size_bytes()
 
+    configured_chunk_size = get_upload_chunk_size_bytes()
     if chunk_size <= 0:
         return JsonResponse({'error': 'chunk_size must be positive'}, status=400)
+    if chunk_size > configured_chunk_size:
+        return JsonResponse({'error': 'chunk_size exceeds the configured maximum'}, status=413)
 
     total_chunks = (total_size + chunk_size - 1) // chunk_size
 
@@ -125,58 +154,65 @@ def upload_init(request):
 @honeypot_exempt
 @require_POST
 def upload_chunk(request, upload_id):
-    try:
-        upload = FileUpload.objects.get(id=upload_id)
-    except (FileUpload.DoesNotExist, ValueError):
+    upload = _get_owned_upload(request, upload_id)
+    if upload is None:
         return JsonResponse({'error': 'Upload session not found'}, status=404)
-
     if upload.status == 'completed':
         return JsonResponse({'error': 'Upload already completed'}, status=400)
+    if upload.status == 'failed':
+        return JsonResponse({'error': 'Upload session has failed'}, status=409)
 
-    chunk_index = request.POST.get('chunk_index')
+    chunk_index_raw = request.POST.get('chunk_index')
     chunk_file = request.FILES.get('chunk')
-
-    if chunk_index is None or chunk_file is None:
+    if chunk_index_raw is None or chunk_file is None:
         return JsonResponse({'error': 'chunk_index and chunk file are required'}, status=400)
-
     try:
-        chunk_index = int(chunk_index)
-    except ValueError:
+        chunk_index = int(chunk_index_raw)
+    except (TypeError, ValueError):
         return JsonResponse({'error': 'chunk_index must be an integer'}, status=400)
-
     if chunk_index < 0 or chunk_index >= upload.total_chunks:
         return JsonResponse({'error': 'chunk_index out of range'}, status=400)
-
-    temp_path = os.path.join(_get_temp_dir(), str(upload.id))
 
     expected_index = upload.chunks_received
     if chunk_index != expected_index:
         return JsonResponse({
-            'error': (
-                f'Expected chunk {expected_index}, got {chunk_index}. '
-                'Chunks must arrive in order.'
-            )
+            'error': f'Expected chunk {expected_index}, got {chunk_index}. Chunks must arrive in order.'
         }, status=409)
 
+    configured_chunk_size = get_upload_chunk_size_bytes()
+    expected_size = (
+        upload.chunk_size
+        if chunk_index < upload.total_chunks - 1
+        else upload.total_size - upload.chunk_size * (upload.total_chunks - 1)
+    )
+    if expected_size <= 0 or chunk_file.size != expected_size or chunk_file.size > configured_chunk_size:
+        return JsonResponse({'error': 'Invalid chunk size'}, status=413)
+    if upload.bytes_received + chunk_file.size > upload.total_size:
+        return JsonResponse({'error': 'Chunk exceeds declared upload size'}, status=413)
+
+    temp_path = os.path.join(_get_temp_dir(), str(upload.id))
     try:
-        with open(temp_path, 'ab') as f:
-            for piece in chunk_file.chunks():
-                f.write(piece)
-    except OSError as e:
+        with transaction.atomic():
+            locked = _get_owned_upload(request, upload_id, lock=True)
+            if locked is None:
+                return JsonResponse({'error': 'Upload session not found'}, status=404)
+            if locked.status == 'completed':
+                return JsonResponse({'error': 'Upload already completed'}, status=400)
+            if locked.chunks_received != expected_index:
+                return JsonResponse({'error': 'Upload state changed; retry this chunk'}, status=409)
+            with open(temp_path, 'ab') as stream:
+                for piece in chunk_file.chunks():
+                    stream.write(piece)
+            locked.bytes_received += chunk_file.size
+            locked.chunks_received += 1
+            locked.status = 'uploading'
+            locked.save(update_fields=['bytes_received', 'chunks_received', 'status', 'updated_at'])
+            upload = locked
+    except OSError as exc:
         upload.status = 'failed'
-        upload.error_message = f'Disk write error: {e}'
+        upload.error_message = f'Disk write error: {exc}'[:500]
         upload.save(update_fields=['status', 'error_message', 'updated_at'])
         return JsonResponse({'error': 'Failed to write chunk to disk'}, status=500)
-
-    upload.bytes_received += chunk_file.size
-    upload.chunks_received += 1
-    upload.status = 'uploading'
-    upload.save(update_fields=[
-        'bytes_received',
-        'chunks_received',
-        'status',
-        'updated_at',
-    ])
 
     return JsonResponse({
         'chunks_received': upload.chunks_received,
@@ -190,84 +226,52 @@ def upload_chunk(request, upload_id):
 @honeypot_exempt
 @require_POST
 def upload_complete(request, upload_id):
-    try:
-        upload = FileUpload.objects.get(id=upload_id)
-    except (FileUpload.DoesNotExist, ValueError):
-        return JsonResponse({'error': 'Upload session not found'}, status=404)
+    with transaction.atomic():
+        upload = _get_owned_upload(request, upload_id, lock=True)
+        if upload is None:
+            return JsonResponse({'error': 'Upload session not found'}, status=404)
+        if upload.status == 'completed':
+            return JsonResponse({'upload': _public_upload(upload), 'already_completed': True})
+        if upload.chunks_received != upload.total_chunks:
+            return JsonResponse({
+                'error': f'Not all chunks received ({upload.chunks_received}/{upload.total_chunks})'
+            }, status=400)
 
-    if upload.status == 'completed':
-        return JsonResponse({
-            'storage_path': upload.storage_path,
-            'already_completed': True,
-        })
+        temp_path = os.path.join(_get_temp_dir(), str(upload.id))
+        if not os.path.exists(temp_path):
+            upload.status = 'failed'
+            upload.error_message = 'Temp file missing at completion time'
+            upload.save(update_fields=['status', 'error_message', 'updated_at'])
+            return JsonResponse({'error': 'Temp file missing'}, status=500)
 
-    if upload.chunks_received != upload.total_chunks:
-        return JsonResponse({
-            'error': f'Not all chunks received ({upload.chunks_received}/{upload.total_chunks})'
-        }, status=400)
+        actual_size = os.path.getsize(temp_path)
+        if actual_size != upload.total_size:
+            upload.status = 'failed'
+            upload.error_message = f'Size mismatch: expected {upload.total_size}, got {actual_size}'
+            upload.save(update_fields=['status', 'error_message', 'updated_at'])
+            return JsonResponse({'error': upload.error_message}, status=400)
 
-    temp_path = os.path.join(_get_temp_dir(), str(upload.id))
+        final_dir = get_uploads_incoming_root()
+        final_path = os.path.join(final_dir, f'{upload.id}_{upload.original_filename}')
+        try:
+            os.replace(temp_path, final_path)
+        except OSError as exc:
+            upload.status = 'failed'
+            upload.error_message = f'Failed to move file to final location: {exc}'[:500]
+            upload.save(update_fields=['status', 'error_message', 'updated_at'])
+            return JsonResponse({'error': 'Failed to finalize upload'}, status=500)
 
-    if not os.path.exists(temp_path):
-        upload.status = 'failed'
-        upload.error_message = 'Temp file missing at completion time'
-        upload.save(update_fields=['status', 'error_message', 'updated_at'])
-        return JsonResponse({'error': 'Temp file missing'}, status=500)
-
-    actual_size = os.path.getsize(temp_path)
-    if actual_size != upload.total_size:
-        upload.status = 'failed'
-        upload.error_message = f'Size mismatch: expected {upload.total_size}, got {actual_size}'
-        upload.save(update_fields=['status', 'error_message', 'updated_at'])
-        return JsonResponse({'error': upload.error_message}, status=400)
-
-    final_dir = get_uploads_incoming_root()
-    final_name = f"{upload.id}_{upload.original_filename}"
-    final_path = os.path.join(final_dir, final_name)
-
-    try:
-        os.rename(temp_path, final_path)
-    except OSError as e:
-        upload.status = 'failed'
-        upload.error_message = f'Failed to move file to final location: {e}'
-        upload.save(update_fields=['status', 'error_message', 'updated_at'])
-        return JsonResponse({'error': 'Failed to finalize upload'}, status=500)
-
-    upload.status = 'completed'
-    upload.storage_path = final_path
-    upload.completed_at = timezone.now()
-    upload.save(update_fields=[
-        'status',
-        'storage_path',
-        'completed_at',
-        'updated_at',
-    ])
-
-    return JsonResponse({
-        'storage_path': final_path,
-        'already_completed': False,
-    })
+        upload.status = 'completed'
+        upload.storage_path = final_path
+        upload.completed_at = timezone.now()
+        upload.save(update_fields=['status', 'storage_path', 'completed_at', 'updated_at'])
+        return JsonResponse({'upload': _public_upload(upload), 'already_completed': False})
 
 
 @staff_member_required
 def upload_list(request):
-    uploads = FileUpload.objects.all()[:100]
-
-    data = [
-        {
-            'id': str(u.id),
-            'filename': u.original_filename,
-            'status': u.status,
-            'progress_percent': u.progress_percent,
-            'total_size': u.total_size,
-            'storage_path': u.storage_path,
-            'created_at': u.created_at.isoformat(),
-            'completed_at': u.completed_at.isoformat() if u.completed_at else None,
-            'uploaded_by': str(u.uploaded_by) if u.uploaded_by else None,
-        }
-        for u in uploads
-    ]
-
+    uploads = FileUpload.objects.all() if request.user.is_superuser else FileUpload.objects.filter(uploaded_by=request.user)
+    data = [_public_upload(u) for u in uploads[:100]]
     return JsonResponse({'uploads': data})
 
 
@@ -275,22 +279,16 @@ def upload_list(request):
 @honeypot_exempt
 @require_POST
 def upload_delete(request, upload_id):
-    try:
-        upload = FileUpload.objects.get(id=upload_id)
-    except (FileUpload.DoesNotExist, ValueError):
+    upload = _get_owned_upload(request, upload_id)
+    if upload is None:
         return JsonResponse({'error': 'Upload session not found'}, status=404)
 
-    paths_to_try = [
-        upload.storage_path,
-        os.path.join(_get_temp_dir(), str(upload.id)),
-    ]
-
+    paths_to_try = [upload.storage_path, os.path.join(_get_temp_dir(), str(upload.id))]
     for path in paths_to_try:
         if path and os.path.exists(path):
             try:
                 os.remove(path)
             except OSError:
                 pass
-
     upload.delete()
     return JsonResponse({'deleted': True})

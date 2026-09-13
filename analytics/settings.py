@@ -20,7 +20,9 @@ DEFAULTS = {
     'DEFAULT_SEARCH_QUERY_PARAMS': ['q', 'search', 'query'],
     'UPLOADS_INCOMING_ROOT': None,
     'UPLOAD_CHUNK_SIZE_MB': 5,                                # optional, default 5
-    'UPLOAD_MAX_FILE_SIZE_MB': 2048,                          # optional, default 2048 (2GB)
+    'UPLOAD_MAX_FILE_SIZE_MB': 2048,
+    'DATA_IMPORT_MAX_FILE_SIZE_MB': 100,
+    'UPLOAD_SESSION_TTL_HOURS': 24,                          # optional, default 2048 (2GB)
 
     # ── Security: IP resolution ──
     # Whether this deployment sits behind a reverse proxy / load balancer
@@ -118,3 +120,4 @@ def get_config():
     config = DEFAULTS.copy()
     config.update(user_config)
     return config
+

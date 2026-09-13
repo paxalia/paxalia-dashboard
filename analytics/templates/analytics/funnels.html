@@ -9,10 +9,12 @@
     <link rel="stylesheet" href="{% static 'analytics/styles/components/security.css' %}">
 {% endblock %}
 
+{% block filter_bar %}
+    {% include 'analytics/includes/filter_bar.html' %}
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="security-page">
-    {% include 'analytics/includes/filter_bar.html' %}
-
     <div class="table-card">
         <h2 class="card-title">{% trans "Create a Funnel" %}</h2>
         <p class="form-hint">

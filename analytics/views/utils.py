@@ -2,6 +2,7 @@
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.utils.timezone import make_aware
+from django.shortcuts import get_object_or_404
 
 from analytics.settings import get_config
 
@@ -107,6 +108,20 @@ def get_current_segment(request):
     return Segment.objects.filter(id=segment_param).first()
 
 
+def scoped_object_or_404(model, request, object_id, *, site_field='site'):
+    """Resolve a dashboard object while respecting the current site filter.
+
+    ``None`` means "All Sites", so no site restriction is applied.  When a
+    concrete site is selected, a site-owned object from another site (or the
+    unassigned bucket) is deliberately invisible.
+    """
+    queryset = model.objects.all()
+    current_site = get_current_site(request)
+    if current_site is not None and site_field:
+        queryset = queryset.filter(**{site_field: current_site})
+    return get_object_or_404(queryset, id=object_id)
+
+
 def site_scoped(queryset, site):
     """Apply the current site filter to a queryset, or return it
     unchanged for "All Sites" (site=None). Centralizing this one-liner
@@ -192,3 +207,4 @@ def parse_user_agent(ua_string):
     except Exception:
         pass  # keep defaults
     return result
+

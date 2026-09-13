@@ -29,6 +29,7 @@ from .views import api_docs as api_docs_views
 from .views import reports as reports_views
 from .views import share_links as share_links_views
 from .views import notifications as notifications_views
+from .views.dependencies import dependencies, dependency_status
 
 app_name = 'analytics'
 
@@ -92,6 +93,8 @@ dashboard_urlpatterns = [
     path('admin-overview/', admin_overview, name='admin_overview'),
 
     path('security/', security_views.security_center, name='security'),
+    path('security/dependencies/', dependencies, name='dependencies'),
+    path('security/dependencies/status/<path:package_name>/', dependency_status, name='dependency_status'),
     path('security/sessions/<uuid:login_event_id>/revoke/', security_views.security_revoke_session, name='security_revoke_session'),
     path('security/ip/block/', security_views.security_block_ip, name='security_block_ip'),
     path('security/ip/<int:block_id>/unblock/', security_views.security_unblock_ip, name='security_unblock_ip'),

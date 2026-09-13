@@ -7,6 +7,24 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET
 
 
+def _runtime_release():
+    import os
+    import socket
+    from importlib.metadata import PackageNotFoundError, version as package_version
+    try:
+        v = package_version("paxalia-dashboard")
+    except PackageNotFoundError:
+        v = os.environ.get("RELEASE_VERSION") or os.environ.get("GIT_SHA") or "development/source tree"
+    except Exception:
+        v = os.environ.get("RELEASE_VERSION") or os.environ.get("GIT_SHA") or "unknown"
+    try:
+        from django.conf import settings
+        environment = getattr(settings, "ENVIRONMENT", os.environ.get("ENVIRONMENT", "unknown"))
+    except Exception:
+        environment = os.environ.get("ENVIRONMENT", "unknown")
+    return {"version": v, "environment": environment, "hostname": socket.gethostname()}
+
+
 @require_section_permission('server')
 def server_overview(request):
     context = {
@@ -82,11 +100,18 @@ def server_slow_queries(request):
     from analytics.models import SlowQuery
 
     slow_queries = SlowQuery.objects.all()[:200]
+    from django.conf import settings
+    from django.db import connection
+    dashboard_config = getattr(settings, 'PAXALIA_DASHBOARD', {}) or {}
+    slow_query_enabled = any(m.rsplit('.', 1)[-1] == 'SlowQueryMiddleware' for m in getattr(settings, 'MIDDLEWARE', []) or [])
     context = {
         'active_page': 'server_slow_queries',
         'page_title': _('Slow Queries'),
         'page_subtitle': _('Database queries recorded by SlowQueryMiddleware'),
         'slow_queries': slow_queries,
+        'slow_query_threshold_ms': dashboard_config.get('SLOW_QUERY_THRESHOLD_MS', 100),
+        'slow_query_enabled': slow_query_enabled,
+        'database_vendor': connection.vendor,
     }
     return render(request, 'analytics/server_slow_queries.html', context)
 
@@ -110,6 +135,7 @@ def server_deployments(request):
 
     deployments = Deployment.objects.select_related('site', 'annotation')[:100]
     context = {
+        'runtime_release': _runtime_release(),
         'active_page': 'server_deployments',
         'page_title': _('Deployments'),
         'page_subtitle': _('Recorded via manage.py record_deployment'),

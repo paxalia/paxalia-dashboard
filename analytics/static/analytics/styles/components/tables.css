@@ -1,7 +1,4 @@
-/* ============================================
-   Analytics Dashboard – Tables
-   ============================================ */
-
+/* Analytics Dashboard – Tables */
 .table-card {
     background: var(--analytics-surface);
     border: 1px solid var(--analytics-border);
@@ -9,24 +6,26 @@
     padding: var(--padding-lg);
     box-shadow: var(--shadow-sm);
     overflow-x: auto;
+    min-width: 0
 }
 
 .setting-flow-table {
-    overflow: visible;
+    overflow: visible
 }
 
 .analytics-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: var(--margin-md);
+    min-width: 0
 }
 
-.analytics-table th,
-.analytics-table td {
+.analytics-table th, .analytics-table td {
     text-align: left;
     padding: var(--margin-sm) var(--margin-md);
     font-size: var(--font-size-sm);
     border-bottom: 1px solid var(--analytics-border);
+    vertical-align: middle
 }
 
 .analytics-table th {
@@ -34,27 +33,26 @@
     font-weight: var(--font-weight-bold);
     text-transform: uppercase;
     font-size: var(--font-size-xs);
-    letter-spacing: 0.04em;
+    letter-spacing: .04em
 }
 
 .analytics-table td {
-    color: var(--analytics-text);
+    color: var(--analytics-text)
 }
 
 .analytics-table tr:last-child td {
-    border-bottom: none;
+    border-bottom: none
 }
 
 .analytics-table-link {
     color: var(--analytics-gold);
-    text-decoration: none;
+    text-decoration: none
 }
 
 .analytics-table-link:hover {
-    text-decoration: underline;
+    text-decoration: underline
 }
 
-/* Pagination */
 .pagination {
     display: flex;
     justify-content: center;
@@ -62,31 +60,27 @@
     gap: var(--gap-md);
     margin-top: var(--margin-md);
     font-size: var(--font-size-sm);
-    color: var(--analytics-text-dim);
+    color: var(--analytics-text-dim)
 }
 
 .pagination a {
     color: var(--analytics-gold);
-    text-decoration: none;
+    text-decoration: none
 }
 
 .pagination a:hover {
-    text-decoration: underline;
+    text-decoration: underline
 }
 
 .setting-table-grid {
     display: flex;
     flex-direction: column;
-    gap: var(--gap-md);
+    gap: var(--gap-md)
 }
 
-/* Generic long-text-in-a-table-cell truncation, used wherever a cell
-   holds a URL, error message, or stack-trace-adjacent text that
-   shouldn't blow out the table's width. Hover/title shows the full
-   text. */
 .table-cell-truncate {
     max-width: 360px;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: nowrap
 }

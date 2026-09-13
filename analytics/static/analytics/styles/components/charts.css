@@ -2,6 +2,10 @@
    Analytics Dashboard – Charts
    ============================================ */
 
+.chart-card {
+    margin-bottom: var(--margin-md);
+}
+
 .chart-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -77,12 +81,12 @@
     height: 460px;
     overflow: auto;
     position: relative;
-    scrollbar-width: none;          /* Firefox */
-    -ms-overflow-style: none;       /* IE / Edge */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE / Edge */
 }
 
 .world-map-scroll::-webkit-scrollbar {
-    display: none;                  /* Chrome / Safari */
+    display: none; /* Chrome / Safari */
 }
 
 /* Fixed large canvas – scroll to explore */
@@ -102,4 +106,21 @@
     color: var(--analytics-text-dim);
     font-size: var(--font-size-sm);
     font-family: var(--font-family-sans);
+}
+
+/* Page section spacing is handled by the shell; keep internal chart spacing predictable. */
+.chart-grid + .table-card, .chart-grid + .setting-table-grid, .stat-grid + .chart-grid {
+    margin-top: 0
+}
+
+.chart-card {
+    min-width: 0
+}
+
+.chart-title-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-md);
+    margin-bottom: var(--margin-md)
 }

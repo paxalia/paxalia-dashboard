@@ -10,9 +10,6 @@
 
     if (!body || !sidebar) return;
 
-    // ----------------------------
-    // Sidebar open / close
-    // ----------------------------
     function isHidden() {
         return body.classList.contains('sidebar-hidden');
     }
@@ -32,22 +29,26 @@
     }
 
     function applyState(hidden) {
-        if (hidden) {
-            body.classList.add('sidebar-hidden');
-            closeBackdrop();
+        body.classList.toggle('sidebar-hidden', hidden);
+
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', hidden ? 'false' : 'true');
+            toggleBtn.setAttribute(
+                'aria-label',
+                hidden ? 'Open sidebar' : 'Close sidebar'
+            );
+        }
+
+        if (!hidden && window.innerWidth < 768) {
+            openBackdrop();
         } else {
-            body.classList.remove('sidebar-hidden');
-            if (window.innerWidth < 768) {
-                openBackdrop();
-            } else {
-                closeBackdrop();
-            }
+            closeBackdrop();
         }
 
         try {
             localStorage.setItem(STORAGE_KEY, hidden ? 'true' : 'false');
         } catch (err) {
-            // localStorage may be unavailable in some contexts
+            // localStorage can be unavailable in privacy-restricted contexts.
         }
     }
 
@@ -60,19 +61,15 @@
     }
 
     if (toggleBtn) {
-        toggleBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            if (isHidden()) {
-                showSidebar();
-            } else {
-                hideSidebar();
-            }
+        toggleBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            applyState(!isHidden());
         });
     }
 
     if (closeBtn) {
-        closeBtn.addEventListener('click', function (e) {
-            e.preventDefault();
+        closeBtn.addEventListener('click', function (event) {
+            event.preventDefault();
             hideSidebar();
         });
     }
@@ -81,8 +78,8 @@
         backdrop.addEventListener('click', hideSidebar);
     }
 
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && !isHidden()) {
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !isHidden()) {
             hideSidebar();
         }
     });
@@ -95,14 +92,9 @@
         }
     });
 
-    // Restore saved state (default: sidebar visible)
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved === 'true') {
-            applyState(true);
-        } else {
-            applyState(false);
-        }
+        applyState(saved === 'true');
     } catch (err) {
         applyState(false);
     }
@@ -133,8 +125,7 @@
         const panel = panelId ? document.getElementById(panelId) : null;
         if (!panel) return;
 
-        const activeLink = panel.querySelector('.active');
-        if (activeLink) {
+        if (panel.querySelector('.active')) {
             setGroupState(button, true);
         }
     }
@@ -142,7 +133,6 @@
     groupButtons.forEach((button) => {
         const panelId = button.getAttribute('aria-controls');
         const panel = panelId ? document.getElementById(panelId) : null;
-
         if (!panel) return;
 
         button.addEventListener('click', function () {

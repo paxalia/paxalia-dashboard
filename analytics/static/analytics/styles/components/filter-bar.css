@@ -172,3 +172,13 @@
     white-space: nowrap;
     border: 0;
 }
+
+/* Shell-level filter bar: no nested card margins; the shell provides the gap. */
+.analytics-main > .filter-bar {
+    width: 100%;
+    box-sizing: border-box
+}
+
+.filter-bar__inner {
+    width: 100%
+}

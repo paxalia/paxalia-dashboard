@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 from analytics.models import ScheduledReport
 from analytics.security_audit import log_action
 
-from .utils import section_enabled, get_current_site
+from .utils import section_enabled, get_current_site, scoped_object_or_404
 
 
 @staff_member_required
@@ -54,7 +54,9 @@ def reports_management(request):
 @staff_member_required
 @require_POST
 def report_toggle_active(request, report_id):
-    report = get_object_or_404(ScheduledReport, id=report_id)
+    if not section_enabled('reports'):
+        raise Http404
+    report = scoped_object_or_404(ScheduledReport, request, report_id)
     report.is_active = not report.is_active
     report.save(update_fields=['is_active'])
     log_action(request, 'report.toggled', detail=f'name={report.name} is_active={report.is_active}')
@@ -65,9 +67,12 @@ def report_toggle_active(request, report_id):
 @staff_member_required
 @require_POST
 def report_delete(request, report_id):
-    report = get_object_or_404(ScheduledReport, id=report_id)
+    if not section_enabled('reports'):
+        raise Http404
+    report = scoped_object_or_404(ScheduledReport, request, report_id)
     name = report.name
     report.delete()
     log_action(request, 'report.deleted', detail=f'name={name}')
     messages.success(request, _('Scheduled report deleted.'))
     return redirect('analytics:reports')
+
