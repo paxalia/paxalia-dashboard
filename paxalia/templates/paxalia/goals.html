@@ -1,0 +1,79 @@
+{% extends 'paxalia/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Goals" %} – Paxalia Analytics{% endblock %}
+{% block page_title %}{% trans "Goals" %}{% endblock %}
+{% block page_subtitle %}{% trans "Conversion rate for each goal in the selected date range" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/security.css' %}">
+{% endblock %}
+
+{% block filter_bar %}
+    {% include 'paxalia/includes/filter_bar.html' %}
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page">
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Add a Goal" %}</h2>
+        <form method="post" class="analytics-settings-form security-inline-form management-form management-form--goal">
+            {% csrf_token %}
+            <input type="hidden" name="save_goal" value="1">
+            <input type="text" name="name" placeholder="{% trans 'Goal name (e.g. Newsletter Signup)' %}" required>
+            <select name="goal_type" required>
+                <option value="page">{% trans "Page visited" %}</option>
+                <option value="event">{% trans "Event fired" %}</option>
+            </select>
+            <input type="text" name="match_value" placeholder="{% trans 'Path, or category:action for an event' %}" required>
+            <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+        </form>
+        <p class="form-hint">
+            {% trans "Page goal: enter the path exactly (e.g. /thank-you/). Event goal: enter category:action (e.g. signup:completed) — matches events fired via the public event API or the embedded tracker." %}
+        </p>
+    </div>
+
+    <div class="table-card">
+        <h2 class="card-title">{% trans "Conversion Rate" %}</h2>
+        <p class="form-hint">{% blocktrans %}Based on {{ total_sessions }} sessions in this date range.{% endblocktrans %}</p>
+        {% if goal_rows %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Goal" %}</th>
+                    <th>{% trans "Type" %}</th>
+                    <th>{% trans "Matches" %}</th>
+                    <th>{% trans "Completed sessions" %}</th>
+                    <th>{% trans "Conversion rate" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in goal_rows %}
+                <tr>
+                    <td>{{ row.goal.name }}</td>
+                    <td>{{ row.goal.get_goal_type_display }}</td>
+                    <td><code>{{ row.goal.match_value }}</code></td>
+                    <td>{{ row.completed }}</td>
+                    <td>{{ row.rate }}%</td>
+                    <td>
+                        <form method="post" action="{% url 'paxalia:goal_delete' row.goal.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Delete this goal?' %}">{% trans "Delete" %}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No goals defined yet." %}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/security.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/filter-bar.js' %}"></script>
+{% endblock %}

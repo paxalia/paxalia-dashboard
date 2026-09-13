@@ -1,0 +1,10 @@
+from django.apps import AppConfig
+
+
+class AnalyticsConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'paxalia'
+
+    def ready(self):
+        from . import signals
+        signals.register_signals()

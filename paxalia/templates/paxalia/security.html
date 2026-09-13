@@ -1,0 +1,411 @@
+{% extends 'paxalia/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Security Center" %} – Paxalia Analytics{% endblock %}
+
+{% block page_title %}{% trans "Security Center" %}{% endblock %}
+{% block page_subtitle %}{% trans "Application posture, server runtime, authentication, and audit evidence" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page analytics-page-stack">
+
+    {% if not dependency_health.django_supported %}
+    <div class="security-banner security-banner--warn">
+        {% blocktrans with version=dependency_health.django_version %}Running Django {{ version }}, which isn't in this package's known-supported list. Check djangoproject.com for your version's support status.{% endblocktrans %}
+    </div>
+    {% endif %}
+
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Successful logins (30d)" %}</span>
+            <span class="stat-value">{{ total_success_30d }}</span>
+        </div>
+        <div class="stat-card {% if total_failed_30d > 0 %}stat-card--highlight{% endif %}">
+            <span class="stat-label">{% trans "Failed logins (30d)" %}</span>
+            <span class="stat-value">{{ total_failed_30d }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "New-location logins (30d)" %}</span>
+            <span class="stat-value">{{ new_location_logins_30d }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">{% trans "Active sessions" %}</span>
+            <span class="stat-value">{{ active_sessions|length }}</span>
+        </div>
+    </div>
+
+    <div class="security-tabs" role="tablist">
+        <button type="button" class="security-tab active" data-tab="logins" role="tab">{% trans "Login Activity" %}</button>
+        <button type="button" class="security-tab" data-tab="sessions" role="tab">{% trans "Active Sessions" %}</button>
+        <button type="button" class="security-tab" data-tab="failed" role="tab">{% trans "Failed Logins" %}</button>
+        <button type="button" class="security-tab" data-tab="ips" role="tab">{% trans "IP Blocklist" %}</button>
+        <button type="button" class="security-tab" data-tab="audit" role="tab">{% trans "Admin Audit Log" %}</button>
+        <button type="button" class="security-tab" data-tab="csp" role="tab">{% trans "CSP Violations" %}</button>
+        <button type="button" class="security-tab" data-tab="scorecard" role="tab">
+            {% trans "Scorecard" %}
+            {% if scorecard.summary.fail %}<span class="scorecard-tab-badge scorecard-tab-badge--fail">{{ scorecard.summary.fail }}</span>{% elif scorecard.summary.warn %}<span class="scorecard-tab-badge scorecard-tab-badge--warn">{{ scorecard.summary.warn }}</span>{% endif %}
+        </button>
+        {% if mfa_status is not None %}
+        <button type="button" class="security-tab" data-tab="mfa" role="tab">{% trans "MFA Status" %}</button>
+        {% endif %}
+        <button type="button" class="security-tab" data-tab="runtime" role="tab">{% trans "Server Runtime" %}</button>
+    </div>
+
+    <!-- ── Server Runtime ── -->
+    <div class="security-panel" data-panel="runtime" hidden>
+        <div class="security-runtime-grid">
+            <div class="table-card">
+                <h2 class="card-title">{% trans "Runtime posture" %}</h2>
+                <div class="security-runtime-list">
+                    <div class="security-runtime-item"><span class="label">{% trans "Dashboard version" %}</span><span class="value">{{ runtime_security.dashboard_version }}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Django" %}</span><span class="value">{{ runtime_security.django }}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Python" %}</span><span class="value">{{ runtime_security.python }}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Database" %}</span><span class="value">{{ runtime_security.db_vendor }}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Environment" %}</span><span class="value">{{ runtime_security.environment }}</span></div>
+                    <div class="security-runtime-item {% if runtime_security.debug %}security-runtime-warning{% endif %}"><span class="label">{% trans "DEBUG" %}</span><span class="value">{% if runtime_security.debug %}{% trans "Enabled" %}{% else %}{% trans "Disabled" %}{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "HTTPS redirect" %}</span><span class="value">{% if runtime_security.secure_ssl_redirect %}{% trans "Enabled" %}{% else %}{% trans "Proxy/application dependent" %}{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "IP block enforcement" %}</span><span class="value">{% if runtime_security.security_block_middleware %}{% trans "Active" %}{% else %}{% trans "Not active" %}{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Slow query capture" %}</span><span class="value">{% if runtime_security.slow_query_middleware %}{% trans "Active" %}{% else %}{% trans "Not active" %}{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Memory used" %}</span><span class="value">{% if runtime_security.memory_percent != None %}{{ runtime_security.memory_percent }}%{% else %}—{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Root disk used" %}</span><span class="value">{% if runtime_security.disk_percent != None %}{{ runtime_security.disk_percent }}%{% else %}—{% endif %}</span></div>
+                    <div class="security-runtime-item"><span class="label">{% trans "Host" %}</span><span class="value">{{ runtime_security.hostname }}</span></div>
+                </div>
+                <p class="form-hint" style="margin-top:14px!important;">{% trans "This view reports the runtime visible to the Django process. It is intentionally not a network vulnerability scanner and does not execute arbitrary remote probes." %}</p>
+            </div>
+            <div class="table-card">
+                <h2 class="card-title">{% trans "Operating-system login sessions" %}</h2>
+                {% if runtime_security.os_users %}
+                <table class="analytics-table">
+                    <thead><tr><th>{% trans "User" %}</th><th>{% trans "Terminal" %}</th><th>{% trans "Host" %}</th><th>{% trans "Since" %}</th></tr></thead>
+                    <tbody>{% for u in runtime_security.os_users %}<tr><td>{{ u.name }}</td><td>{{ u.terminal }}</td><td>{{ u.host }}</td><td>{{ u.started|date:"Y-m-d H:i" }}</td></tr>{% endfor %}</tbody>
+                </table>
+                {% else %}
+                <div class="security-empty"><strong>{% trans "No operating-system users are currently visible." %}</strong><span>{% trans "psutil may return no interactive sessions for a headless server or container." %}</span></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Login Activity ── -->
+    <div class="security-panel table-card" data-panel="logins">
+        <h2 class="card-title">{% trans "Recent Login Activity" %}</h2>
+        {% if recent_logins %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "When" %}</th>
+                    <th>{% trans "User" %}</th>
+                    <th>{% trans "Result" %}</th>
+                    <th>{% trans "IP" %}</th>
+                    <th>{% trans "Location" %}</th>
+                    <th>{% trans "Device" %}</th>
+                    <th>{% trans "New?" %}</th>
+                    <th>{% trans "Session" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in recent_logins %}
+                <tr>
+                    <td>{{ e.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ e.user.get_username|default:e.username_attempted|default:"—" }}</td>
+                    <td>
+                        <span class="security-status-badge {% if e.result == 'success' %}security-status-ok{% else %}security-status-bad{% endif %}">
+                            {{ e.get_result_display }}
+                        </span>
+                    </td>
+                    <td>{{ e.ip_address|default:"—" }}</td>
+                    <td>{% if e.city or e.country_name %}{{ e.city }}{% if e.city and e.country_name %}, {% endif %}{{ e.country_name }}{% else %}—{% endif %}</td>
+                    <td>{{ e.browser }} / {{ e.os }}</td>
+                    <td>{% if e.is_new_location %}<span class="status-flag-new">{% trans "Yes" %}</span>{% else %}—{% endif %}</td>
+                    <td>
+                        {% if e.is_active_session %}
+                        <form method="post" action="{% url 'paxalia:security_revoke_session' e.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Force logout this session?' %}">{% trans "Revoke" %}</button>
+                        </form>
+                        {% elif e.result == 'success' %}
+                            <span class="status-dim">{% trans "ended" %}</span>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No login activity recorded yet." %}</div>
+        {% endif %}
+    </div>
+
+    <!-- ── Active Sessions ── -->
+    <div class="security-panel table-card" data-panel="sessions" hidden>
+        <h2 class="card-title">{% trans "Active Sessions" %}</h2>
+        <p class="form-hint">{% trans "Session revocation requires the default database session backend. If this project uses a different SESSION_ENGINE, revoking here ends tracking but may not immediately invalidate the session." %}</p>
+        {% if active_sessions %}
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>{% trans "User" %}</th>
+                    <th>{% trans "Signed in" %}</th>
+                    <th>{% trans "IP" %}</th>
+                    <th>{% trans "Device" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in active_sessions %}
+                <tr>
+                    <td>{{ e.user.get_username|default:"—" }}</td>
+                    <td>{{ e.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ e.ip_address|default:"—" }}</td>
+                    <td>{{ e.browser }} / {{ e.os }}</td>
+                    <td>
+                        <form method="post" action="{% url 'paxalia:security_revoke_session' e.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Force logout this session?' %}">{% trans "Revoke" %}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No active sessions tracked." %}</div>
+        {% endif %}
+    </div>
+
+    <!-- ── Failed Logins / Brute-force monitor ── -->
+    <div class="security-panel" data-panel="failed" hidden>
+        <div class="setting-table-grid">
+            <div class="table-card">
+                <h2 class="card-title">{% trans "Top attacking IPs (30d)" %}</h2>
+                {% if failed_by_ip %}
+                <table class="analytics-table">
+                    <thead><tr><th>{% trans "IP" %}</th><th>{% trans "Failed attempts" %}</th><th>{% trans "Actions" %}</th></tr></thead>
+                    <tbody>
+                        {% for row in failed_by_ip %}
+                        <tr>
+                            <td>{{ row.ip_address }}</td>
+                            <td>{{ row.count }}</td>
+                            <td>
+                                <form method="post" action="{% url 'paxalia:security_block_ip' %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="ip_address" value="{{ row.ip_address }}">
+                                    <input type="hidden" name="reason" value="{% trans 'Repeated failed logins' %}">
+                                    <button type="submit" class="btn btn-sm btn-danger">{% trans "Block" %}</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="security-empty">{% trans "No failed logins in the last 30 days." %}</div>
+                {% endif %}
+            </div>
+            <div class="table-card">
+                <h2 class="card-title">{% trans "Top targeted usernames (30d)" %}</h2>
+                {% if failed_by_username %}
+                <table class="analytics-table">
+                    <thead><tr><th>{% trans "Username attempted" %}</th><th>{% trans "Failed attempts" %}</th></tr></thead>
+                    <tbody>
+                        {% for row in failed_by_username %}
+                        <tr><td>{{ row.username_attempted }}</td><td>{{ row.count }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="security-empty">{% trans "No failed logins in the last 30 days." %}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ── IP Blocklist ── -->
+    <div class="security-panel table-card" data-panel="ips" hidden>
+        <h2 class="card-title">{% trans "IP Blocklist" %}</h2>
+        <form method="post" action="{% url 'paxalia:security_block_ip' %}" class="analytics-settings-form security-inline-form">
+            {% csrf_token %}
+            <input type="text" name="ip_address" placeholder="{% trans 'IP address' %}" required>
+            <input type="text" name="reason" placeholder="{% trans 'Reason (optional)' %}">
+            <button type="submit" class="btn btn-primary">{% trans "Block IP" %}</button>
+        </form>
+        <p class="form-hint">
+            {% trans "Blocking here only takes effect if SecurityBlockMiddleware is added to MIDDLEWARE." %}
+        </p>
+        {% if blocked_ips %}
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "IP" %}</th><th>{% trans "Reason" %}</th><th>{% trans "Status" %}</th><th>{% trans "Added" %}</th><th>{% trans "Actions" %}</th></tr></thead>
+            <tbody>
+                {% for b in blocked_ips %}
+                <tr>
+                    <td>{{ b.ip_address }}</td>
+                    <td>{{ b.reason|default:"—" }}</td>
+                    <td>
+                        <span class="security-status-badge {% if b.active %}security-status-ok{% else %}security-status-bad{% endif %}">
+                            {% if b.active %}{% trans "Blocked" %}{% else %}{% trans "Inactive" %}{% endif %}
+                        </span>
+                    </td>
+                    <td>{{ b.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        {% if b.active %}
+                        <form method="post" action="{% url 'paxalia:security_unblock_ip' b.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-secondary">{% trans "Unblock" %}</button>
+                        </form>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No IPs blocked." %}</div>
+        {% endif %}
+    </div>
+
+    <!-- ── Admin Audit Log ── -->
+    <div class="security-panel table-card" data-panel="audit" hidden>
+        <h2 class="card-title">{% trans "Admin Audit Log" %}</h2>
+        {% if audit_entries %}
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "When" %}</th><th>{% trans "User" %}</th><th>{% trans "Action" %}</th><th>{% trans "Detail" %}</th><th>{% trans "IP" %}</th></tr></thead>
+            <tbody>
+                {% for a in audit_entries %}
+                <tr>
+                    <td>{{ a.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ a.user.get_username|default:"system" }}</td>
+                    <td><code>{{ a.action }}</code></td>
+                    <td>{{ a.detail|default:"—" }}</td>
+                    <td>{{ a.ip_address|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No admin actions recorded yet." %}</div>
+        {% endif %}
+    </div>
+
+    <!-- ── CSP Violations ── -->
+    <div class="security-panel table-card" data-panel="csp" hidden>
+        <h2 class="card-title">{% trans "CSP Violations" %}</h2>
+        <p class="form-hint">
+            {% trans "This package doesn't set your Content-Security-Policy header — point your own CSP's report-uri/report-to at this dashboard's /csp-report/ endpoint to start seeing reports here." %}
+        </p>
+        {% if csp_violations %}
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "When" %}</th><th>{% trans "Directive" %}</th><th>{% trans "Blocked URI" %}</th><th>{% trans "Page" %}</th></tr></thead>
+            <tbody>
+                {% for v in csp_violations %}
+                <tr>
+                    <td>{{ v.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ v.violated_directive|default:"—" }}</td>
+                    <td>{{ v.blocked_uri|default:"—" }}</td>
+                    <td>{{ v.document_uri|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No CSP violations reported." %}</div>
+        {% endif %}
+    </div>
+
+    <!-- ── Security Scorecard ── -->
+    <div class="security-panel table-card" data-panel="scorecard" hidden>
+        <h2 class="card-title">{% trans "Security Scorecard" %}</h2>
+        <p class="form-hint">
+            {% trans "A pass/fail/warn checklist read from your Django settings at page-load time — not a live filesystem scan." %}
+        </p>
+
+        <div class="stat-grid">
+            <div class="stat-card">
+                <span class="stat-label">{% trans "Passing" %}</span>
+                <span class="stat-value">{{ scorecard.summary.pass }}</span>
+            </div>
+            <div class="stat-card {% if scorecard.summary.warn > 0 %}stat-card--highlight{% endif %}">
+                <span class="stat-label">{% trans "Warnings" %}</span>
+                <span class="stat-value">{{ scorecard.summary.warn }}</span>
+            </div>
+            <div class="stat-card {% if scorecard.summary.fail > 0 %}stat-card--highlight{% endif %}">
+                <span class="stat-label">{% trans "Failing" %}</span>
+                <span class="stat-value">{{ scorecard.summary.fail }}</span>
+            </div>
+        </div>
+
+        <h3 class="scorecard-group-title">{% trans "Django configuration" %}</h3>
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "Check" %}</th><th>{% trans "Status" %}</th><th>{% trans "Detail" %}</th></tr></thead>
+            <tbody>
+                {% for check in scorecard.django %}
+                <tr>
+                    <td>{{ check.label }}</td>
+                    <td>
+                        <span class="security-status-badge security-status-{{ check.status }}">
+                            {{ check.status }}
+                        </span>
+                    </td>
+                    <td>{{ check.detail }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h3 class="scorecard-group-title">{% trans "This package" %}</h3>
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "Check" %}</th><th>{% trans "Status" %}</th><th>{% trans "Detail" %}</th></tr></thead>
+            <tbody>
+                {% for check in scorecard.package %}
+                <tr>
+                    <td>{{ check.label }}</td>
+                    <td>
+                        <span class="security-status-badge security-status-{{ check.status }}">
+                            {{ check.status }}
+                        </span>
+                    </td>
+                    <td>{{ check.detail }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if mfa_status is not None %}
+    <!-- ── MFA Status ── -->
+    <div class="security-panel table-card" data-panel="mfa" hidden>
+        <h2 class="card-title">{% trans "MFA Status (staff)" %}</h2>
+        <p class="form-hint">
+            <a href="{% url 'paxalia:mfa_enroll' %}">{% trans "Set up or manage two-factor authentication for your own account" %}</a>
+        </p>
+        {% if mfa_status %}
+        <table class="analytics-table">
+            <thead><tr><th>{% trans "User" %}</th><th>{% trans "2FA Enabled" %}</th></tr></thead>
+            <tbody>
+                {% for row in mfa_status %}
+                <tr>
+                    <td>{{ row.user.get_username }}</td>
+                    <td>
+                        <span class="security-status-badge {% if row.mfa_enabled %}security-status-ok{% else %}security-status-bad{% endif %}">
+                            {% if row.mfa_enabled %}{% trans "Enabled" %}{% else %}{% trans "Not enabled" %}{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="security-empty">{% trans "No staff accounts found." %}</div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/security.js' %}"></script>
+{% endblock %}

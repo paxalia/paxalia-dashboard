@@ -1,0 +1,774 @@
+{% load static %}
+{% load i18n %}
+{% load analytics_tags %}
+{% get_analytics_config as analytics_config %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" data-analytics-theme="dark"
+      dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="icon" href="{% static 'assets/icons/brand/icon-logo.svg' %}" type="image/svg+xml"/>
+    <title>{% block title %}Paxalia Analytics{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'paxalia/styles/themes.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/base.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/layout.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/stat-cards.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/charts.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/tables.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/buttons.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/sidebar.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/settings-form.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/typography.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/icon.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/topbar.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/filter-bar.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/export-btn.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/menu.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/notifications.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/dashboard-refinements.css' %}">
+    {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="analytics-dashboard">
+    <div class="analytics-body">
+        <aside class="analytics-sidebar" role="region" aria-label="Dashboard sections" id="analytics-sidebar">
+            <div class="sidebar__branding">
+                <a href="{% url 'paxalia:dashboard' %}" class="sidebar__logo">
+            <span class="icon icon--md" aria-hidden="true">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                          d="M5 21v-6m7 6V3m7 18V9"></path>
+                </svg>
+            </span>
+                    <span class="sidebar__title">Paxalia Dashboard</span>
+                </a>
+
+                <button class="sidebar-close analytics-sidebar-close-btn" aria-label="Close sidebar">
+            <span class="icon icon--md" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path fill="currentColor"
+                          d="M7.94 11.72 17 2.63c.14-.14.14-.38 0-.52a.374.374 0 0 0-.52 0L6.91 11.7c-.14.14-.14.38 0 .52l9.64 9.67c.14.14.38.14.52 0 .14-.15.14-.39 0-.53l-9.13-9.11a.37.37 0 0 1 0-.53Z"></path>
+                </svg>
+            </span>
+                </button>
+            </div>
+
+            <nav class="analytics-sidebar-nav">
+                {# Analytics group #}
+                <section class="sidebar-group" data-sidebar-group>
+                    <button
+                            type="button"
+                            class="sidebar-group__toggle"
+                            data-sidebar-group-toggle
+                            aria-expanded="false"
+                            aria-controls="sidebar-group-analytics"
+                    >
+                <span class="sidebar-group__title">
+                    {% trans "Analytics" %}
+                </span>
+
+                        <span class="sidebar-group__chevron" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18">
+                        <path fill="currentColor" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"></path>
+                    </svg>
+                </span>
+                    </button>
+
+                    <div class="sidebar-group__panel" id="sidebar-group-analytics" hidden>
+                        {% if 'overview' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:dashboard' %}"
+                           class="analytics-sidebar-link {% if active_page == 'overview' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="currentColor"
+                                      d="m19.675 20.375.7-.7L18.5 17.8V15h-1v3.2zM18 23q-2.075 0-3.537-1.463Q13.001 20.075 13 18q0-2.075 1.463-3.537Q15.927 13 18 13t3.538 1.463T23 18t-1.463 3.538T18 23M7 9h10V7H7zm4.675 12H5q-.824 0-1.412-.587A1.93 1.93 0 0 1 3 19V5q0-.824.588-1.412A1.93 1.93 0 0 1 5 3h14q.825 0 1.413.588T21 5v6.7a7.2 7.2 0 0 0-1.463-.525A6.6 6.6 0 0 0 18 11q-.274 0-.513.012a3 3 0 0 0-.487.063V11H7v2h6.125q-.45.425-.812.925A7 7 0 0 0 11.675 15H7v2h4.075q-.05.25-.062.488-.012.239-.013.512 0 .825.15 1.538T11.675 21"></path>
+                            </svg>
+                        </span>
+                            {% trans "Overview" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'pages' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:pages' %}"
+                           class="analytics-sidebar-link {% if active_page == 'pages' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="currentColor"
+                                      d="M14.54 1.602a2.4 2.4 0 0 1 1.697.704l3.862 3.862.16.176a2.4 2.4 0 0 1 .544 1.52v12.138a2.4 2.4 0 0 1-2.4 2.4h-12.8a2.4 2.4 0 0 1-2.4-2.4v-16a2.4 2.4 0 0 1 2.4-2.4zm-8.937 1.6a.8.8 0 0 0-.8.8v16a.8.8 0 0 0 .8.8h12.8a.8.8 0 0 0 .8-.8V7.864a.8.8 0 0 0-.134-.443l-.1-.122-3.864-3.864a.8.8 0 0 0-.564-.233zm11.2 12.8a.8.8 0 1 1 0 1.6h-9.6a.8.8 0 1 1 0-1.6zm0-4.8a.8.8 0 1 1 0 1.6h-9.6a.8.8 0 1 1 0-1.6zm-4.8-4.8a.8.8 0 1 1 0 1.6h-4.8a.8.8 0 1 1 0-1.6z"></path>
+                            </svg>
+                        </span>
+                            {% trans "Pages" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'broken_links' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:broken_links' %}"
+                           class="analytics-sidebar-link {% if active_page == 'broken_links' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M17 7a5 5 0 0 1 0 10h-3a1 1 0 1 1 0-2h3a3 3 0 0 0 0-6h-3a1 1 0 1 1 0-2zm-7 0a1 1 0 1 1 0 2H7a3 3 0 0 0 0 6h3a1 1 0 1 1 0 2H7A5 5 0 0 1 7 7zm7 4a1 1 0 0 1 1 1v.01a1 1 0 1 1-2 0V12a1 1 0 0 1 1-1zm-4 0a1 1 0 0 1 1 1v.01a1 1 0 1 1-2 0V12a1 1 0 0 1 1-1z"/>
+                                </svg>
+                            </span>
+                            {% trans "Broken Links" %}
+                        </a>
+                        {% endif %}
+
+                        {# FIXED: this used to incorrectly check 'pages' #}
+                        {% if 'api' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:api' %}"
+                           class="analytics-sidebar-link {% if active_page == 'api' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="var(--analytics-gold)"
+                                      d="M20.979 11.802a1 1 0 0 0-.738-.77l-6.86-1.717 2.537-5.92a1 1 0 0 0-1.551-1.169l-11 9a1 1 0 0 0 .39 1.744l6.719 1.681-3.345 5.854A1 1 0 0 0 8.599 21.8l12-9a1 1 0 0 0 .38-.998"></path>
+                            </svg>
+                        </span>
+                            {% trans "API" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'traffic' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:traffic' %}"
+                           class="analytics-sidebar-link {% if active_page == 'traffic' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path fill="none" stroke="currentColor" stroke-miterlimit="10"
+                                      d="M22 12.03c0 .13-.06.25-.16.5-.08.18-.17.36-.34.68-.1.18-.2.35-.34.59-.07.11-.44.71-.86 1.26-.92 1.21-1.99 2.1-1.99 2.1-.54.45-1.37 1.13-2.64 1.67a9.7 9.7 0 0 1-3.83.78 9 9 0 0 1-2.39-.35c-1.1-.33-1.84-.8-2.47-1.2-.47-.3-1.53-.99-2.53-2.14-.36-.42-.68-.86-1.31-1.74-.05-.07-.23-.32-.44-.66a9 9 0 0 1-.41-.74c-.19-.38-.28-.57-.29-.73 0-.11.02-.22.26-.73.22-.45.41-.78.42-.8.15-.26.35-.59.61-.98.3-.44.7-.97 1.22-1.54.74-.81 1.39-1.33 1.6-1.49.59-.45 1.38-1.07 2.58-1.53 1.38-.53 2.55-.55 3.15-.56 1.67-.02 2.92.39 3.36.54 0 0 2.14.76 3.86 2.54.42.43.8.92 1.25 1.49.24.31.54.69.84 1.22.08.14.15.26.2.35.15.27.25.47.27.51.06.12.11.22.17.35.14.32.22.48.22.62Z"></path>
+                                <ellipse cx="12" cy="11.99" fill="currentColor" rx="4.13" ry="4.12"></ellipse>
+                            </svg>
+                        </span>
+                            {% trans "Traffic" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'geography' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:geography' %}"
+                           class="analytics-sidebar-link {% if active_page == 'geography' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <circle fill="var(--analytics-text)" cx="12" cy="12" r="10"></circle>
+                                <circle fill="var(--analytics-surface)" cx="12" cy="12" r="9.46"></circle>
+                                <ellipse fill="var(--analytics-text)" cx="11.93" cy="12" rx="5.04" ry="10"></ellipse>
+                                <ellipse fill="var(--analytics-surface)" cx="11.93" cy="12" rx="4.37"
+                                         ry="9.46"></ellipse>
+                                <path fill="var(--analytics-text)" d="M3.08 8.94h17.93V8.3H3.08z"></path>
+                                <path fill="var(--analytics-text)" d="M3.01 15.78h17.94v-.64H3.01z"></path>
+                            </svg>
+                        </span>
+                            {% trans "Geography" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'realtime' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:realtime' %}"
+                           class="analytics-sidebar-link {% if active_page == 'realtime' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <circle fill="var(--analytics-gold)" cx="12" cy="12" r="10"></circle>
+                                <path fill="var(--analytics-surface)"
+                                      d="M11.94 4.8c-.13 0-.24.08-.24.18l-.03 6.93c0 .1.11.18.24.18s.24-.08.24-.18l.03-6.93c0-.1-.11-.18-.24-.18"></path>
+                                <path fill="var(--analytics-surface)"
+                                      d="M11.81 11.69c-.09.09-.13.21-.08.26l3.44 3.49c.05.05.17.02.26-.08.09-.09.13-.21.08-.26l-3.44-3.49c-.05-.05-.17-.02-.26.08"></path>
+                                <path fill="var(--analytics-surface)"
+                                      d="M18.34 15.59v5.95c0 .07.05.12.12.12h.02c.07 0 .12-.05.12-.12v-5.96l-.11-.14-.15.09v.07Z"></path>
+                                <path fill="var(--analytics-surface)"
+                                      d="m18.52 15.55 2.25 2.57s.09.04.13 0 .04-.11 0-.15l-2.37-2.71s-.09-.04-.13 0l-2.39 2.73s-.04.11 0 .15.09.04.13 0l2.25-2.59s.09-.04.13 0"></path>
+                            </svg>
+                        </span>
+                            {% trans "Real-time" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'events' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:events' %}"
+                           class="analytics-sidebar-link {% if active_page == 'events' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="var(--analytics-gold)"
+                                      d="M20.979 11.802a1 1 0 0 0-.738-.77l-6.86-1.717 2.537-5.92a1 1 0 0 0-1.551-1.169l-11 9a1 1 0 0 0 .39 1.744l6.719 1.681-3.345 5.854A1 1 0 0 0 8.599 21.8l12-9a1 1 0 0 0 .38-.998"></path>
+                            </svg>
+                        </span>
+                            {% trans "Events" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'rum' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:rum' %}"
+                           class="analytics-sidebar-link {% if active_page == 'rum' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 3a9 9 0 0 0-7.5 14h2.4a7 7 0 1 1 10.2 0h2.4A9 9 0 0 0 12 3zm0 6a1.5 1.5 0 0 0-1.5 1.5c0 .3.08.58.22.82l-2.3 3.98a1 1 0 1 0 1.73 1l2.3-3.98A1.5 1.5 0 1 0 12 9z"/>
+                                </svg>
+                            </span>
+                            {% trans "Real User Monitoring" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'uptime' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:uptime' %}"
+                           class="analytics-sidebar-link {% if active_page == 'uptime' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/>
+                                </svg>
+                            </span>
+                            {% trans "Uptime Monitoring" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'goals' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:goals' %}"
+                           class="analytics-sidebar-link {% if active_page == 'goals' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 16a6 6 0 1 1 6-6 6 6 0 0 1-6 6zm0-9a3 3 0 1 0 3 3 3 3 0 0 0-3-3z"/>
+                                </svg>
+                            </span>
+                            {% trans "Goals" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'funnels' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:funnels' %}"
+                           class="analytics-sidebar-link {% if active_page == 'funnels' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M3 4h18v2l-7 8v6l-4-2v-4L3 6z"/>
+                                </svg>
+                            </span>
+                            {% trans "Funnels" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'segments' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:segments' %}"
+                           class="analytics-sidebar-link {% if active_page == 'segments' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M4 5h16v3H4zm0 5.5h10v3H4zm0 5.5h7v3H4z"/>
+                                </svg>
+                            </span>
+                            {% trans "Segments" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'cohorts' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:cohorts' %}"
+                           class="analytics-sidebar-link {% if active_page == 'cohorts' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M4 4h4v16H4zm6 6h4v10h-4zm6-4h4v14h-4z"/>
+                                </svg>
+                            </span>
+                            {% trans "Cohorts" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'campaigns' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:campaigns' %}"
+                           class="analytics-sidebar-link {% if active_page == 'campaigns' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M3 11l18-7-7 18-2-8-8-2z"/>
+                                </svg>
+                            </span>
+                            {% trans "Campaigns" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'annotations' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:annotations' %}"
+                           class="analytics-sidebar-link {% if active_page == 'annotations' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M4 20l4-1 10-10-3-3L5 16l-1 4zm12.5-14.5l2 2 1.5-1.5-2-2z"/>
+                                </svg>
+                            </span>
+                            {% trans "Annotations" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'bots' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:bots' %}"
+                           class="analytics-sidebar-link {% if active_page == 'bots' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 8V4H8" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                          stroke-linejoin="round"/>
+                                    <path d="M18 8H6C4.89543 8 4 8.89543 4 10V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V10C20 8.89543 19.1046 8 18 8Z"
+                                          stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                          stroke-linejoin="round"/>
+                                    <path d="M2 14H4M20 14H22M15 13V15M9 13V15" stroke="currentColor" stroke-width="2"
+                                          stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            {% trans "Bot Traffic" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'billing' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_billing %}
+                        <a href="{% url 'paxalia:billing' %}"
+                           class="analytics-sidebar-link {% if active_page == 'billing' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                <path fill="currentColor"
+                                      d="M19.204 15.474c0-5.115-9.429-4.78-9.429-7.869 0-1.494 1.43-2.224 3.089-2.224 2.789 0 3.286 1.792 4.549 1.792.895 0 1.325-.564 1.325-1.195 0-1.467-2.224-2.578-4.358-2.963V1.6a1.6 1.6 0 0 0-3.198 0v1.466c-2.326.53-4.327 2.143-4.327 4.773 0 4.913 9.428 4.714 9.428 8.165 0 1.195-1.294 2.39-3.42 2.39-3.187 0-4.249-2.157-5.543-2.157-.631 0-1.195.53-1.195 1.33 0 1.271 2.13 2.8 5.059 3.228l-.002.01v1.598a1.6 1.6 0 0 0 3.2 0v-1.598c0-.019-.01-.033-.011-.05 2.635-.492 4.833-2.21 4.833-5.28"></path>
+                            </svg>
+                        </span>
+                            {% trans "Billing" %}
+                        </a>
+                        {% endif %}
+                    </div>
+                </section>
+
+                {# Administration group #}
+                <section class="sidebar-group" data-sidebar-group>
+                    <button
+                            type="button"
+                            class="sidebar-group__toggle"
+                            data-sidebar-group-toggle
+                            aria-expanded="false"
+                            aria-controls="sidebar-group-admin"
+                    >
+                        <span class="sidebar-group__title">{% trans "Administration" %}</span>
+                        <span class="sidebar-group__chevron" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"></path>
+                            </svg>
+                        </span>
+                    </button>
+
+                    <div class="sidebar-group__panel" id="sidebar-group-admin" hidden>
+                        <a href="{% url 'paxalia:admin_overview' %}"
+                           class="analytics-sidebar-link {% if active_page == 'admin_overview' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                          d="M5 21v-6m7 6V3m7 18V9"/>
+                                </svg>
+                            </span>
+                            {% trans "Overview" %}
+                        </a>
+
+                        <a href="{% url 'admin:index' %}"
+                           class="analytics-sidebar-link {% if active_page == 'admin_index' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M9.125 14.125A2.9 2.9 0 0 0 10 12q0-1.25-.875-2.125A2.9 2.9 0 0 0 7 9q-1.25 0-2.125.875A2.9 2.9 0 0 0 4 12q0 1.25.875 2.125A2.9 2.9 0 0 0 7 15q1.25 0 2.125-.875M7 18q-2.5 0-4.25-1.75T1 12t1.75-4.25T7 6q2.025 0 3.538 1.15Q12.052 8.3 12.65 10h8.375L23 11.975l-3.5 4L17 14l-2 2-2-2h-.35a5.8 5.8 0 0 1-2.175 2.9A5.86 5.86 0 0 1 7 18"/>
+                                </svg>
+                            </span>
+                            {% trans "Django Admin" %}
+                        </a>
+
+                        {% if 'releases' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:releases' %}"
+                           class="analytics-sidebar-link {% if active_page == 'releases' %}active{% endif %}">
+                        <span class="icon icon--sm" aria-hidden="true">
+                            <svg width="24" height="24" viewBox="0 0 24 24">
+                                <path fill="var(--analytics-gold)"
+                                      d="M17.03 10.31h1.01c2.19 0 3.96 1.75 3.96 3.92 0 2.16-1.77 3.92-3.96 3.92H5.96C3.77 18.15 2 16.4 2 14.23c0-2.16 1.77-3.92 3.96-3.92h.98"/>
+                                <path fill="var(--analytics-gold)"
+                                      d="M6.93 10.84c.02-2.75 2.27-4.98 5.06-4.99s5.1 2.22 5.12 5"/>
+                                <path fill="var(--analytics-surface)"
+                                      d="M12.08 14.6h-.04c-.07 0-.13-.06-.09-.13V10.1l-1.37 1.32c-.05.05-.13.05-.18 0a.127.127 0 0 1 0-.18l1.58-1.56c.05-.05.13-.05.18 0l1.6 1.58c.05.05.05.13 0 .18s-.13.05-.18 0l-1.35-1.35v4.38c0 .07-.06.13-.14.13Z"/>
+                            </svg>
+                        </span>
+                            {% trans "Release Center" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'backups' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_backups %}
+                        <a href="{% url 'paxalia:backups' %}"
+                           class="analytics-sidebar-link {% if active_page == 'backups' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2m6 2a6 6 0 0 0-6 6c0 3.31 2.69 6 6.1 6l-.88-2.23a1.01 1.01 0 0 1 .37-1.37l.86-.5a1.01 1.01 0 0 1 1.37.37l1.92 2.42A5.98 5.98 0 0 0 18 10a6 6 0 0 0-6-6m0 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2m-5 9a1 1 0 1 0 0 2 1 1 0 0 0 0-2m5.09-4.73 2.49 6.31 2.59-1.5-4.22-5.31z"/>
+                                </svg>
+                            </span>
+                            {% trans "Backups" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'security' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_security %}
+                        <a href="{% url 'paxalia:security' %}"
+                           class="analytics-sidebar-link {% if active_page == 'security' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5zm0 9.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11z"/>
+                                </svg>
+                            </span>
+                            {% trans "Security Center" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'sites' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_sites %}
+                        <a href="{% url 'paxalia:sites' %}"
+                           class="analytics-sidebar-link {% if active_page == 'sites' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm7.9 9h-3.02c-.13-2.11-.68-4.05-1.5-5.5A8.03 8.03 0 0 1 19.9 11zM12 4.05c1.03 1.15 2.13 3.36 2.36 6.95H9.64C9.87 7.41 10.97 5.2 12 4.05zM4.1 13h3.02c.13 2.11.68 4.05 1.5 5.5A8.03 8.03 0 0 1 4.1 13zm3.02-2H4.1a8.03 8.03 0 0 1 4.52-5.5c-.82 1.45-1.37 3.39-1.5 5.5zM12 19.95c-1.03-1.15-2.13-3.36-2.36-6.95h4.72c-.23 3.59-1.33 5.8-2.36 6.95zm2.9-1.45c.82-1.45 1.37-3.39 1.5-5.5h3.02a8.03 8.03 0 0 1-4.52 5.5z"/>
+                                </svg>
+                            </span>
+                            {% trans "Sites" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'compliance' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_compliance %}
+                        <a href="{% url 'paxalia:compliance' %}"
+                           class="analytics-sidebar-link {% if active_page == 'compliance' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 1 0-2 0v1H10V3a1 1 0 0 0-1-1zM7 10h10v2H7zm0 4h6v2H7z"/>
+                                </svg>
+                            </span>
+                            {% trans "Compliance" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'data_import' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:data_import' %}"
+                           class="analytics-sidebar-link {% if active_page == 'data_import' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42l2.3 2.3V4a1 1 0 0 1 1-1zM5 19a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z"/>
+                                </svg>
+                            </span>
+                            {% trans "Data Import" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'api_keys' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:api_keys' %}"
+                           class="analytics-sidebar-link {% if active_page == 'api_keys' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M14 2a6 6 0 0 0-5.66 8L2 16.34V20h3.66l1.5-1.5H10v-2.5h2.5V13.5L14 12a6 6 0 1 0 0-10zm2 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/>
+                                </svg>
+                            </span>
+                            {% trans "Paxalia API Keys" %}
+                        </a>
+                        <a href="{% url 'paxalia:api_docs' %}"
+                           class="analytics-sidebar-link {% if active_page == 'api_docs' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5zM7 12h10v1.5H7zm0 3.5h10V17H7zm0-7h5v1.5H7z"/>
+                                </svg>
+                            </span>
+                            {% trans "Paxalia API Reference" %}
+                        </a>
+                        {% if 'security' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_security %}
+                        <a href="{% url 'paxalia:dependencies' %}" class="analytics-sidebar-link {% if active_page == 'dependencies' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M10 3a7 7 0 1 0 4.9 11.99L22 22v-4h-3v-3h-3v-2.1A7 7 0 0 0 10 3Zm0 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm0 2a2 2 0 1 0 0 4 2 2 0 0 0-4Z"/>
+                                </svg>
+                            </span>
+                            {% trans "Dependencies" %}
+                        </a>
+                        {% endif %}
+                        {% endif %}
+
+                        {% if 'reports' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:reports' %}"
+                           class="analytics-sidebar-link {% if active_page == 'reports' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M4 4h16v2H4zm2 4h12v12H6zm2 2v2h8v-2zm0 4v2h8v-2z"/>
+                                </svg>
+                            </span>
+                            {% trans "Scheduled Reports" %}
+                        </a>
+                        {% endif %}
+
+                        {% if 'share_links' in analytics_config.SIDEBAR_SECTIONS %}
+                        <a href="{% url 'paxalia:share_links' %}"
+                           class="analytics-sidebar-link {% if active_page == 'share_links' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M11 2a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-8 0zm2 4V6a2 2 0 1 1 4 0v2z"/>
+                                </svg>
+                            </span>
+                            {% trans "Share Links" %}
+                        </a>
+                        {% endif %}
+                    </div>
+                </section>
+
+                {% if analytics_all_sites %}
+                <section class="analytics-sidebar-section" aria-label="{% trans 'Site filter' %}">
+                    <form method="get" class="analytics-site-switcher" onchange="this.submit()" style="padding: 0 1rem;">
+                        <select name="site" aria-label="{% trans 'Filter by site' %}"
+                                style="width: 100%; background: var(--analytics-bg); color: var(--analytics-text); border: 1px solid var(--analytics-border); border-radius: 4px; padding: 0.4rem;">
+                            <option value="" {% if not analytics_current_site %}selected{% endif %}>{% trans "All Sites" %}</option>
+                            {% for s in analytics_all_sites %}
+                            <option value="{{ s.id }}" {% if analytics_current_site.id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </section>
+                {% endif %}
+
+                {# Server group #}
+                {% if perms.paxalia.view_server %}
+                <section class="sidebar-group" data-sidebar-group>
+                    <button
+                            type="button"
+                            class="sidebar-group__toggle"
+                            data-sidebar-group-toggle
+                            aria-expanded="false"
+                            aria-controls="sidebar-group-server"
+                    >
+                        <span class="sidebar-group__title">{% trans "Server" %}</span>
+                        <span class="sidebar-group__chevron" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"></path>
+                            </svg>
+                        </span>
+                    </button>
+
+                    <div class="sidebar-group__panel" id="sidebar-group-server" hidden>
+                        <a href="{% url 'paxalia:server_overview' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_overview' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="m19.675 20.375.7-.7L18.5 17.8V15h-1v3.2zM18 23q-2.075 0-3.537-1.463Q13.001 20.075 13 18q0-2.075 1.463-3.537Q15.927 13 18 13t3.538 1.463T23 18t-1.463 3.538T18 23M7 9h10V7H7zm4.675 12H5q-.824 0-1.412-.587A1.93 1.93 0 0 1 3 19V5q0-.824.588-1.412A1.93 1.93 0 0 1 5 3h14q.825 0 1.413.588T21 5v6.7a7.2 7.2 0 0 0-1.463-.525A6.6 6.6 0 0 0 18 11q-.274 0-.513.012a3 3 0 0 0-.487.063V11H7v2h6.125q-.45.425-.812.925A7 7 0 0 0 11.675 15H7v2h4.075q-.05.25-.062.488-.012.239-.013.512 0 .825.15 1.538T11.675 21"/>
+                                </svg>
+                            </span>
+                            {% trans "Overview" %}
+                        </a>
+
+                        <a href="{% url 'paxalia:server_cpu' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_cpu' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M9.75 9a.75.75 0 0 0-.75.75v4.5a.75.75 0 0 0 .75.75h4.5a.75.75 0 0 0 .75-.75v-4.5a.75.75 0 0 0-.75-.75z"/><path
+                                        fill="currentColor"
+                                        d="M8.25.75a.75.75 0 0 0-1.5 0V3A3.75 3.75 0 0 0 3 6.75H.75a.75.75 0 0 0 0 1.5H3v1.5H.75a.75.75 0 0 0 0 1.5H3v1.5H.75a.75.75 0 1 0 0 1.5H3v1.5H.75a.75.75 0 1 0 0 1.5H3A3.75 3.75 0 0 0 6.75 21v2.25a.75.75 0 1 0 1.5 0V21h1.5v2.25a.75.75 0 1 0 1.5 0V21h1.5v2.25a.75.75 0 1 0 1.5 0V21h1.5v2.25a.75.75 0 1 0 1.5 0V21A3.75 3.75 0 0 0 21 17.25h2.25a.75.75 0 1 0 0-1.5H21v-1.5h2.25a.75.75 0 1 0 0-1.5H21v-1.5h2.25a.75.75 0 1 0 0-1.5H21v-1.5h2.25a.75.75 0 1 0 0-1.5H21A3.75 3.75 0 0 0 17.25 3V.75a.75.75 0 1 0-1.5 0V3h-1.5V.75a.75.75 0 1 0-1.5 0V3h-1.5V.75a.75.75 0 1 0-1.5 0V3h-1.5zm1.5 6.75h4.5a2.25 2.25 0 0 1 2.25 2.25v4.5a2.25 2.25 0 0 1-2.25 2.25h-4.5a2.25 2.25 0 0 1-2.25-2.25v-4.5A2.25 2.25 0 0 1 9.75 7.5"/>
+                                </svg>
+                            </span>
+                            {% trans "CPU" %}
+                        </a>
+                        <a href="{% url 'paxalia:server_memory' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_memory' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="19" fill="none" viewBox="0 0 24 19">
+                                    <path fill="currentColor"
+                                          d="M24 4.86V3.561c0-.655-.537-1.187-1.2-1.187H1.2c-.663 0-1.2.532-1.2 1.188v1.296c.698.245 1.2.898 1.2 1.672 0 .775-.502 1.427-1.2 1.672v3.672h24V8.203a1.78 1.78 0 0 1-1.2-1.672c0-.774.502-1.427 1.2-1.672M8.4 9.5H6V4.75h2.4zm4.8 0h-2.4V4.75h2.4zm4.8 0h-2.4V4.75H18zM0 16.625h2.4v-.99c0-.328.268-.594.6-.594s.6.266.6.594v.99h4.8v-.99c0-.328.268-.594.6-.594s.6.266.6.594v.99h4.8v-.99c0-.328.268-.594.6-.594s.6.266.6.594v.99h4.8v-.99c0-.328.269-.594.6-.594s.6.266.6.594v.99H24v-3.562H0z"/>
+                                </svg>
+                            </span>
+                            {% trans "Memory" %}
+                        </a>
+                        <a href="{% url 'paxalia:server_disk' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_disk' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2m6 2a6 6 0 0 0-6 6c0 3.31 2.69 6 6.1 6l-.88-2.23a1.01 1.01 0 0 1 .37-1.37l.86-.5a1.01 1.01 0 0 1 1.37.37l1.92 2.42A5.98 5.98 0 0 0 18 10a6 6 0 0 0-6-6m0 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2m-5 9a1 1 0 1 0 0 2 1 1 0 0 0 0-2m5.09-4.73 2.49 6.31 2.59-1.5-4.22-5.31z"/>
+                                </svg>
+                            </span>
+                            {% trans "Disk" %}
+                        </a>
+                        <a href="{% url 'paxalia:server_network' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_network' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" stroke="currentColor" stroke-width="1.5"
+                                          d="M9.4 2H3.6a.6.6 0 0 0-.6.6v3.8a.6.6 0 0 0 .6.6h5.8a.6.6 0 0 0 .6-.6V2.6a.6.6 0 0 0-.6-.6Zm5.5 15H9.1a.6.6 0 0 0-.6.6v3.8a.6.6 0 0 0 .6.6h5.8a.6.6 0 0 0 .6-.6v-3.8a.6.6 0 0 0-.6-.6Zm5.5-15h-5.8a.6.6 0 0 0-.6.6v3.8a.6.6 0 0 0 .6.6h5.8a.6.6 0 0 0 .6-.6V2.6a.6.6 0 0 0-.6-.6Z"/>
+                                    <path stroke="currentColor" stroke-width="1.5"
+                                          d="M6.5 7v3.5a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2V7M12 12.5V17"/>
+                                </svg>
+                            </span>
+                            {% trans "Network" %}
+                        </a>
+                        <a href="{% url 'paxalia:server_services' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_services' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <path fill="currentColor"
+                                          d="M4 1H20C20.2652 1 20.5196 1.10536 20.7071 1.29289C20.8946 1.48043 21 1.73478 21 2V6C21 6.26522 20.8946 6.51957 20.7071 6.70711C20.5196 6.89464 20.2652 7 20 7H4C3.73478 7 3.48043 6.89464 3.29289 6.70711C3.10536 6.51957 3 6.26522 3 6V2C3 1.73478 3.10536 1.48043 3.29289 1.29289C3.48043 1.10536 3.73478 1 4 1ZM4 9H20C20.2652 9 20.5196 9.10536 20.7071 9.29289C20.8946 9.48043 21 9.73478 21 10V14C21 14.2652 20.8946 14.5196 20.7071 14.7071C20.5196 14.8946 20.2652 15 20 15H4C3.73478 15 3.48043 14.8946 3.29289 14.7071C3.10536 14.5196 3 14.2652 3 14V10C3 9.73478 3.10536 9.48043 3.29289 9.29289C3.48043 9.10536 3.73478 9 4 9ZM4 17H20C20.2652 17 20.5196 17.1054 20.7071 17.2929C20.8946 17.4804 21 17.7348 21 18V22C21 22.2652 20.8946 22.5196 20.7071 22.7071C20.5196 22.8946 20.2652 23 20 23H4C3.73478 23 3.48043 22.8946 3.29289 22.7071C3.10536 22.5196 3 22.2652 3 22V18C3 17.7348 3.10536 17.4804 3.29289 17.2929C3.48043 17.1054 3.73478 17 4 17ZM9 5H10V3H9V5ZM9 13H10V11H9V13ZM9 21H10V19H9V21ZM5 3V5H7V3H5ZM5 11V13H7V11H5ZM5 19V21H7V19H5Z"/>
+                                </svg>
+                            </span>
+                            {% trans "Services" %}
+                        </a>
+                        <a href="{% url 'paxalia:server_processes' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_processes' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path stroke="currentColor" stroke-linejoin="round"
+                                          d="M12.991 3.067a2 2 0 0 0-1.982 0L2.75 7.78l8.259 4.713a2 2 0 0 0 1.982 0L21.25 7.78z"/>
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                          d="m2.75 12 7.268 4.147a4 4 0 0 0 3.964 0L21.25 12"/>
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                          d="m2.75 16.227 7.268 4.147a4 4 0 0 0 3.964 0l7.268-4.147"/>
+                                </svg>
+                            </span>
+                            {% trans "Processes" %}
+                        </a>
+
+                        <a href="{% url 'paxalia:server_slow_queries' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_slow_queries' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm.75 5v5.5l4.5 2.67-.75 1.23L11 13V7z"/>
+                                </svg>
+                            </span>
+                            {% trans "Slow Queries" %}
+                        </a>
+                        <a href="{% url 'paxalia:server_queues' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_queues' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M4 4h16v3H4zm0 6.5h16v3H4zM4 17h16v3H4z"/>
+                                </svg>
+                            </span>
+                            {% trans "Queues" %}
+                        </a>
+                        <a href="{% url 'paxalia:server_deployments' %}"
+                           class="analytics-sidebar-link {% if active_page == 'server_deployments' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6zm0 9-3-3 1.4-1.4L12 8.2l1.6-1.6L15 8z"/>
+                                </svg>
+                            </span>
+                            {% trans "Deployments" %}
+                        </a>
+                    </div>
+                </section>
+
+                {% endif %}
+                {# System group #}
+                <section class="sidebar-group" data-sidebar-group>
+                    <button
+                            type="button"
+                            class="sidebar-group__toggle"
+                            data-sidebar-group-toggle
+                            aria-expanded="false"
+                            aria-controls="sidebar-group-system"
+                    >
+                        <span class="sidebar-group__title">{% trans "System" %}</span>
+                        <span class="sidebar-group__chevron" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"></path>
+                            </svg>
+                        </span>
+                    </button>
+
+                    <div class="sidebar-group__panel" id="sidebar-group-system" hidden>
+                        <a href="{% url 'paxalia:settings' %}"
+                           class="analytics-sidebar-link {% if active_page == 'settings' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.04 7.04 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.49.37 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 15.6 12 3.6 3.6 0 0 1 12 15.6z"/>
+                                </svg>
+                            </span>
+                            {% trans "Settings" %}
+                        </a>
+
+                        <a href="{% url 'paxalia:about' %}"
+                           class="analytics-sidebar-link {% if active_page == 'about' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                                </svg>
+                            </span>
+                            {% trans "About" %}
+                        </a>
+                    </div>
+                </section>
+            </nav>
+
+            <div class="sidebar__footer">
+                <span class="sidebar__credit">
+                    {% trans "Dashboard by" %} <a href="https://www.paxalia.com/" target="_blank"
+                                                  rel="noopener">Paxalia</a>
+                </span>
+            </div>
+        </aside>
+
+        <div class="sidebar-backdrop" id="sidebarBackdrop" hidden></div>
+
+        <main class="analytics-main">
+            <header class="topbar dashboard-topbar" role="banner">
+                <button class="topbar__menu-toggle sidebar-toggle" aria-controls="analytics-sidebar"
+                        aria-expanded="false" aria-label="{% trans 'Toggle sidebar' %}">
+                    <span class="icon icon--sm" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <rect width="20" height="1.71" x="2" y="20.29" rx=".85" ry=".85" fill="currentColor"></rect>
+                            <rect width="20" height="1.71" x="2" y="11.15" rx=".83" ry=".83" fill="currentColor"></rect>
+                            <rect width="20" height="1.71" x="2" y="2" rx=".83" ry=".83" fill="currentColor"></rect>
+                        </svg>
+                    </span>
+                </button>
+
+                <div class="dashboard-topbar__title" id="analytics-title">
+                    <h1 class="dashboard-page-title">{% block page_title %}{% trans "Overview" %}{% endblock %}</h1>
+                    <p class="dashboard-page-subtitle">{% block page_subtitle %}{% endblock %}</p>
+                </div>
+
+                {% if 'notifications' in analytics_config.SIDEBAR_SECTIONS %}
+                <a href="{% url 'paxalia:notifications' %}" class="analytics-notification-bell"
+                   aria-label="{% trans 'Notifications' %}">
+                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill="currentColor" d="M12 2a6 6 0 0 0-6 6v3.2c0 .5-.2 1-.5 1.4L4 15h16l-1.5-2.4c-.3-.4-.5-.9-.5-1.4V8a6 6 0 0 0-6-6zm0 20a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22z"/>
+                    </svg>
+                    {% if analytics_unread_notification_count %}
+                    <span class="analytics-notification-badge">
+                        {{ analytics_unread_notification_count }}
+                    </span>
+                    {% endif %}
+                </a>
+                {% endif %}
+            </header>
+
+            {% block filter_bar %}{% endblock %}
+
+            {% if messages %}
+            <div class="analytics-messages">
+                {% for message in messages %}
+                <div class="analytics-message analytics-message--{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="analytics-container">
+                {% block dashboard_content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+</div>
+<script nonce="{{ request.csp_nonce }}">
+    window.ANALYTICS_CONFIG = {
+        realtimeDataUrl: "{{ ANALYTICS_REALTIME_DATA_URL }}",
+        serverMetricsUrl: "{{ ANALYTICS_SERVER_METRICS_URL }}",
+        serverHistoryUrl: "{{ ANALYTICS_SERVER_HISTORY_URL }}",
+        uploadInitUrl: "{{ ANALYTICS_UPLOAD_INIT_URL }}",
+        uploadChunkUrl: "{{ ANALYTICS_UPLOAD_CHUNK_URL }}",
+        uploadCompleteUrl: "{{ ANALYTICS_UPLOAD_COMPLETE_URL }}",
+        uploadDeleteUrl: "{{ ANALYTICS_UPLOAD_DELETE_URL }}",
+        uploadListUrl: "{{ ANALYTICS_UPLOAD_LIST_URL }}",
+        eventsDataUrl: "{{ ANALYTICS_EVENTS_DATA_URL }}",
+    };
+</script>
+{% block extra_js %}
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/chart.umd.js' %}"></script>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/sidebar.js' %}"></script>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/theme-manager.js' %}"></script>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/language-manager.js' %}"></script>
+{% block page_scripts %}{% endblock %}
+{% endblock %}
+</body>
+</html>
