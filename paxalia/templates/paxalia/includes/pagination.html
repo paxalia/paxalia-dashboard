@@ -1,0 +1,32 @@
+{% load i18n %}
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav class="pagination" aria-label="{% trans 'Pagination' %}">
+    {% if page_obj.has_previous %}
+        <a class="pagination__link pagination__prev" href="?{% if pagination_query %}{{ pagination_query.urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">
+            <span class="pagination__arrow" aria-hidden="true">‹</span>
+            <span>{% trans "Previous" %}</span>
+        </a>
+    {% else %}
+        <span class="pagination__disabled pagination__prev" aria-hidden="true">
+            <span class="pagination__arrow">‹</span>
+            <span>{% trans "Previous" %}</span>
+        </span>
+    {% endif %}
+
+    <span class="pagination__status" aria-current="page">
+        {% blocktrans with current=page_obj.number total=page_obj.paginator.num_pages %}Page {{ current }} of {{ total }}{% endblocktrans %}
+    </span>
+
+    {% if page_obj.has_next %}
+        <a class="pagination__link pagination__next" href="?{% if pagination_query %}{{ pagination_query.urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}">
+            <span>{% trans "Next" %}</span>
+            <span class="pagination__arrow" aria-hidden="true">›</span>
+        </a>
+    {% else %}
+        <span class="pagination__disabled pagination__next" aria-hidden="true">
+            <span>{% trans "Next" %}</span>
+            <span class="pagination__arrow">›</span>
+        </span>
+    {% endif %}
+</nav>
+{% endif %}

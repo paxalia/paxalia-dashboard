@@ -3,6 +3,7 @@
 # Source code
 include paxalia/*.py
 include paxalia/views/*.py
+recursive-include paxalia/logging *.py
 include paxalia/templatetags/*.py
 recursive-include paxalia/management *.py
 recursive-include paxalia/migrations *.py

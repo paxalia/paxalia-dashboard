@@ -1,0 +1,57 @@
+{% extends 'paxalia/base.html' %}
+{% load i18n static %}
+
+{% block title %}{{ page_title }} — Paxalia{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{{ page_subtitle }}{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/logging.css' %}">{% endblock %}
+
+{% block filter_bar %}
+<form class="filter-bar logging-filter" method="get" aria-label="{% trans 'Authentication activity filters' %}">
+    <div class="filter-bar__inner" data-logging-filter data-active-preset="{{ active_preset|default:'' }}">
+        <div class="logging-filter__primary">
+            <div class="logging-filter__presets" aria-label="{% trans 'Date presets' %}">
+                <button type="button" class="filter-bar__preset{% if active_preset == 'today' %} active{% endif %}" data-preset="today" aria-pressed="{% if active_preset == 'today' %}true{% else %}false{% endif %}">{% trans "Today" %}</button>
+                <button type="button" class="filter-bar__preset{% if active_preset == 'last7' %} active{% endif %}" data-preset="last7" aria-pressed="{% if active_preset == 'last7' %}true{% else %}false{% endif %}">{% trans "7 days" %}</button>
+                <button type="button" class="filter-bar__preset{% if active_preset == 'last30' %} active{% endif %}" data-preset="last30" aria-pressed="{% if active_preset == 'last30' %}true{% else %}false{% endif %}">{% trans "30 days" %}</button>
+            </div>
+            <div class="logging-filter__range">
+                <span class="logging-filter__range-label">{% trans "Range" %}</span>
+                <label for="login-start-date" class="sr-only">{% trans "From" %}</label><input id="login-start-date" class="logging-filter__date" type="date" name="start_date" value="{{ start_dt|date:'Y-m-d' }}">
+                <span class="logging-filter__date-separator">–</span>
+                <label for="login-end-date" class="sr-only">{% trans "To" %}</label><input id="login-end-date" class="logging-filter__date" type="date" name="end_date" value="{{ end_dt|date:'Y-m-d' }}">
+            </div>
+            <label class="logging-filter__field"><span class="logging-filter__field-label">{% trans "Result" %}</span><select name="result" class="logging-filter__control"><option value="">{% trans "All results" %}</option><option value="success" {% if request.GET.result == 'success' %}selected{% endif %}>{% trans "Success" %}</option><option value="failed" {% if request.GET.result == 'failed' %}selected{% endif %}>{% trans "Failed" %}</option></select></label>
+            <div class="logging-filter__search"><span class="logging-filter__search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.05" cy="9.87" r="7.87" fill="none" stroke="currentColor" stroke-miterlimit="10"></circle><path d="m21.52 21.96-6.12-6.12.26-.27 6.12 6.12" fill="none" stroke="currentColor"></path></svg></span><label for="login-search" class="sr-only">{% trans "Search" %}</label><input id="login-search" class="logging-filter__search-input" name="q" value="{{ request.GET.q }}" placeholder="{% trans 'Username or account identifier' %}"></div>
+            <button class="logging-filter__apply" type="submit">{% trans "Apply" %}</button>
+        </div>
+        <details class="logging-filter__advanced"><summary>{% trans "More filters" %}</summary><div class="logging-filter__advanced-grid">
+            <label class="logging-filter__field"><span class="logging-filter__field-label">{% trans "Traffic" %}</span><select name="traffic_type" class="logging-filter__control"><option value="">{% trans "All traffic" %}</option><option value="WEB" {% if request.GET.traffic_type == 'WEB' %}selected{% endif %}>WEB</option><option value="API" {% if request.GET.traffic_type == 'API' %}selected{% endif %}>API</option><option value="BOT" {% if request.GET.traffic_type == 'BOT' %}selected{% endif %}>BOT</option><option value="INTERNAL" {% if request.GET.traffic_type == 'INTERNAL' %}selected{% endif %}>INTERNAL</option></select></label>
+            <label class="logging-filter__field"><span class="logging-filter__field-label">{% trans "Failure category" %}</span><input class="logging-filter__control" name="failure_category" value="{{ request.GET.failure_category }}" placeholder="{% trans 'Invalid credentials, blocked…' %}"></label>
+            <label class="logging-filter__field"><span class="logging-filter__field-label">{% trans "IP address" %}</span><input class="logging-filter__control" name="ip" value="{{ request.GET.ip }}" autocomplete="off"></label>
+            <a class="logging-filter__clear" href="{{ request.path }}">{% trans "Clear filters" %}</a>
+        </div></details>
+    </div>
+</form>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="analytics-page-stack logging-page-stack logging-activity-page">
+    <div class="logging-summary-grid">
+        <article class="logging-summary-card logging-summary-card--neutral"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Matching records" %}</span><strong class="logging-summary-card__value">{{ total }}</strong></div></article>
+        <article class="logging-summary-card logging-summary-card--success"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Success" %}</span><strong class="logging-summary-card__value">{{ success }}</strong></div></article>
+        <article class="logging-summary-card logging-summary-card--error"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Failures" %}</span><strong class="logging-summary-card__value">{{ failures }}</strong></div></article>
+    </div>
+
+    <div class="table-card"><div class="table-card__header"><h2>{% trans "Authentication events" %}</h2><span class="muted">{{ page_obj.paginator.count }} {% trans "records in the selected range" %}</span></div><div class="table-scroll"><table class="analytics-table logging-activity-table"><thead><tr><th>{% trans "Time" %}</th><th>{% trans "User" %}</th><th>{% trans "Result" %}</th><th>{% trans "Category" %}</th><th>{% trans "IP" %}</th><th>{% trans "Browser / OS" %}</th><th>{% trans "Traffic" %}</th></tr></thead><tbody>
+        {% for event in page_obj %}
+        <tr class="logging-activity-row logging-activity-row--{{ event.result }}"><td class="logging-time">{{ event.created_at|date:'Y-m-d H:i:s' }}</td><td class="logging-account-name">{% if event.user %}{{ event.user.get_username }}{% elif event.identifier_hash %}{% trans "Unresolved account" %} <code>{{ event.identifier_hash|slice:':12' }}</code>{% else %}{% trans "Unknown" %}{% endif %}</td><td><span class="logging-result-badge logging-result-badge--{{ event.result }}">{{ event.result }}</span></td><td>{{ event.failure_category|default:event.failure_reason|default:'—' }}</td><td>{{ event.ip_address|default:'—' }}</td><td>{{ event.browser|default:'—' }} / {{ event.os|default:'—' }}</td><td>{{ event.traffic_type }}</td></tr>
+        {% empty %}<tr><td colspan="7">{% trans "No authentication activity found in this range." %}</td></tr>{% endfor %}
+    </tbody></table></div>{% include 'paxalia/includes/pagination.html' %}</div>
+
+    {% if categories %}<div class="table-card"><div class="table-card__header"><h2>{% trans "Failure categories" %}</h2></div><div class="table-scroll"><table class="analytics-table"><thead><tr><th>{% trans "Category" %}</th><th>{% trans "Count" %}</th></tr></thead><tbody>{% for item in categories %}<tr><td>{{ item.failure_category }}</td><td>{{ item.count }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+</div>
+{% endblock %}
+
+{% block page_scripts %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/logging-filter.js' %}"></script>{% endblock %}

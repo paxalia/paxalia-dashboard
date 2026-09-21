@@ -29,6 +29,7 @@ from .models import (
     ScheduledReport,
     ShareLink,
     Notification,
+    PaxaliaLogEvent, PaxaliaLogGroup,
 )
 
 
@@ -193,16 +194,41 @@ class BackupArchiveAdmin(admin.ModelAdmin):
 @admin.register(LoginEvent)
 class LoginEventAdmin(admin.ModelAdmin):
     list_display = (
-        'created_at', 'user', 'username_attempted', 'result',
-        'ip_address', 'country_name', 'browser', 'os', 'is_new_location',
+        'created_at', 'event_type', 'user', 'username_attempted', 'result', 'is_admin',
+        'failure_category', 'ip_address', 'country_name', 'browser', 'os', 'traffic_type', 'is_new_location',
     )
-    list_filter = ('result', 'is_new_location', 'created_at')
-    search_fields = ('username_attempted', 'ip_address', 'user__username')
+    list_filter = ('event_type', 'result', 'is_admin', 'failure_category', 'traffic_type', 'is_new_location', 'created_at')
+    search_fields = ('username_attempted', 'identifier_hash', 'ip_address', 'user__username')
     date_hierarchy = 'created_at'
     readonly_fields = [f.name for f in LoginEvent._meta.fields]
 
     def has_add_permission(self, request):
         return False
+
+
+@admin.register(PaxaliaLogGroup)
+class PaxaliaLogGroupAdmin(admin.ModelAdmin):
+    list_display = ('last_seen', 'severity', 'source', 'category', 'occurrence_count', 'suppressed_count')
+    list_filter = ('severity', 'source', 'category')
+    search_fields = ('fingerprint', 'normalized_message', 'exception_type')
+    date_hierarchy = 'last_seen'
+    readonly_fields = [f.name for f in PaxaliaLogGroup._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(PaxaliaLogEvent)
+class PaxaliaLogEventAdmin(admin.ModelAdmin):
+    list_display = ('timestamp', 'severity', 'source', 'traffic_type', 'category', 'message', 'response_status')
+    list_filter = ('severity', 'source', 'traffic_type', 'category', 'response_status')
+    search_fields = ('message', 'logger_name', 'request_path', 'request_id', 'correlation_id', 'fingerprint')
+    date_hierarchy = 'timestamp'
+    readonly_fields = [f.name for f in PaxaliaLogEvent._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
 
 
 @admin.register(BlockedIP)

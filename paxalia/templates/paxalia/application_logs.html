@@ -1,0 +1,51 @@
+{% extends 'paxalia/base.html' %}
+{% load i18n static %}
+
+{% block title %}{{ page_title }} — Paxalia{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{{ page_subtitle }}{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/logging.css' %}">{% endblock %}
+
+{% block filter_bar %}
+{% if sources %}
+<form class="filter-bar logging-filter" method="get" aria-label="{% trans 'Application log filters' %}">
+    <div class="filter-bar__inner" data-logging-filter data-active-preset="{{ active_preset|default:'' }}">
+        <div class="logging-filter__primary">
+            <div class="logging-filter__presets" aria-label="{% trans 'Date presets' %}"><button type="button" class="filter-bar__preset{% if active_preset == 'today' %} active{% endif %}" data-preset="today" aria-pressed="{% if active_preset == 'today' %}true{% else %}false{% endif %}">{% trans "Today" %}</button><button type="button" class="filter-bar__preset{% if active_preset == 'last7' %} active{% endif %}" data-preset="last7" aria-pressed="{% if active_preset == 'last7' %}true{% else %}false{% endif %}">{% trans "7 days" %}</button><button type="button" class="filter-bar__preset{% if active_preset == 'last30' %} active{% endif %}" data-preset="last30" aria-pressed="{% if active_preset == 'last30' %}true{% else %}false{% endif %}">{% trans "30 days" %}</button></div>
+            <div class="logging-filter__range"><span class="logging-filter__range-label">{% trans "Range" %}</span><label for="application-start-date" class="sr-only">{% trans "From" %}</label><input id="application-start-date" class="logging-filter__date" type="date" name="start_date" value="{{ start_dt|date:'Y-m-d' }}"><span class="logging-filter__date-separator">–</span><label for="application-end-date" class="sr-only">{% trans "To" %}</label><input id="application-end-date" class="logging-filter__date" type="date" name="end_date" value="{{ end_dt|date:'Y-m-d' }}"></div>
+            <label class="logging-filter__field"><span class="logging-filter__field-label">{% trans "Source" %}</span><select name="source" class="logging-filter__control">{% for item in sources %}<option value="{{ item.name }}" {% if selected_source and selected_source.name == item.name %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></label>
+            <div class="logging-filter__search"><span class="logging-filter__search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.05" cy="9.87" r="7.87" fill="none" stroke="currentColor" stroke-miterlimit="10"></circle><path d="m21.52 21.96-6.12-6.12.26-.27 6.12 6.12" fill="none" stroke="currentColor"></path></svg></span><label for="application-search" class="sr-only">{% trans "Search" %}</label><input id="application-search" class="logging-filter__search-input" name="q" value="{{ request.GET.q }}" placeholder="{% trans 'Action, feature, screen, or workspace' %}"></div>
+            <button class="logging-filter__apply" type="submit">{% trans "Apply" %}</button>
+        </div>
+        <details class="logging-filter__advanced"><summary>{% trans "More filters" %}</summary><div class="logging-filter__advanced-grid">
+            <label class="logging-filter__field"><span class="logging-filter__field-label">{% trans "Action" %}</span><input class="logging-filter__control" name="action" value="{{ request.GET.action }}"></label>
+            <label class="logging-filter__field"><span class="logging-filter__field-label">{% trans "Feature" %}</span><input class="logging-filter__control" name="feature" value="{{ request.GET.feature }}"></label>
+            <label class="logging-filter__field"><span class="logging-filter__field-label">{% trans "Screen" %}</span><input class="logging-filter__control" name="screen" value="{{ request.GET.screen }}"></label>
+            <label class="logging-filter__field"><span class="logging-filter__field-label">{% trans "Workspace" %}</span><input class="logging-filter__control" name="workspace" value="{{ request.GET.workspace }}"></label>
+            <label class="logging-filter__field"><span class="logging-filter__field-label">{% trans "Status" %}</span><input class="logging-filter__control" name="status" value="{{ request.GET.status }}"></label>
+            <a class="logging-filter__clear" href="{{ request.path }}">{% trans "Clear filters" %}</a>
+        </div></details>
+    </div>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="analytics-page-stack logging-page-stack">
+{% if sources %}
+{% if selected_source and summary %}
+<div class="logging-summary-grid">
+    <article class="logging-summary-card logging-summary-card--neutral"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Matching records" %}</span><strong class="logging-summary-card__value">{{ summary.total }}</strong></div></article>
+    <article class="logging-summary-card logging-summary-card--neutral"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Total model records" %}</span><strong class="logging-summary-card__value">{{ source_stats.total }}</strong></div></article>
+    <article class="logging-summary-card logging-summary-card--error"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Classified errors" %}</span><strong class="logging-summary-card__value">{{ source_stats.errors }}</strong></div></article>
+    <article class="logging-summary-card logging-summary-card--warning"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Classified warnings" %}</span><strong class="logging-summary-card__value">{{ source_stats.warnings }}</strong></div></article>
+</div>
+{% if source_stats.top_actions %}<div class="table-card"><div class="table-card__header"><h2>{% trans "Top actions" %}</h2></div><div class="table-scroll"><table class="analytics-table"><thead><tr><th>{% trans "Action" %}</th><th>{% trans "Count" %}</th></tr></thead><tbody>{% for item in source_stats.top_actions %}<tr><td>{{ item.action }}</td><td>{{ item.count }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+<section class="table-card"><div class="table-card__header"><h2>{% trans "Application activity" %}</h2><span class="muted">{{ page_obj.paginator.count }} {% trans "matching records" %}</span></div><div class="table-scroll"><table class="analytics-table logging-table"><thead><tr>{% for key in summary.headers %}<th>{{ key }}</th>{% endfor %}</tr></thead><tbody>{% for row in summary.rows %}<tr>{% for key, value in row.items %}<td>{{ value }}</td>{% endfor %}</tr>{% empty %}<tr><td colspan="{{ summary.rows.0.items|length|default:'1' }}">{% trans "No records found for the selected filters." %}</td></tr>{% endfor %}</tbody></table></div>{% include 'paxalia/includes/pagination.html' %}</section>
+{% else %}<div class="empty-state"><h2>{% trans "No compatible application log source selected" %}</h2><p>{% trans "The configured adapters were not available to your account or could not be resolved safely." %}</p></div>{% endif %}
+{% else %}<div class="empty-state"><h2>{% trans "No application log adapters configured" %}</h2><p>{% trans "Application Logs is a read-only adapter layer. It reads existing host application log models; it does not capture, ingest, or duplicate Paxalia Logs." %}</p><p>{% trans "Configure PAXALIA_DASHBOARD['APPLICATION_LOGS'] with safe model and field mappings for a host model, then return here." %}</p><p class="muted">{% trans "Use Paxalia Logs for canonical Python, Django, HTTP, and browser observability." %}</p></div>{% endif %}
+</div>
+{% endblock %}
+
+{% block page_scripts %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/logging-filter.js' %}"></script>{% endblock %}

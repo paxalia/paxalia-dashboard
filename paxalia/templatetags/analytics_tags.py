@@ -26,6 +26,11 @@ def analytics_consent_config():
         'enabled': bool(config['CONSENT_MODE_ENABLED']),
         'cookieName': config['CONSENT_COOKIE_NAME'],
         'grantedValue': config['CONSENT_COOKIE_GRANTED_VALUE'],
+        'browserLogEnabled': bool(config.get('LOGGING_ENABLED', True)),
+        'browserLogUrl': '/api/paxalia/browser-log/',
+        'captureConsole': bool(config.get('LOG_BROWSER_CAPTURE_CONSOLE', False)),
+        'captureResourceErrors': bool(config.get('LOG_BROWSER_CAPTURE_RESOURCE_ERRORS', True)),
+        'maxBrowserEvents': int(config.get('LOG_BROWSER_MAX_EVENTS_PER_PAGE', 50)),
     }
     # Escape '</' so a maliciously-configured cookie name/value (server
     # config, not user input, but cheap insurance) can't break out of

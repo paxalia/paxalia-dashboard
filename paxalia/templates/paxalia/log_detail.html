@@ -1,0 +1,125 @@
+{% extends 'paxalia/base.html' %}
+{% load i18n static %}
+
+{% block title %}{{ page_title }} — Paxalia{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{{ page_subtitle }}{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/logging.css' %}">{% endblock %}
+
+{% block dashboard_content %}
+<div class="analytics-page-stack logging-page-stack">
+    <div class="logging-toolbar logging-toolbar--detail">
+        <div class="logging-toolbar__left"><span class="logging-time">{{ event.timestamp|date:'Y-m-d H:i:s T' }}</span><span class="logging-toolbar__hint">{{ event.source }}{% if event.category %} · {{ event.category }}{% endif %}</span></div>
+        <a class="btn btn-secondary" href="{% url 'paxalia:logs' %}">{% trans "Back to logs" %}</a>
+    </div>
+
+    <section class="log-detail-hero log-detail-hero--{{ event.severity|lower }}">
+        <div class="log-detail-hero__copy"><div class="log-detail-hero__eyebrow"><span class="log-severity-badge log-severity-badge--{{ event.severity|lower }}">{{ event.severity }}</span><span>{{ event.source }}</span>{% if event.category %}<span>· {{ event.category }}</span>{% endif %}{% if event.action %}<span>· {{ event.action }}</span>{% endif %}</div><p class="log-detail-hero__message">{{ event.message }}</p></div>
+        {% if event.fingerprint %}<code class="logging-code-inline">{{ event.fingerprint }}</code>{% endif %}
+    </section>
+
+    <section class="log-ai-card">
+        <div class="log-ai-card__header"><div><div class="log-ai-card__title">{% trans "AI-ready incident context" %}</div><div class="log-ai-card__hint">{% trans "Sanitized, structured context you can copy into an AI debugging prompt or incident report." %}</div></div><button type="button" class="log-ai-card__copy" data-copy-target="#log-ai-context">{% trans "Copy for AI" %}</button></div>
+        <pre id="log-ai-context" class="log-ai-context">PAXALIA LOG EVENT
+=================
+Event ID: {{ event.id }}
+Timestamp: {{ event.timestamp|date:'c' }}
+Received At: {{ event.received_at|date:'c' }}
+Severity: {{ event.severity|default:'—' }}
+Source: {{ event.source|default:'—' }}
+Category: {{ event.category|default:'—' }}
+Action: {{ event.action|default:'—' }}
+Logger: {{ event.logger_name|default:'—' }}
+
+MESSAGE
+-------
+{{ event.message|default:'—' }}
+
+EXCEPTION
+---------
+Type: {{ event.exception_type|default:'—' }}
+Location: {{ event.file_name|default:'—' }}{% if event.line_number %}:{{ event.line_number }}{% endif %}{% if event.function_name %} · {{ event.function_name }}{% endif %}
+
+REQUEST / NETWORK
+-----------------
+Method: {{ event.request_method|default:'—' }}
+Path: {{ event.request_path|default:'—' }}
+Response Status: {{ event.response_status|default:'—' }}
+Duration: {% if event.duration_ms %}{{ event.duration_ms }} ms{% else %}—{% endif %}
+Traffic Type: {{ event.traffic_type|default:'—' }}
+Request ID: {{ event.request_id|default:'—' }}
+Correlation ID: {{ event.correlation_id|default:'—' }}
+Trace ID: {{ event.trace_id|default:'—' }}
+Session ID: {{ event.session_id|default:'—' }}
+
+IDENTITY / CLIENT
+-----------------
+User: {{ event.user_display|default:'Anonymous' }}
+User Type: {{ event.user_type|default:'—' }}
+Admin Flag: {{ event.admin_flag }}
+IP: {{ event.ip_address|default:'—' }}
+IP Storage Mode: {{ event.ip_mode|default:'—' }}
+Browser: {{ event.browser|default:'—' }}
+Operating System: {{ event.operating_system|default:'—' }}
+Device: {{ event.device|default:'—' }}
+User Agent: {{ event.user_agent|default:'—' }}
+
+RUNTIME
+-------
+Module: {{ event.module|default:'—' }}
+Process ID: {{ event.process_id|default:'—' }}
+Thread: {{ event.thread_name|default:'—' }}
+Host: {{ event.host|default:'—' }}
+Environment: {{ event.environment|default:'—' }}
+Release: {{ event.release|default:'—' }}
+Site: {{ event.site|default:'—' }}
+Sensitive Data State: {{ event.sensitive_data_state|default:'—' }}
+
+GROUP / DEDUPLICATION
+---------------------
+Fingerprint: {{ event.fingerprint|default:'—' }}
+{% if event.group %}Group ID: {{ event.group.id }}
+Occurrences: {{ event.group.occurrence_count }}
+Suppressed: {{ event.group.suppressed_count }}
+First Seen: {{ event.group.first_seen|date:'c' }}
+Last Seen: {{ event.group.last_seen|date:'c' }}{% else %}Group: —{% endif %}
+
+SANITIZED METADATA
+------------------
+{{ metadata_json }}
+
+STACK TRACE
+-----------
+{{ event.stack_trace|default:'—' }}</pre>
+        <div class="log-ai-card__status" data-copy-status aria-live="polite"></div>
+    </section>
+
+    <div class="log-detail-grid">
+        <section class="table-card"><div class="table-card__header"><h2>{% trans "Event" %}</h2></div><dl class="log-detail-list">
+            <dt>{% trans "Severity" %}</dt><dd><span class="log-severity-badge log-severity-badge--{{ event.severity|lower }}">{{ event.severity }}</span></dd>
+            <dt>{% trans "Source" %}</dt><dd>{{ event.source }}</dd><dt>{% trans "Category" %}</dt><dd>{{ event.category|default:'—' }}</dd><dt>{% trans "Action" %}</dt><dd>{{ event.action|default:'—' }}</dd><dt>{% trans "Logger" %}</dt><dd>{{ event.logger_name|default:'—' }}</dd><dt>{% trans "Message" %}</dt><dd class="pre-wrap">{{ event.message|default:'—' }}</dd><dt>{% trans "Exception" %}</dt><dd>{{ event.exception_type|default:'—' }}</dd><dt>{% trans "Module" %}</dt><dd>{{ event.module|default:'—' }}</dd><dt>{% trans "Location" %}</dt><dd>{{ event.file_name|default:'—' }}{% if event.line_number %}:{{ event.line_number }}{% endif %}{% if event.function_name %} · {{ event.function_name }}{% endif %}</dd><dt>{% trans "Sensitive data" %}</dt><dd>{{ event.sensitive_data_state|default:'—' }}</dd>
+        </dl></section>
+
+        <section class="table-card"><div class="table-card__header"><h2>{% trans "Request & identity" %}</h2></div><dl class="log-detail-list">
+            <dt>{% trans "Method" %}</dt><dd>{{ event.request_method|default:'—' }}</dd><dt>{% trans "Path" %}</dt><dd>{{ event.request_path|default:'—' }}</dd><dt>{% trans "Status" %}</dt><dd>{{ event.response_status|default:'—' }}</dd><dt>{% trans "Duration" %}</dt><dd>{% if event.duration_ms %}{{ event.duration_ms }} ms{% else %}—{% endif %}</dd><dt>{% trans "Traffic" %}</dt><dd>{{ event.traffic_type|default:'—' }}</dd><dt>{% trans "Request ID" %}</dt><dd><code class="logging-code-inline">{{ event.request_id|default:'—' }}</code></dd><dt>{% trans "Correlation ID" %}</dt><dd><code class="logging-code-inline">{{ event.correlation_id|default:'—' }}</code></dd><dt>{% trans "Trace ID" %}</dt><dd><code class="logging-code-inline">{{ event.trace_id|default:'—' }}</code></dd><dt>{% trans "User" %}</dt><dd>{{ event.user_display|default:'Anonymous' }}</dd><dt>{% trans "IP" %}</dt><dd>{{ event.ip_address|default:'—' }}</dd><dt>{% trans "Browser / OS / Device" %}</dt><dd>{{ event.browser|default:'—' }} / {{ event.operating_system|default:'—' }} / {{ event.device|default:'—' }}</dd>
+        </dl></section>
+
+        <section class="table-card"><div class="table-card__header"><h2>{% trans "Runtime & client" %}</h2></div><dl class="log-detail-list">
+            <dt>{% trans "User Agent" %}</dt><dd class="pre-wrap">{{ event.user_agent|default:'—' }}</dd><dt>{% trans "User Type" %}</dt><dd>{{ event.user_type|default:'—' }}</dd><dt>{% trans "Admin Flag" %}</dt><dd>{{ event.admin_flag }}</dd><dt>{% trans "Bot Category" %}</dt><dd>{{ event.bot_category|default:'—' }}</dd><dt>{% trans "Process" %}</dt><dd>{{ event.process_id|default:'—' }}</dd><dt>{% trans "Thread" %}</dt><dd>{{ event.thread_name|default:'—' }}</dd><dt>{% trans "Host" %}</dt><dd>{{ event.host|default:'—' }}</dd><dt>{% trans "Environment" %}</dt><dd>{{ event.environment|default:'—' }}</dd><dt>{% trans "Release" %}</dt><dd>{{ event.release|default:'—' }}</dd><dt>{% trans "Site" %}</dt><dd>{{ event.site|default:'—' }}</dd>
+        </dl></section>
+
+        <section class="table-card"><div class="table-card__header"><h2>{% trans "Group & deduplication" %}</h2></div><dl class="log-detail-list">
+            <dt>{% trans "Fingerprint" %}</dt><dd><code class="logging-code-inline">{{ event.fingerprint|default:'—' }}</code></dd>
+            {% if event.group %}<dt>{% trans "Group ID" %}</dt><dd><code class="logging-code-inline">{{ event.group.id }}</code></dd><dt>{% trans "Occurrences" %}</dt><dd>{{ event.group.occurrence_count }}</dd><dt>{% trans "Suppressed" %}</dt><dd>{{ event.group.suppressed_count }}</dd><dt>{% trans "First seen" %}</dt><dd>{{ event.group.first_seen|date:'Y-m-d H:i:s T' }}</dd><dt>{% trans "Last seen" %}</dt><dd>{{ event.group.last_seen|date:'Y-m-d H:i:s T' }}</dd>{% else %}<dt>{% trans "Group" %}</dt><dd>—</dd>{% endif %}
+        </dl></section>
+    </div>
+
+    <section class="table-card"><div class="table-card__header"><h2>{% trans "Stack trace" %}</h2></div><pre class="log-code">{{ event.stack_trace|default:'—' }}</pre></section>
+    <section class="table-card"><div class="table-card__header"><h2>{% trans "Metadata (sanitized)" %}</h2></div><pre class="log-code">{{ metadata_json }}</pre></section>
+
+    <section class="table-card"><div class="table-card__header"><div><h2>{% trans "Related events" %}</h2><span class="logging-table__secondary">{% trans "Events sharing the same fingerprint, request, or correlation context" %}</span></div></div><div class="table-scroll"><table class="analytics-table logging-table"><thead><tr><th>{% trans "Time" %}</th><th>{% trans "Severity" %}</th><th>{% trans "Source" %}</th><th>{% trans "Message" %}</th></tr></thead><tbody>{% for row in related %}<tr class="logging-event-row logging-event-row--{{ row.severity|lower }}"><td class="logging-time"><a href="{% url 'paxalia:log_detail' row.id %}">{{ row.timestamp|date:'Y-m-d H:i:s' }}</a></td><td><span class="log-severity-badge log-severity-badge--{{ row.severity|lower }}">{{ row.severity }}</span></td><td>{{ row.source }}</td><td class="log-message">{{ row.message|truncatechars:180 }}</td></tr>{% empty %}<tr><td colspan="4">{% trans "No related events found." %}</td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+{% endblock %}
+
+{% block page_scripts %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/logs.js' %}"></script>{% endblock %}

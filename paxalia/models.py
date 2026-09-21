@@ -423,8 +423,17 @@ class LoginEvent(models.Model):
         ('success', 'Success'),
         ('failed', 'Failed'),
     ]
+    EVENT_TYPE_CHOICES = [('login', 'Login'), ('logout', 'Logout')]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    event_type = models.CharField(max_length=10, choices=EVENT_TYPE_CHOICES, default='login', db_index=True)
+    is_admin = models.BooleanField(default=False, db_index=True)
+    request_id = models.CharField(max_length=100, blank=True, db_index=True)
+    correlation_id = models.CharField(max_length=100, blank=True, db_index=True)
+    trace_id = models.CharField(max_length=100, blank=True, db_index=True)
+    traffic_type = models.CharField(max_length=12, choices=[('WEB','Web'),('API','API'),('BOT','Bot'),('INTERNAL','Internal')], default='WEB', db_index=True)
+    failure_category = models.CharField(max_length=100, blank=True, db_index=True)
+    identifier_hash = models.CharField(max_length=64, blank=True, db_index=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='login_events'
@@ -460,8 +469,11 @@ class LoginEvent(models.Model):
         verbose_name_plural = "Login Events"
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['user', '-created_at']),
-            models.Index(fields=['result', '-created_at']),
+            models.Index(fields=['user', '-created_at'], name='paxalia_log_user_id_a63a3f_idx'),
+            models.Index(fields=['result', '-created_at'], name='paxalia_log_result_9e90aa_idx'),
+            models.Index(fields=['is_admin', '-created_at'], name='paxalia_log_is_admi_119e3b_idx'),
+            models.Index(fields=['event_type', '-created_at'], name='paxalia_log_event_t_7d5a3e_idx'),
+            models.Index(fields=['failure_category', '-created_at'], name='paxalia_log_failure_8314a0_idx'),
         ]
 
     def __str__(self):
@@ -471,6 +483,129 @@ class LoginEvent(models.Model):
     @property
     def is_active_session(self):
         return self.result == 'success' and self.logged_out_at is None
+
+
+class PaxaliaLogGroup(models.Model):
+    """Stable fingerprint group for one class of observable event."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    fingerprint = models.CharField(max_length=64, unique=True, db_index=True)
+    severity = models.CharField(max_length=10, db_index=True)
+    source = models.CharField(max_length=50, db_index=True)
+    category = models.CharField(max_length=100, blank=True, db_index=True)
+    exception_type = models.CharField(max_length=255, blank=True)
+    normalized_message = models.CharField(max_length=2000, blank=True)
+    first_seen = models.DateTimeField(default=timezone.now, db_index=True)
+    last_seen = models.DateTimeField(default=timezone.now, db_index=True)
+    occurrence_count = models.PositiveBigIntegerField(default=0)
+    suppressed_count = models.PositiveBigIntegerField(default=0)
+    window_started_at = models.DateTimeField(default=timezone.now)
+    sample_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Paxalia Log Group'
+        verbose_name_plural = 'Paxalia Log Groups'
+        ordering = ['-last_seen']
+        indexes = [
+            models.Index(fields=['source', '-last_seen'], name='paxalia_pax_source_b2919b_idx'),
+            models.Index(fields=['severity', '-last_seen'], name='paxalia_pax_severit_8f2790_idx'),
+            models.Index(fields=['category', '-last_seen'], name='paxalia_pax_categor_457dd8_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.severity} {self.source}: {self.normalized_message[:80]}"
+
+
+class PaxaliaLogEvent(models.Model):
+    """Canonical structured application/HTTP/browser observability event."""
+    SEVERITY_CHOICES = [
+        ('DEBUG', 'Debug'), ('INFO', 'Info'), ('WARNING', 'Warning'),
+        ('ERROR', 'Error'), ('CRITICAL', 'Critical'),
+    ]
+    TRAFFIC_CHOICES = [
+        ('WEB', 'Web'), ('API', 'API'), ('BOT', 'Bot'), ('INTERNAL', 'Internal'),
+    ]
+    SENSITIVE_STATES = [
+        ('safe', 'Safe'), ('redacted', 'Redacted'), ('protected', 'Protected'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    received_at = models.DateTimeField(default=timezone.now, db_index=True)
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, db_index=True)
+    source = models.CharField(max_length=50, default='Other', db_index=True)
+    category = models.CharField(max_length=100, blank=True, db_index=True)
+    action = models.CharField(max_length=100, blank=True, db_index=True)
+    logger_name = models.CharField(max_length=255, blank=True, db_index=True)
+    message = models.TextField()
+    exception_type = models.CharField(max_length=255, blank=True, db_index=True)
+    stack_trace = models.TextField(blank=True)
+    module = models.CharField(max_length=255, blank=True)
+    file_name = models.CharField(max_length=500, blank=True)
+    line_number = models.PositiveIntegerField(null=True, blank=True)
+    function_name = models.CharField(max_length=255, blank=True)
+
+    session_id = models.CharField(max_length=64, blank=True, db_index=True)
+    request_id = models.CharField(max_length=100, blank=True, db_index=True)
+    correlation_id = models.CharField(max_length=100, blank=True, db_index=True)
+    trace_id = models.CharField(max_length=100, blank=True, db_index=True)
+    request_method = models.CharField(max_length=20, blank=True)
+    request_path = models.CharField(max_length=2048, blank=True, db_index=True)
+    response_status = models.PositiveSmallIntegerField(null=True, blank=True, db_index=True)
+    duration_ms = models.FloatField(null=True, blank=True)
+
+    site = models.ForeignKey(
+        Site, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='paxalia_log_events',
+    )
+    traffic_type = models.CharField(max_length=12, choices=TRAFFIC_CHOICES, default='INTERNAL', db_index=True)
+    is_api = models.BooleanField(default=False, db_index=True)
+    is_bot = models.BooleanField(default=False, db_index=True)
+    bot_category = models.CharField(max_length=30, blank=True, db_index=True)
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='paxalia_log_events',
+    )
+    user_display = models.CharField(max_length=255, blank=True)
+    user_type = models.CharField(max_length=100, blank=True)
+    admin_flag = models.BooleanField(default=False, db_index=True)
+    ip_address = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    ip_mode = models.CharField(max_length=10, default='none')
+    user_agent = models.CharField(max_length=512, blank=True)
+    browser = models.CharField(max_length=100, blank=True)
+    operating_system = models.CharField(max_length=100, blank=True)
+    device = models.CharField(max_length=50, blank=True)
+
+    process_id = models.IntegerField(null=True, blank=True)
+    thread_name = models.CharField(max_length=255, blank=True)
+    host = models.CharField(max_length=255, blank=True)
+    environment = models.CharField(max_length=100, blank=True)
+    release = models.CharField(max_length=100, blank=True)
+
+    metadata = models.JSONField(default=dict, blank=True)
+    fingerprint = models.CharField(max_length=64, db_index=True)
+    group = models.ForeignKey(
+        PaxaliaLogGroup, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='events', db_index=True,
+    )
+    sensitive_data_state = models.CharField(max_length=10, choices=SENSITIVE_STATES, default='redacted')
+
+    class Meta:
+        verbose_name = 'Paxalia Log Event'
+        verbose_name_plural = 'Paxalia Log Events'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['timestamp', 'severity'], name='paxalia_pax_timesta_037ce2_idx'),
+            models.Index(fields=['source', 'timestamp'], name='paxalia_pax_source_a542fb_idx'),
+            models.Index(fields=['traffic_type', 'timestamp'], name='paxalia_pax_traffic_c4b81c_idx'),
+            models.Index(fields=['request_id', 'timestamp'], name='paxalia_pax_request_c74a7d_idx'),
+            models.Index(fields=['correlation_id', 'timestamp'], name='paxalia_pax_correla_924d68_idx'),
+            models.Index(fields=['exception_type', 'timestamp'], name='paxalia_pax_excepti_933c37_idx'),
+            models.Index(fields=['fingerprint', 'timestamp'], name='paxalia_pax_fingerp_3a10aa_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.severity}: {self.message[:100]}"
 
 
 class BlockedIP(models.Model):
@@ -756,6 +891,7 @@ class DashboardAccess(models.Model):
             ('view_sites', 'Can view Sites section'),
             ('view_server', 'Can view Server monitoring'),
             ('view_compliance', 'Can view Compliance tools'),
+            ('view_logs', 'Can view Paxalia Logs'),
         ]
 
 
@@ -1082,4 +1218,5 @@ class Deployment(models.Model):
 
     def __str__(self):
         return self.version or f"deployment @ {self.deployed_at}"
+
 
