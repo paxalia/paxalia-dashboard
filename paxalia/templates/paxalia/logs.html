@@ -1,0 +1,168 @@
+{% extends 'paxalia/base.html' %}
+{% load i18n static %}
+
+{% block title %}{{ page_title }} — Paxalia{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{{ page_subtitle }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'paxalia/styles/components/logging.css' %}">
+{% endblock %}
+
+{% block filter_bar %}
+<form class="filter-bar logging-filter" method="get" aria-label="{% trans 'Paxalia log filters' %}">
+    <div class="filter-bar__inner" data-logging-filter data-active-preset="{{ active_preset|default:'' }}">
+        <div class="logging-filter__primary">
+            <div class="logging-filter__presets" aria-label="{% trans 'Date presets' %}">
+                <button type="button" class="filter-bar__preset{% if active_preset == 'today' %} active{% endif %}" data-preset="today" aria-pressed="{% if active_preset == 'today' %}true{% else %}false{% endif %}">{% trans "Today" %}</button>
+                <button type="button" class="filter-bar__preset{% if active_preset == 'last7' %} active{% endif %}" data-preset="last7" aria-pressed="{% if active_preset == 'last7' %}true{% else %}false{% endif %}">{% trans "7 days" %}</button>
+                <button type="button" class="filter-bar__preset{% if active_preset == 'last30' %} active{% endif %}" data-preset="last30" aria-pressed="{% if active_preset == 'last30' %}true{% else %}false{% endif %}">{% trans "30 days" %}</button>
+            </div>
+
+            <div class="logging-filter__range">
+                <span class="logging-filter__range-label">{% trans "Range" %}</span>
+                <label for="log-start-date" class="sr-only">{% trans "From" %}</label>
+                <input id="log-start-date" class="logging-filter__date" type="date" name="start_date" value="{{ start_dt|date:'Y-m-d' }}">
+                <span class="logging-filter__date-separator" aria-hidden="true">–</span>
+                <label for="log-end-date" class="sr-only">{% trans "To" %}</label>
+                <input id="log-end-date" class="logging-filter__date" type="date" name="end_date" value="{{ end_dt|date:'Y-m-d' }}">
+            </div>
+
+            <label class="logging-filter__field">
+                <span class="logging-filter__field-label">{% trans "Severity" %}</span>
+                <select name="severity" class="logging-filter__control">
+                    <option value="">{% trans "All severities" %}</option>
+                    {% for x in severity_choices %}
+                    <option value="{{ x }}" {% if request.GET.severity == x %}selected{% endif %}>{{ x }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <div class="logging-filter__search">
+                <span class="logging-filter__search-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="10.05" cy="9.87" r="7.87" fill="none" stroke="currentColor" stroke-miterlimit="10"></circle><path d="m21.52 21.96-6.12-6.12.26-.27 6.12 6.12" fill="none" stroke="currentColor"></path></svg>
+                </span>
+                <label for="log-search" class="sr-only">{% trans "Search log events" %}</label>
+                <input id="log-search" class="logging-filter__search-input" name="q" value="{{ request.GET.q }}" placeholder="{% trans 'Search message, logger, path, or exception' %}">
+            </div>
+
+            <button class="logging-filter__apply" type="submit">{% trans "Apply" %}</button>
+        </div>
+
+        <details class="logging-filter__advanced">
+            <summary>{% trans "More filters" %}</summary>
+            <div class="logging-filter__advanced-grid">
+                <label class="logging-filter__field">
+                    <span class="logging-filter__field-label">{% trans "Source" %}</span>
+                    <input class="logging-filter__control" name="source" value="{{ request.GET.source }}" placeholder="Django / HTTP / Browser">
+                </label>
+                <label class="logging-filter__field">
+                    <span class="logging-filter__field-label">{% trans "Category" %}</span>
+                    <input class="logging-filter__control" name="category" value="{{ request.GET.category }}">
+                </label>
+                <label class="logging-filter__field">
+                    <span class="logging-filter__field-label">{% trans "Logger" %}</span>
+                    <input class="logging-filter__control" name="logger_name" value="{{ request.GET.logger_name }}">
+                </label>
+                <label class="logging-filter__field">
+                    <span class="logging-filter__field-label">{% trans "Status" %}</span>
+                    <input class="logging-filter__control" type="number" min="100" max="599" name="status" value="{{ request.GET.status }}" placeholder="404">
+                </label>
+                <label class="logging-filter__field">
+                    <span class="logging-filter__field-label">{% trans "Traffic" %}</span>
+                    <select name="traffic_type" class="logging-filter__control">
+                        <option value="">{% trans "All traffic" %}</option>
+                        <option value="WEB" {% if request.GET.traffic_type == "WEB" %}selected{% endif %}>WEB</option>
+                        <option value="API" {% if request.GET.traffic_type == "API" %}selected{% endif %}>API</option>
+                        <option value="BOT" {% if request.GET.traffic_type == "BOT" %}selected{% endif %}>BOT</option>
+                        <option value="INTERNAL" {% if request.GET.traffic_type == "INTERNAL" %}selected{% endif %}>INTERNAL</option>
+                    </select>
+                </label>
+                <label class="logging-filter__field">
+                    <span class="logging-filter__field-label">{% trans "Exception" %}</span>
+                    <input class="logging-filter__control" name="exception_type" value="{{ request.GET.exception_type }}">
+                </label>
+                <a class="logging-filter__clear" href="{% url 'paxalia:logs' %}">{% trans "Clear filters" %}</a>
+            </div>
+        </details>
+    </div>
+</form>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="analytics-page-stack logging-page-stack" data-logging-page>
+    <div class="logging-summary-grid">
+        <article class="logging-summary-card logging-summary-card--neutral"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Total events" %}</span><strong class="logging-summary-card__value">{{ stats.total }}</strong></div></article>
+        <article class="logging-summary-card logging-summary-card--critical"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Critical" %}</span><strong class="logging-summary-card__value">{{ stats.CRITICAL }}</strong></div></article>
+        <article class="logging-summary-card logging-summary-card--error"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Errors" %}</span><strong class="logging-summary-card__value">{{ stats.ERROR }}</strong></div></article>
+        <article class="logging-summary-card logging-summary-card--warning"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Warnings" %}</span><strong class="logging-summary-card__value">{{ stats.WARNING }}</strong></div></article>
+        <article class="logging-summary-card logging-summary-card--neutral"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Suppressed" %}</span><strong class="logging-summary-card__value">{{ stats.suppressed }}</strong></div></article>
+        <article class="logging-summary-card logging-summary-card--error"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "Open problems" %}</span><strong class="logging-summary-card__value">{{ stats.open_problems }}</strong></div></article>
+        <article class="logging-summary-card logging-summary-card--info"><span class="logging-summary-card__icon" aria-hidden="true"></span><div class="logging-summary-card__copy"><span class="logging-summary-card__label">{% trans "New today" %}</span><strong class="logging-summary-card__value">{{ stats.new_problems_today }}</strong></div></article>
+    </div>
+
+    <div class="logging-toolbar">
+        <label class="logging-toolbar__toggle">
+            <input type="checkbox" data-log-autorefresh
+                   data-feed-url="{% url 'paxalia:log_feed' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+                   data-detail-url-template="{% url 'paxalia:log_detail' '00000000-0000-0000-0000-000000000000' %}"
+                   data-refresh-seconds="{{ log_refresh_seconds }}">
+            {% blocktrans with seconds=log_refresh_seconds %}Auto refresh every {{ seconds }} seconds{% endblocktrans %}
+        </label>
+        <span class="logging-toolbar__hint">{% trans "The feed is permission-checked and bounded." %}</span>
+        <div class="logging-actions">
+            <a class="btn btn-secondary" href="{% url 'paxalia:logs_export' %}?format=csv{% if request.GET.urlencode %}&amp;{{ request.GET.urlencode }}{% endif %}">{% trans "Export CSV" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:logs_export' %}?format=json{% if request.GET.urlencode %}&amp;{{ request.GET.urlencode }}{% endif %}">{% trans "Export JSON" %}</a>
+        </div>
+    </div>
+
+    <div class="logging-traffic-grid">
+        {% for name, value in traffic.items %}<div class="logging-kpi"><span class="logging-kpi__label">{{ name }}</span><b class="logging-kpi__value">{{ value }}</b></div>{% endfor %}
+    </div>
+
+    <div class="table-card">
+        <div class="table-card__header"><h2>{% trans "Recent Events" %}</h2><span class="muted">{{ page_obj.paginator.count }} {% trans "matching events" %}</span></div>
+        <div class="table-scroll">
+            <table class="analytics-table logging-table" data-log-table>
+                <thead><tr><th>{% trans "Time" %}</th><th>{% trans "Severity" %}</th><th>{% trans "Source" %}</th><th>{% trans "Traffic" %}</th><th>{% trans "Message" %}</th><th>{% trans "Path" %}</th></tr></thead>
+                <tbody data-log-tbody>
+                {% for event in events %}
+                <tr class="logging-event-row logging-event-row--{{ event.severity|lower }}">
+                    <td class="logging-time"><a href="{% url 'paxalia:log_detail' event.id %}">{{ event.timestamp|date:'Y-m-d H:i:s' }}</a></td>
+                    <td><span class="log-severity-badge log-severity-badge--{{ event.severity|lower }}">{{ event.severity }}</span></td>
+                    <td class="logging-source">{{ event.source }}{% if event.category or event.action %}<span class="logging-table__secondary">{{ event.category }}{% if event.category and event.action %} · {% endif %}{{ event.action }}</span>{% endif %}</td>
+                    <td>{{ event.traffic_type }}</td>
+                    <td class="log-message">{{ event.message|truncatechars:180 }}</td>
+                    <td>{{ event.request_path|truncatechars:100|default:'—' }}</td>
+                </tr>
+                {% empty %}<tr><td colspan="6">{% trans "No canonical log events match the current filters." %}<div class="logging-empty-help">{% trans "Generate a safe self-test event with" %} <code>python manage.py paxalia_logs_test</code> {% trans "to verify the handler and database path." %}</div></td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include 'paxalia/includes/pagination.html' %}
+    </div>
+
+    <div class="table-card">
+        <div class="table-card__header"><h2>{% trans "Daily Summary" %}</h2></div>
+        <div class="table-scroll">
+            <table class="analytics-table"><thead><tr><th>{% trans "Date" %}</th><th>{% trans "Events" %}</th><th>{% trans "Critical" %}</th><th>{% trans "Errors" %}</th><th>{% trans "Warnings" %}</th><th>{% trans "Info" %}</th><th>{% trans "Browser Errors" %}</th><th>{% trans "Login Failures" %}</th><th>{% trans "API Failures" %}</th><th>{% trans "Bot Failures" %}</th></tr></thead>
+                <tbody>{% for row in daily %}<tr><td>{{ row.day|date:'Y-m-d' }}</td><td>{{ row.count }}</td><td class="log-count log-count--critical">{{ row.critical }}</td><td class="log-count log-count--error">{{ row.errors }}</td><td class="log-count log-count--warning">{{ row.warnings }}</td><td class="log-count log-count--info">{{ row.info }}</td><td>{{ row.browser_errors }}</td><td>{{ row.login_failures }}</td><td>{{ row.api_failures }}</td><td>{{ row.bot_failures }}</td></tr>{% empty %}<tr><td colspan="10">{% trans "No daily data." %}</td></tr>{% endfor %}</tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-card__header"><h2>{% trans "Repeated Problems" %}</h2><span class="muted">{{ stats.repeated_problems }}</span></div>
+        <div class="table-scroll">
+            <table class="analytics-table"><thead><tr><th>{% trans "Severity" %}</th><th>{% trans "Source" %}</th><th>{% trans "Problem" %}</th><th>{% trans "Occurrences" %}</th><th>{% trans "Suppressed" %}</th><th>{% trans "Last Seen" %}</th></tr></thead>
+                <tbody>{% for group in groups %}<tr><td><span class="log-severity-badge log-severity-badge--{{ group.severity|lower }}">{{ group.severity }}</span></td><td>{{ group.source }}</td><td><a href="?fingerprint={{ group.fingerprint|urlencode }}">{{ group.normalized_message|truncatechars:180 }}</a></td><td>{{ group.occurrence_count }}</td><td>{{ group.suppressed_count }}</td><td>{{ group.last_seen|date:'Y-m-d H:i:s' }}</td></tr>{% empty %}<tr><td colspan="6">{% trans "No grouped problems in this range." %}</td></tr>{% endfor %}</tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/logging-filter.js' %}"></script>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/logs.js' %}"></script>
+{% endblock %}

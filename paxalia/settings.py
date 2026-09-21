@@ -4,7 +4,7 @@ from django.conf import settings
 DEFAULTS = {
     'SIDEBAR_SECTIONS': [
         'overview', 'pages', 'api', 'traffic', 'realtime', 'bots',
-        'geography', 'events', 'billing', 'releases', 'backups', 'security',
+        'geography', 'events', 'logs', 'billing', 'releases', 'backups', 'security',
         'sites', 'broken_links', 'goals', 'funnels', 'segments', 'campaigns',
         'annotations', 'cohorts', 'api_keys', 'reports', 'share_links', 'notifications', 'rum', 'uptime', 'compliance', 'data_import', 'settings'
     ],
@@ -40,10 +40,47 @@ DEFAULTS = {
     # Only log logins for staff/superuser accounts by default, in keeping
     # with the package's privacy-first philosophy. Set False to track
     # every user's login (make sure your privacy policy covers this).
-    'SECURITY_TRACK_ONLY_STAFF': True,
+    'SECURITY_TRACK_ONLY_STAFF': False,
+    # Optional trusted callable for projects with a custom administrator role.
+    # Signature: callable(user) -> bool. Defaults to is_staff/is_superuser.
+    'SECURITY_ADMIN_USER_CHECK': None,
     # How many days of LoginEvent / SecurityAuditLog rows to keep.
     # Enforced by `python manage.py prune_security_logs` (run via cron).
     'SECURITY_LOG_RETENTION_DAYS': 180,
+
+    # ── Paxalia Observability ──
+    # Standard-library Python/Django logging capture is enabled by default.
+    'LOGGING_ENABLED': True,
+    'LOG_CAPTURE_STANDARD_LOGGING': True,
+    'LOG_MIN_LEVEL': 'INFO',
+    'LOG_REQUEST_SUCCESSES': False,
+    'LOG_REQUEST_ID_RESPONSE_HEADER': 'X-Paxalia-Request-ID',
+    'LOG_MAX_MESSAGE_LENGTH': 4000,
+    'LOG_MAX_STACK_LENGTH': 12000,
+    'LOG_MAX_METADATA_BYTES': 16384,
+    'LOG_DEDUPE_WINDOW_SECONDS': 60,
+    'LOG_MAX_SAMPLES_PER_GROUP': 5,
+    'LOG_BROWSER_MAX_EVENTS_PER_PAGE': 50,
+    'LOG_BROWSER_MAX_REQUESTS_PER_MINUTE': 120,
+    'LOG_BROWSER_MAX_PAYLOAD_BYTES': 32768,
+    'LOG_BROWSER_CAPTURE_CONSOLE': False,
+    'LOG_BROWSER_CAPTURE_RESOURCE_ERRORS': True,
+    'LOG_RELEASE': None,
+    'LOG_SENSITIVE_KEYS': [],
+    'LOG_RETENTION_DAYS': {
+        'system': 30,
+        'request': 30,
+        'browser': 30,
+        'application': 30,
+        'login': 180,
+        'security': 180,
+        'group': 90,
+    },
+    # Keep failed identifiers hashed by default. Raw attempted usernames can
+    # be enabled only when the host project's privacy policy supports it.
+    'SECURITY_STORE_FAILED_USERNAME': True,
+    # Configurable host application log model adapters.
+    'APPLICATION_LOGS': [],
     # Consecutive failed logins (any account) from one IP within
     # SECURITY_FAILED_LOGIN_WINDOW_MINUTES before it's surfaced as a
     # "brute force suspected" alert on the Security Center.
@@ -120,4 +157,3 @@ def get_config():
     config = DEFAULTS.copy()
     config.update(user_config)
     return config
-

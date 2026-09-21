@@ -35,7 +35,7 @@ occasionally change; check web.dev/vitals if a rating looks off.
 """
 from django.db.models import Count, Max, Min
 
-from .models import AnalyticsEvent, JSError
+from .models import AnalyticsEvent, JSError, PaxaliaLogEvent
 
 # (good_max, needs_improvement_max) — anything above the second value
 # is 'poor'. LCP/INP in milliseconds, CLS unitless.
@@ -120,31 +120,43 @@ def compute_web_vitals_summary(start_dt, end_dt, site=None):
 
 
 def compute_top_js_errors(start_dt, end_dt, site=None, limit=20):
-    """
-    JS errors grouped by message (the vast majority of dedup value is
-    in the message text alone — grouping in filename/lineno too would
-    split the same error across minified-build hashes that change
-    every deploy). Returns a list of {message, count, first_seen,
-    last_seen, sample_path} ordered by count desc.
-    """
-    qs = JSError.objects.filter(created_at__range=(start_dt, end_dt))
-    if site is not None:
-        qs = qs.filter(site=site)
+    """Return grouped browser JavaScript errors from both current and legacy stores.
 
-    grouped = (
-        qs.values('message')
-        .annotate(count=Count('id'), first_seen=Min('created_at'), last_seen=Max('created_at'))
-        .order_by('-count')[:limit]
-    )
-    results = []
-    for row in grouped:
-        sample = qs.filter(message=row['message']).order_by('-created_at').values('path', 'filename', 'lineno').first()
-        results.append({
-            'message': row['message'],
-            'count': row['count'],
-            'first_seen': row['first_seen'],
-            'last_seen': row['last_seen'],
+    New reports come from PaxaliaLogEvent. Legacy JSError rows remain included so
+    upgrading a live deployment does not erase the historical RUM view.
+    """
+    legacy_qs = JSError.objects.filter(created_at__range=(start_dt, end_dt))
+    if site is not None:
+        legacy_qs = legacy_qs.filter(site=site)
+    grouped = {}
+    for row in legacy_qs.values('message').annotate(count=Count('id'), first_seen=Min('created_at'), last_seen=Max('created_at')):
+        sample = legacy_qs.filter(message=row['message']).order_by('-created_at').values('path', 'filename', 'lineno').first()
+        grouped[row['message']] = {
+            'message': row['message'], 'count': row['count'],
+            'first_seen': row['first_seen'], 'last_seen': row['last_seen'],
             'sample_path': sample['path'] if sample else '',
             'sample_location': f"{sample['filename']}:{sample['lineno']}" if sample and sample['filename'] else '',
+        }
+
+    current_qs = PaxaliaLogEvent.objects.filter(
+        timestamp__range=(start_dt, end_dt), source__in=['JavaScript', 'Browser'],
+        category='browser', severity__in=['ERROR', 'CRITICAL'],
+    )
+    if site is not None:
+        current_qs = current_qs.filter(site=site)
+    for row in current_qs.values('message').annotate(count=Count('id'), first_seen=Min('timestamp'), last_seen=Max('timestamp')):
+        target = grouped.setdefault(row['message'], {
+            'message': row['message'], 'count': 0, 'first_seen': row['first_seen'],
+            'last_seen': row['last_seen'], 'sample_path': '', 'sample_location': '',
         })
-    return results
+        target['count'] += row['count']
+        target['first_seen'] = min(target['first_seen'], row['first_seen'])
+        target['last_seen'] = max(target['last_seen'], row['last_seen'])
+        sample = current_qs.filter(message=row['message']).order_by('-timestamp').values('request_path', 'metadata').first()
+        if sample:
+            target['sample_path'] = sample.get('request_path') or target['sample_path']
+            metadata = sample.get('metadata') or {}
+            target['sample_location'] = f"{metadata.get('filename')}:{metadata.get('lineno')}" if metadata.get('filename') else target['sample_location']
+
+    return sorted(grouped.values(), key=lambda item: (-item['count'], item['message']))[:limit]
+

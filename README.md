@@ -2089,3 +2089,69 @@ If this package helps your project, consider:
 - Supporting via [Paxalia](https://paxalia.com/donation/)
 
 Thank you for using **paxalia-dashboard**.
+
+## Paxalia Logging / Observability
+
+The v4 logging branch adds a canonical observability layer without replacing the existing RUM, Security Center, analytics, or server-monitoring systems. Standard Python/Django loggers are captured through a safe handler after the Paxalia app loads. Add `paxalia.logging.middleware.PaxaliaLoggingMiddleware` after session/auth middleware when you want request IDs, duration, and explicit response-status events for requests that are not already logged by Django.
+
+```python
+MIDDLEWARE = [
+    # Django session/auth middleware first ...
+    'paxalia.logging.middleware.PaxaliaLoggingMiddleware',
+    'paxalia.middleware.AnalyticsMiddleware',
+]
+```
+
+Structured application events can use the branded helper:
+
+```python
+import paxalia
+
+paxalia.log(
+    'Workspace synchronization failed',
+    level='ERROR',
+    category='application.sync',
+    action='sync_failed',
+    metadata={'workspace_id': '...'},
+)
+```
+
+The helper uses the standard logging infrastructure underneath and redacts common credential fields before storage. The same canonical store powers the Paxalia Logs dashboard, grouping/fingerprints, correlation IDs, filtered exports, browser error ingestion, authentication activity, and retention pruning.
+
+Relevant `PAXALIA_DASHBOARD` settings:
+
+```python
+PAXALIA_DASHBOARD = {
+    'LOGGING_ENABLED': True,
+    'LOG_CAPTURE_STANDARD_LOGGING': True,
+    'LOG_MIN_LEVEL': 'INFO',
+    'LOG_REQUEST_SUCCESSES': False,
+    'LOG_REQUEST_ID_RESPONSE_HEADER': 'X-Paxalia-Request-ID',
+    'LOG_MAX_MESSAGE_LENGTH': 4000,
+    'LOG_MAX_STACK_LENGTH': 12000,
+    'LOG_MAX_METADATA_BYTES': 16384,
+    'LOG_DEDUPE_WINDOW_SECONDS': 60,
+    'LOG_MAX_SAMPLES_PER_GROUP': 5,
+    'LOG_BROWSER_MAX_EVENTS_PER_PAGE': 50,
+    'LOG_BROWSER_MAX_REQUESTS_PER_MINUTE': 120,
+    'LOG_BROWSER_MAX_PAYLOAD_BYTES': 32768,
+    'LOG_BROWSER_CAPTURE_CONSOLE': False,
+    'LOG_BROWSER_CAPTURE_RESOURCE_ERRORS': True,
+    'LOG_RELEASE': None,
+    'LOG_SENSITIVE_KEYS': [],
+    'LOG_RETENTION_DAYS': {
+        'system': 30,
+        'request': 30,
+        'browser': 30,
+        'application': 30,
+        'login': 180,
+        'security': 180,
+        'group': 90,
+    },
+    'SECURITY_STORE_FAILED_USERNAME': False,
+    'SECURITY_ADMIN_USER_CHECK': None,
+    'APPLICATION_LOGS': [],
+}
+```
+
+Run `python manage.py paxalia_logs_prune --dry-run` before scheduling `python manage.py paxalia_logs_prune`. Failed login identifiers are stored as a SHA-256 fingerprint by default; set `SECURITY_STORE_FAILED_USERNAME=True` only when the host application's privacy requirements explicitly permit raw identifiers. For projects where `is_staff`/`is_superuser` is not the administrator definition, `SECURITY_ADMIN_USER_CHECK` may be set to a trusted callable accepting a user and returning a boolean.

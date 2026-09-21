@@ -21,6 +21,11 @@ from .rum import _percentile, rate_metric
 from .security_scorecard import run_scorecard_checks
 from .uptime import compute_uptime_percentage, perform_check, record_check, validate_monitor_url
 from .views.events import _clean_int
+from .logging import log
+from .logging.fingerprint import normalize_message
+from .logging.redaction import bound_json, redact_text
+from .logging.services import persist_event, _base_payload
+from .models import PaxaliaLogEvent, PaxaliaLogGroup
 
 
 class FileUploadModelTests(TestCase):
@@ -700,3 +705,48 @@ class V3HardeningRegressionTests(TestCase):
         self.assertEqual(start.date().isoformat(), '2026-09-12')
         self.assertEqual(end.date().isoformat(), '2026-09-13')
 
+
+class LoggingUtilityTests(TestCase):
+    def test_redacts_common_credentials(self):
+        self.assertNotIn('Bearer secret-token', redact_text('Authorization: Bearer secret-token'))
+        self.assertEqual(bound_json({'password': 'secret'})['password'], '[REDACTED]')
+
+
+    def test_redacts_sensitive_query_values(self):
+        self.assertNotIn('token=supersecret', redact_text('https://example.test/?token=supersecret&ok=1'))
+
+    def test_fingerprint_message_normalizes_ids_and_numbers(self):
+        self.assertEqual(
+            normalize_message('Workspace 123 failed for 550e8400-e29b-41d4-a716-446655440000'),
+            'Workspace <n> failed for <uuid>',
+        )
+
+    @override_settings(PAXALIA_DASHBOARD={'LOG_MAX_SAMPLES_PER_GROUP': 1, 'LOG_DEDUPE_WINDOW_SECONDS': 60})
+    def test_duplicate_events_are_grouped_and_suppressed(self):
+        payload = {
+            'message': 'DatabaseError for workspace 123',
+            'severity': 'ERROR',
+            'source': 'Application',
+            'category': 'database',
+            'action': 'failure',
+            'logger_name': 'tests',
+            'metadata': {},
+        }
+        first = persist_event(_base_payload(**payload))
+        second = persist_event(_base_payload(**payload))
+        self.assertIsInstance(first, PaxaliaLogEvent)
+        self.assertIsInstance(second, PaxaliaLogGroup)
+        group = PaxaliaLogGroup.objects.get(fingerprint=first.fingerprint)
+        self.assertEqual(group.occurrence_count, 2)
+        self.assertEqual(group.suppressed_count, 1)
+        self.assertEqual(PaxaliaLogEvent.objects.count(), 1)
+
+
+class LoggingPublicApiTests(TestCase):
+    def test_paxalia_log_does_not_raise(self):
+        log('test event', metadata={'password': 'do-not-store'})
+        self.assertTrue(PaxaliaLogEvent.objects.filter(message='test event').exists())
+
+    def test_root_import_exposes_log(self):
+        import paxalia
+        self.assertIs(paxalia.log, log)

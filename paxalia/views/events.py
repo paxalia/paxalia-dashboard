@@ -18,6 +18,7 @@ from honeypot.decorators import honeypot_exempt
 
 from paxalia.middleware import AnalyticsMiddleware
 from paxalia.models import AnalyticsEvent, JSError
+from paxalia.logging.services import emit_message
 from paxalia.settings import get_config
 from .utils import get_date_range, detect_active_preset, section_enabled
 
@@ -189,21 +190,123 @@ def analytics_js_error_api(request):
         return JsonResponse({'error': 'message is required'}, status=400)
 
     try:
+        filename = _clean_str(body.get('filename'), 500)
+        lineno = _clean_int(body.get('lineno'))
+        colno = _clean_int(body.get('colno'))
+        stack = _clean_str(body.get('stack'), MAX_STACK_LENGTH)
+        path = _clean_str(body.get('path'), 255)
         JSError.objects.create(
             message=message,
-            filename=_clean_str(body.get('filename'), 500),
-            lineno=_clean_int(body.get('lineno')),
-            colno=_clean_int(body.get('colno')),
-            stack=_clean_str(body.get('stack'), MAX_STACK_LENGTH),
-            path=_clean_str(body.get('path'), 255),
+            filename=filename,
+            lineno=lineno,
+            colno=colno,
+            stack=stack,
+            path=path,
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:512],
             session_id=getattr(request, 'analytics_session_id', ''),
+        )
+        # Keep the legacy JSError table for compatibility, but also feed the
+        # canonical v4 Paxalia Logs store so old clients are visible there.
+        emit_message(
+            message,
+            level='ERROR',
+            source='JavaScript',
+            category='browser',
+            action='error',
+            metadata={
+                'filename': filename,
+                'lineno': lineno,
+                'colno': colno,
+                'path': path,
+            },
+            request=request,
         )
         return JsonResponse({'status': 'ok'})
     except Exception as e:
         logger.error('paxalia: Failed to save JS error: %s', e)
         return JsonResponse({'error': 'Failed to save error report'}, status=500)
 
+
+
+# ─── Public Browser Log API ───────────────────────────────────────────
+BROWSER_LOG_RATE_LIMIT_WINDOW_SECONDS = 60
+
+
+def _browser_rate_limited(request):
+    ip = AnalyticsMiddleware._get_ip(request) or 'unknown'
+    session_id = getattr(request, 'analytics_session_id', '') or 'no-session'
+    cache_key = f'paxalia:browser_log_rl:{ip}:{session_id}'
+    if cache.add(cache_key, 1, timeout=BROWSER_LOG_RATE_LIMIT_WINDOW_SECONDS):
+        return False
+    try:
+        count = cache.incr(cache_key)
+    except ValueError:
+        cache.add(cache_key, 1, timeout=BROWSER_LOG_RATE_LIMIT_WINDOW_SECONDS)
+        count = 1
+    return count > int(get_config().get('LOG_BROWSER_MAX_REQUESTS_PER_MINUTE', 120))
+
+
+def _browser_source(kind):
+    return {
+        'console': 'JavaScript',
+        'error': 'JavaScript',
+        'rejection': 'JavaScript',
+        'resource': 'Browser',
+    }.get(kind, 'Browser')
+
+
+@csrf_exempt
+@honeypot_exempt
+@require_http_methods(["POST"])
+def analytics_browser_log_api(request):
+    """Public, bounded browser observability ingestion endpoint."""
+    if _browser_rate_limited(request):
+        return JsonResponse({'error': 'Too many requests'}, status=429)
+    if _consent_denied(request):
+        return JsonResponse({'status': 'skipped', 'reason': 'consent not granted'})
+    max_bytes = int(get_config().get('LOG_BROWSER_MAX_PAYLOAD_BYTES', 32768))
+    if len(request.body) > max_bytes:
+        return JsonResponse({'error': 'Payload too large'}, status=413)
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        if not isinstance(body, dict):
+            raise ValueError('Payload must be a JSON object')
+    except (json.JSONDecodeError, ValueError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    kind = _clean_str(body.get('kind'), 20).lower()
+    allowed = {'console', 'error', 'rejection', 'resource'}
+    if kind not in allowed:
+        return JsonResponse({'error': 'Unsupported browser event'}, status=400)
+    if kind == 'console' and not bool(get_config().get('LOG_BROWSER_CAPTURE_CONSOLE', False)):
+        return JsonResponse({'status': 'ignored'})
+
+    severity = _clean_str(body.get('severity'), 10).upper()
+    if severity not in {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}:
+        severity = 'ERROR' if kind in {'error', 'rejection', 'resource'} else 'INFO'
+    message = _clean_str(body.get('message'), int(get_config().get('LOG_MAX_MESSAGE_LENGTH', 4000)))
+    if not message:
+        return JsonResponse({'error': 'message is required'}, status=400)
+
+    metadata = body.get('metadata') if isinstance(body.get('metadata'), dict) else {}
+    emit_message(
+        message,
+        level=severity,
+        source=_browser_source(kind),
+        category='browser' if kind != 'console' else 'console',
+        action=kind,
+        traffic_type='WEB',
+        metadata={
+            'filename': _clean_str(body.get('filename'), 500),
+            'lineno': _clean_int(body.get('lineno')),
+            'colno': _clean_int(body.get('colno')),
+            'path': _clean_str(body.get('path'), 255),
+            'stack': _clean_str(body.get('stack'), int(get_config().get('LOG_MAX_STACK_LENGTH', 12000))),
+            'metadata': metadata,
+        },
+        request=request,
+    )
+    return JsonResponse({'status': 'ok'})
 
 # ─── Admin Dashboard View ─────────────────────────────────────────────
 

@@ -410,6 +410,36 @@
                         </a>
                         {% endif %}
 
+                        {% if 'security' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_security %}
+                        <a href="{% url 'paxalia:user_login_activity' %}" class="analytics-sidebar-link {% if active_page == 'user_login_activity' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path fill="currentColor" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4m0 2c-4.42 0-8 2.24-8 5v1h8v-2H6.2c.75-1.75 2.92-2 5.8-2s5.05.25 5.8 2H12v2h8v-1c0-2.76-3.58-5-8-5"/>
+                                    <path fill="currentColor" d="M15 6h6v6h-2V9.41l-4.29 4.3-1.42-1.42L17.59 8H15z"/>
+                                </svg>
+                            </span>
+                            {% trans "User Login Activity" %}
+                        </a>
+                        <a href="{% url 'paxalia:admin_login_activity' %}" class="analytics-sidebar-link {% if active_page == 'admin_login_activity' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path fill="currentColor" d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5zm0 3.08 5 1.88v4.04c0 3.86-2.38 7.38-5 8.69-2.62-1.31-5-4.83-5-8.69V6.96z"/>
+                                    <path fill="currentColor" d="M12 8a2.25 2.25 0 1 0 0 4.5A2.25 2.25 0 0 0 12 8m-4 8.25c0-1.53 1.79-2.75 4-2.75s4 1.22 4 2.75V17H8z"/>
+                                </svg>
+                            </span>
+                            {% trans "Admin Login Activity" %}
+                        </a>
+                        <a href="{% url 'paxalia:failed_login_activity' %}" class="analytics-sidebar-link {% if active_page == 'failed_login_activity' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path fill="currentColor" d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5zm0 3.08 5 1.88v4.04c0 3.86-2.38 7.38-5 8.69-2.62-1.31-5-4.83-5-8.69V6.96z"/>
+                                    <path d="m9.25 9.25 5.5 5.5m0-5.5-5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                            {% trans "Failed Login Activity" %}
+                        </a>
+                        {% endif %}
+
                         {% if 'sites' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_sites %}
                         <a href="{% url 'paxalia:sites' %}"
                            class="analytics-sidebar-link {% if active_page == 'sites' %}active{% endif %}">
@@ -511,10 +541,30 @@
                                 style="width: 100%; background: var(--analytics-bg); color: var(--analytics-text); border: 1px solid var(--analytics-border); border-radius: 4px; padding: 0.4rem;">
                             <option value="" {% if not analytics_current_site %}selected{% endif %}>{% trans "All Sites" %}</option>
                             {% for s in analytics_all_sites %}
-                            <option value="{{ s.id }}" {% if analytics_current_site.id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                            <option value="{{ s.id }}" {% if s == analytics_current_site %}selected{% endif %}>{{ s.name }}</option>
                             {% endfor %}
                         </select>
                     </form>
+                </section>
+                {% endif %}
+
+                {# Operations group #}
+                {% if 'logs' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_logs %}
+                <section class="sidebar-group" data-sidebar-group>
+                    <button type="button" class="sidebar-group__toggle" data-sidebar-group-toggle aria-expanded="false" aria-controls="sidebar-group-operations">
+                        <span class="sidebar-group__title">{% trans "Operations" %}</span>
+                        <span class="sidebar-group__chevron" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg></span>
+                    </button>
+                    <div class="sidebar-group__panel" id="sidebar-group-operations" hidden>
+                        <a href="{% url 'paxalia:logs' %}" class="analytics-sidebar-link {% if active_page == 'logs' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16v2H4zm0 5h16v2H4zm0 5h10v2H4zm0 5h16v2H4z"/></svg></span>
+                            {% trans "Paxalia Logs" %}
+                        </a>
+                        <a href="{% url 'paxalia:application_logs' %}" class="analytics-sidebar-link {% if active_page == 'application_logs' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2m2 4v2h10V7zm0 4v2h10v-2zm0 4v2h7v-2z"/></svg></span>
+                            {% trans "Application Logs" %}
+                        </a>
+                    </div>
                 </section>
                 {% endif %}
 

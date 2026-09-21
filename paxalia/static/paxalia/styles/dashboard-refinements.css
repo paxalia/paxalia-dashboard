@@ -2,16 +2,8 @@
     margin-bottom: var(--margin-lg) !important
 }
 
-.stat-grid + .chart-grid, .stat-grid + .table-card, .stat-grid + .setting-table-grid {
-    margin-top: 0 !important
-}
-
 .chart-grid, .table-card, .setting-table-grid {
     min-width: 0
-}
-
-.chart-grid + .table-card, .chart-grid + .setting-table-grid, .table-card + .table-card, .setting-table-grid + .table-card {
-    margin-top: 0
 }
 
 .management-form {
@@ -226,11 +218,7 @@
    ------------------------------------------------------------------------- */
 
 .table-card {
-    margin: 0 !important;
-}
-
-.table-card + .table-card {
-    margin-top: 0 !important;
+    min-width: 0;
 }
 
 .table-card > .card-title + .form-hint,
@@ -567,4 +555,3 @@ button + .btn,
         margin-top: 6px;
     }
 }
-

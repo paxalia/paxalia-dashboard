@@ -6,7 +6,7 @@ from django.contrib import messages
 from paxalia.permissions import require_section_permission
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,6 +14,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from ..models import BlockedIP, LoginEvent, SecurityAuditLog, CSPViolation
+from ..settings import get_config
 from ..security_audit import log_action
 from ..security_scorecard import run_scorecard_checks
 from .utils import section_enabled
@@ -50,8 +51,12 @@ def _mfa_status():
     except ImportError:
         return None
 
+    try:
+        staff_users = User.objects.filter(is_staff=True).order_by('username')
+    except Exception:
+        return []
     rows = []
-    for user in User.objects.filter(is_staff=True).order_by('username'):
+    for user in staff_users:
         try:
             has_device = any(True for _d in devices_for_user(user, confirmed=True))
         except Exception:
@@ -150,38 +155,51 @@ def security_center(request):
 
     # ── Login Activity ──
     recent_logins = LoginEvent.objects.select_related('user').filter(
-        created_at__gte=last_30_days
+        event_type='login', created_at__gte=last_30_days
     )[:200]
 
-    total_success_30d = LoginEvent.objects.filter(
-        result='success', created_at__gte=last_30_days
-    ).count()
-    total_failed_30d = LoginEvent.objects.filter(
-        result='failed', created_at__gte=last_30_days
-    ).count()
-    new_location_logins_30d = LoginEvent.objects.filter(
-        result='success', is_new_location=True, created_at__gte=last_30_days
-    ).count()
+    login_base = LoginEvent.objects.filter(
+        event_type='login',
+        created_at__gte=last_30_days,
+    )
+    login_counts = login_base.aggregate(
+        total_success=Count('id', filter=Q(result='success')),
+        total_failed=Count('id', filter=Q(result='failed')),
+        new_locations=Count('id', filter=Q(result='success', is_new_location=True)),
+        admin_success=Count('id', filter=Q(result='success', is_admin=True)),
+        admin_failed=Count('id', filter=Q(result='failed', is_admin=True)),
+        unknown_account_failures=Count(
+            'id',
+            filter=Q(result='failed', failure_category='invalid_credentials', user__isnull=True),
+        ),
+    )
+    total_success_30d = login_counts['total_success'] or 0
+    total_failed_30d = login_counts['total_failed'] or 0
+    new_location_logins_30d = login_counts['new_locations'] or 0
+    admin_success_30d = login_counts['admin_success'] or 0
+    admin_failed_30d = login_counts['admin_failed'] or 0
+    unknown_account_failures_30d = login_counts['unknown_account_failures'] or 0
 
     # ── Active Sessions (successful logins with no logout yet, last 30 days) ──
     active_sessions = LoginEvent.objects.select_related('user').filter(
-        result='success',
+        event_type='login', result='success',
         logged_out_at__isnull=True,
         created_at__gte=last_30_days,
     ).exclude(session_key='').exclude(session_key__isnull=True)[:100]
 
     # ── Failed-login / brute-force monitor ──
     failed_by_ip = (
-        LoginEvent.objects.filter(result='failed', created_at__gte=last_30_days)
+        LoginEvent.objects.filter(event_type='login', result='failed', created_at__gte=last_30_days)
         .exclude(ip_address__isnull=True)
         .values('ip_address')
         .annotate(count=Count('id'))
         .order_by('-count')[:20]
     )
+    failed_identifier_field = 'username_attempted' if get_config().get('SECURITY_STORE_FAILED_USERNAME', False) else 'identifier_hash'
     failed_by_username = (
-        LoginEvent.objects.filter(result='failed', created_at__gte=last_30_days)
-        .exclude(username_attempted='')
-        .values('username_attempted')
+        LoginEvent.objects.filter(event_type='login', result='failed', created_at__gte=last_30_days)
+        .exclude(**{failed_identifier_field: ''})
+        .values(failed_identifier_field)
         .annotate(count=Count('id'))
         .order_by('-count')[:20]
     )
@@ -205,6 +223,9 @@ def security_center(request):
         'total_success_30d': total_success_30d,
         'total_failed_30d': total_failed_30d,
         'new_location_logins_30d': new_location_logins_30d,
+        'admin_success_30d': admin_success_30d,
+        'admin_failed_30d': admin_failed_30d,
+        'unknown_account_failures_30d': unknown_account_failures_30d,
         'active_sessions': active_sessions,
         'failed_by_ip': failed_by_ip,
         'failed_by_username': failed_by_username,

@@ -17,7 +17,7 @@ leaving JSError rows behind on an IP-based request.
 """
 import hashlib
 
-from .models import AnalyticsEvent, JSError, PageView
+from .models import AnalyticsEvent, JSError, PageView, PaxaliaLogEvent
 
 
 def forget_by_session(session_id):
@@ -27,6 +27,7 @@ def forget_by_session(session_id):
         'PageView': PageView.objects.filter(session_id=session_id).delete()[0],
         'AnalyticsEvent': AnalyticsEvent.objects.filter(session_id=session_id).delete()[0],
         'JSError': JSError.objects.filter(session_id=session_id).delete()[0],
+        'PaxaliaLogEvent': PaxaliaLogEvent.objects.filter(session_id=session_id).delete()[0],
     }
 
 
@@ -44,4 +45,5 @@ def forget_by_ip(ip_address):
     return {
         'PageView': PageView.objects.filter(ip_hash__in=[ip_address, hashed]).delete()[0],
         'AnalyticsEvent': AnalyticsEvent.objects.filter(ip_hash__in=[ip_address, hashed]).delete()[0],
+        'PaxaliaLogEvent': PaxaliaLogEvent.objects.filter(ip_address__in=[ip_address, hashed]).delete()[0],
     }

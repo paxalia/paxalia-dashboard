@@ -3,11 +3,13 @@
 (function() {
     'use strict';
 
-    if (typeof window.opAnalytics !== 'undefined') {
+    if (window.__paxaliaBrowserLoggingInitialized) {
         return;
     }
+    window.__paxaliaBrowserLoggingInitialized = true;
 
     var EVENT_URL = '/api/paxalia/event/';
+    var hasExistingOpAnalytics = typeof window.opAnalytics === 'function';
 
     // ─── Consent Mode (Phase 14) ─────────────────────────────────
     // window.PAXALIA_CONSENT_CONFIG is set by the
@@ -31,13 +33,11 @@
     }
 
     if (!hasConsent()) {
-        // Consent not granted: define opAnalytics as a no-op so any
-        // onclick="opAnalytics(...)" call sites elsewhere on the page
-        // don't throw, but attach no listeners and send nothing. The
-        // server independently enforces this too (AnalyticsMiddleware
-        // and the event API endpoints) — this client-side gate is
-        // about not even trying, not the actual compliance guarantee.
-        window.opAnalytics = function() {};
+        // Do not overwrite a host application's existing tracker. The
+        // server independently enforces consent on all Paxalia endpoints.
+        if (!hasExistingOpAnalytics) {
+            window.opAnalytics = function() {};
+        }
         return;
     }
 
@@ -55,7 +55,8 @@
         return cookieValue;
     }
 
-    window.opAnalytics = function(category, action, label, value) {
+    if (!hasExistingOpAnalytics) {
+        window.opAnalytics = function(category, action, label, value) {
         var payload = {
             category: category,
             action: action,
@@ -89,7 +90,13 @@
             }
         })
         .catch(function() { /* silent fail */ });
-    };
+        };
+    }
+
+    // The host may already provide opAnalytics. In that case, keep its
+    // existing event tracker intact and only add Paxalia's browser error
+    // observability below. This prevents duplicate click/outbound beacons.
+    if (!hasExistingOpAnalytics) {
 
     // ─── Global click listener ──────────────────────────────────
     document.addEventListener('click', function(e) {
@@ -296,15 +303,52 @@
         window.addEventListener('pagehide', reportAllVitals);
     }
 
+    }
+
     // ─── JS error tracking ──────────────────────────────────────
     // Sent immediately via fetch(keepalive) rather than batched or
     // deferred to unload, since the page may keep running for a long
     // time after an error and a developer wants to know sooner.
     var JS_ERROR_URL = '/api/paxalia/js-error/';
-    var MAX_ERRORS_PER_PAGE = 10; // guard against a runaway error loop
+    var browserConfig = {
+        enabled: consentConfig.browserLogEnabled !== false,
+        url: consentConfig.browserLogUrl || '/api/paxalia/browser-log/',
+        captureConsole: consentConfig.captureConsole === true,
+        captureResourceErrors: consentConfig.captureResourceErrors !== false,
+        maxEvents: Number(consentConfig.maxBrowserEvents || 50)
+    };
+    var MAX_ERRORS_PER_PAGE = Math.max(1, browserConfig.maxEvents);
     var errorsSentCount = 0;
-    var errorsSeen = {}; // per-page-load dedup: same error firing on every
-                          // animation frame shouldn't count as 10 reports
+    var errorsSeen = {};
+    var browserEventsSent = 0;
+    var browserEventsSeen = {};
+
+    function sendBrowserLog(kind, severity, message, extra) {
+        if (!browserConfig.enabled || browserEventsSent >= browserConfig.maxEvents) return;
+        extra = extra || {};
+        var key = kind + '|' + String(message || '') + '|' + String(extra.filename || '') + '|' + String(extra.lineno || '');
+        if (browserEventsSeen[key]) return;
+        browserEventsSeen[key] = true;
+        browserEventsSent++;
+
+        var payload = {
+            kind: kind,
+            severity: severity,
+            message: String(message || 'Unknown browser event').slice(0, 4000),
+            filename: extra.filename ? String(extra.filename).slice(0, 500) : '',
+            lineno: extra.lineno || null,
+            colno: extra.colno || null,
+            stack: extra.stack ? String(extra.stack).slice(0, 12000) : '',
+            path: window.location.pathname,
+            metadata: extra.metadata || {}
+        };
+        var headers = { 'Content-Type': 'application/json' };
+        var csrfToken = getCsrfToken();
+        if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+        fetch(browserConfig.url, {
+            method: 'POST', headers: headers, body: JSON.stringify(payload), keepalive: true
+        }).catch(function() { /* silent fail */ });
+    }
 
     function reportJsError(message, filename, lineno, colno, stack) {
         if (errorsSentCount >= MAX_ERRORS_PER_PAGE) return;
@@ -312,40 +356,46 @@
         if (errorsSeen[key]) return;
         errorsSeen[key] = true;
         errorsSentCount++;
-
-        var payload = {
-            message: String(message || 'Unknown error').slice(0, 500),
-            filename: filename ? String(filename).slice(0, 500) : '',
-            lineno: lineno || null,
-            colno: colno || null,
-            stack: stack ? String(stack).slice(0, 4000) : '',
-            path: window.location.pathname
-        };
-
-        var headers = { 'Content-Type': 'application/json' };
-        var csrfToken = getCsrfToken();
-        if (csrfToken) headers['X-CSRFToken'] = csrfToken;
-
-        fetch(JS_ERROR_URL, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(payload),
-            keepalive: true
-        }).catch(function() { /* silent fail */ });
+        sendBrowserLog('error', 'ERROR', message, {filename: filename, lineno: lineno, colno: colno, stack: stack});
     }
 
     window.addEventListener('error', function(e) {
-        // Resource-load failures (an <img>/<script>/<link> failing to
-        // load) also fire a window 'error' event, but with no message —
-        // filter those out, this is for JS exceptions only.
+        if (e.target && e.target !== window && browserConfig.captureResourceErrors) {
+            var target = e.target;
+            var resource = target.src || target.href || '';
+            if (resource) {
+                sendBrowserLog('resource', 'ERROR', 'Browser resource failed to load: ' + String(resource).slice(0, 1000), {metadata: {url: String(resource).slice(0, 1000), tag: String(target.tagName || '').slice(0, 50)}});
+            }
+            return;
+        }
         if (!e.message) return;
         reportJsError(e.message, e.filename, e.lineno, e.colno, e.error && e.error.stack);
-    });
+    }, true);
 
     window.addEventListener('unhandledrejection', function(e) {
         var reason = e.reason;
         var reasonMessage = reason && reason.message ? reason.message : String(reason);
         var stack = reason && reason.stack ? reason.stack : '';
-        reportJsError('Unhandled promise rejection: ' + reasonMessage, '', null, null, stack);
+        sendBrowserLog('rejection', 'ERROR', 'Unhandled promise rejection: ' + reasonMessage, {stack: stack});
     });
+
+    if (typeof window.console !== 'undefined') {
+        var consoleLevels = browserConfig.captureConsole ? ['error', 'warn', 'info', 'log', 'debug'] : ['error'];
+        consoleLevels.forEach(function(level) {
+            var original = window.console[level];
+            if (typeof original !== 'function') return;
+            window.console[level] = function() {
+                try {
+                    var args = Array.prototype.slice.call(arguments, 0, 5).map(function(item) {
+                        try { return typeof item === 'string' ? item : JSON.stringify(item); }
+                        catch (err) { return String(item); }
+                    });
+                    var severity = level === 'error' ? 'ERROR' : (level === 'warn' ? 'WARNING' : (level === 'debug' ? 'DEBUG' : 'INFO'));
+                    var kind = level === 'error' ? 'error' : 'console';
+                    sendBrowserLog(kind, severity, args.join(' ').slice(0, 4000));
+                } catch (err) { /* never break console calls */ }
+                return original.apply(window.console, arguments);
+            };
+        });
+    }
 })();

@@ -11,6 +11,8 @@ from honeypot.decorators import honeypot_exempt
 
 from ..middleware import AnalyticsMiddleware
 from ..models import CSPViolation
+from ..logging.redaction import redact
+from ..logging.services import emit_message
 
 logger = logging.getLogger('paxalia.security')
 
@@ -72,13 +74,30 @@ def csp_report(request):
 
     for r in reports[:20]:  # hard cap per request, defense in depth
         try:
+            blocked_uri = str(r.get('blockedURL') or r.get('blocked-uri', ''))[:2048]
+            violated_directive = str(r.get('effectiveDirective') or r.get('violated-directive', ''))[:255]
+            document_uri = str(r.get('documentURL') or r.get('document-uri', ''))[:2048]
+            source_file = str(r.get('sourceFile', ''))[:2048]
+            line_number = r.get('lineNumber') or None
             CSPViolation.objects.create(
-                blocked_uri=str(r.get('blockedURL') or r.get('blocked-uri', ''))[:2048],
-                violated_directive=str(r.get('effectiveDirective') or r.get('violated-directive', ''))[:255],
-                document_uri=str(r.get('documentURL') or r.get('document-uri', ''))[:2048],
-                source_file=str(r.get('sourceFile', ''))[:2048],
-                line_number=r.get('lineNumber') or None,
-                raw_report=r if isinstance(r, dict) else {},
+                blocked_uri=blocked_uri,
+                violated_directive=violated_directive,
+                document_uri=document_uri,
+                source_file=source_file,
+                line_number=line_number,
+                raw_report=redact(r) if isinstance(r, dict) else {},
+            )
+            emit_message(
+                'Content-Security-Policy violation', level='WARNING', source='CSP',
+                category='csp', action='violation', request=request,
+                traffic_type='WEB',
+                metadata={
+                    'blocked_uri': blocked_uri,
+                    'violated_directive': violated_directive,
+                    'document_uri': document_uri,
+                    'source_file': source_file,
+                    'line_number': line_number,
+                },
             )
         except Exception:
             logger.exception('Failed to store CSP violation report')
