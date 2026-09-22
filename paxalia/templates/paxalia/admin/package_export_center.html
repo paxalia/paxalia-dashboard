@@ -1,0 +1,50 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Export Package" %} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{% trans "Export package" %}{% endblock %}
+{% block page_subtitle %}{% trans "Choose the registered models that should travel together" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    <header class="pa-admin-page-head"><div class="pa-admin-page-head__copy"><div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><a href="{% url 'paxalia:admin_packages' %}">{% trans "Packages" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Export" %}</span></div><span class="pa-admin-page-head__eyebrow">{% trans "Logical snapshot" %}</span><h2>{% trans "Export selected models" %}</h2><p>{% trans "Select one or more registered models. Paxalia exports only data visible through each model's Django Admin queryset." %}</p></div><div class="pa-admin-page-head__actions"><a class="btn btn-secondary" href="{% url 'paxalia:admin_packages' %}">{% trans "Package center" %}</a><a class="btn btn-secondary" href="{% url 'paxalia:admin_package_history' %}">{% trans "History" %}</a></div></header>
+
+    <div class="pa-admin-form-error" data-paxalia-export-error tabindex="-1"{% if not export_error %} hidden{% endif %} data-password-required="{% trans 'A package password is required for encryption.' %}" data-selection-required="{% trans 'Select at least one model to export.' %}" data-protected-required="{% trans 'Enable encryption before exporting protected models.' %}" data-generic-error="{% trans 'Package export failed.' %}" data-network-error="{% trans 'The package could not be generated because the server could not be reached.' %}" data-no-download="{% trans 'The server did not return a package file.' %}">{% if export_error %}{{ export_error }}{% endif %}</div>
+    <div class="pa-admin-form-success" data-paxalia-export-success hidden data-success-label="{% trans 'Package created. The download has started.' %}" role="status" aria-live="polite"></div>
+
+    <form method="post" class="pa-admin-export-form" data-paxalia-package-export data-paxalia-download-export data-require-encryption-for-protected="{{ require_encryption_for_protected|yesno:'true,false' }}">
+        {% csrf_token %}
+        <section class="pa-admin-card">
+            <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Model selection" %}</span><h2>{% trans "What should be included?" %}</h2><p>{% trans "Use the search field to narrow the registry, then open an application group and select the models you need." %}</p></div><div class="pa-admin-card-header__meta"><span class="pa-admin-status pa-admin-status--muted"><strong data-package-selected-count>0</strong> {% trans "selected" %}</span><button class="btn btn-secondary btn-sm" type="button" data-package-select-all>{% trans "Select visible" %}</button></div></div>
+            <div class="pa-admin-card-body">
+                <label class="pa-admin-search"><span>{% trans "Find a model" %}</span><span class="pa-admin-search__control"><span class="pa-admin-search__icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M15.5 15.5 21 21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></span><input type="search" data-package-model-search autocomplete="off" placeholder="{% trans 'Search app or model…' %}"></span></label>
+                <div class="pa-admin-package-apps" aria-live="polite">
+                    {% for app_label, definitions in groups.items %}
+                    <details class="pa-admin-package-app"{% if forloop.first %} open{% endif %} data-package-app>
+                        <summary><span><span class="pa-admin-eyebrow">{{ app_label }}</span><strong>{{ definitions|length }} {% trans "models" %}</strong></span><span class="pa-admin-disclosure__chevron" aria-hidden="true">⌄</span></summary>
+                        <div class="pa-admin-list-select">
+                            {% for definition in definitions %}
+                            <label class="pa-admin-package-model" data-package-model-row data-package-model="{{ definition.label|lower }} {{ definition.verbose_name_plural|lower }} {{ app_label|lower }}"{% if definition.capabilities.protected %} data-package-protected="true"{% endif %}><input type="checkbox" name="models" value="{{ definition.label }}"{% if definition.label|lower in selected_labels %} checked{% endif %}><span><strong>{{ definition.verbose_name_plural }}</strong><small>{{ definition.label }}</small></span>{% if definition.capabilities.protected %}<span class="pa-admin-package-model__badge pa-admin-status pa-admin-status--warning">{% trans "Protected" %}</span>{% endif %}</label>
+                            {% endfor %}
+                        </div>
+                    </details>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section class="pa-admin-card">
+            <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Package options" %}</span><h2>{% trans "Protect what you create" %}</h2><p>{% trans "Normal packages are integrity-checked. Encrypted packages additionally protect the payload with authenticated encryption." %}</p></div></div>
+            <div class="pa-admin-card-body">
+                {% if require_encryption_for_protected %}<p class="pa-admin-note pa-admin-note--warning">{% trans "Protected models require encryption before they can be exported." %}</p>{% endif %}
+                <div class="pa-admin-option-list">
+                    <label class="pa-admin-option-row"><input type="checkbox" name="encrypted"{% if encrypted_value %} checked{% endif %}><span><strong>{% trans "Encrypt this package" %}</strong><small>{% trans "Require a password before the package payload can be read." %}</small></span></label>
+                    <label class="pa-admin-option-row"><input type="checkbox" name="translations_only"{% if translations_only_value %} checked{% endif %}><span><strong>{% trans "Export translation data only" %}</strong><small>{% trans "Use the translation payload where the selected models expose supported translations." %}</small></span></label>
+                </div>
+                <label class="pa-admin-form-field pa-admin-password-field" data-package-password-field><span>{% trans "Encryption password" %}</span><input type="password" name="password" autocomplete="new-password" placeholder="{% trans 'Required when encryption is enabled' %}"><small class="form-hint">{% trans "The password is never written to the package history or audit record." %}</small></label>
+            </div>
+            <div class="pa-admin-form-actions"><button class="btn btn-primary" type="submit" data-package-submit data-busy-label="{% trans 'Creating package…' %}">{% trans "Create .paxalia package" %}</button><a class="btn btn-secondary" href="{{ history_url }}">{% trans "History" %}</a></div>
+        </section>
+    </form>
+</div>
+{% endblock %}
+{% block page_scripts %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/admin-center.js' %}"></script>{% endblock %}

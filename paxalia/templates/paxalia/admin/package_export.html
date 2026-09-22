@@ -1,0 +1,31 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Export" %} · {{ definition.verbose_name_plural }} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{% trans "Export" %} {{ definition.verbose_name_plural }}{% endblock %}
+{% block page_subtitle %}{% trans "Create a portable .paxalia package" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    <header class="pa-admin-page-head"><div class="pa-admin-page-head__copy"><div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><a href="{{ overview_url }}">{{ definition.verbose_name_plural }}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Export" %}</span></div><span class="pa-admin-page-head__eyebrow">{{ definition.label }}</span><h2>{% trans "Export data" %}</h2><p>{% trans "Exports use the registered ModelAdmin queryset and Paxalia's redaction rules." %}</p></div><div class="pa-admin-page-head__actions"><a class="btn btn-secondary" href="{{ list_url }}">{% trans "Back to records" %}</a></div></header>
+    <div class="pa-admin-form-error" data-single-export-error tabindex="-1" hidden data-password-required="{% trans 'A package password is required for encryption.' %}" data-generic-error="{% trans 'Package export failed.' %}" data-network-error="{% trans 'The package could not be generated because the server could not be reached.' %}" data-no-download="{% trans 'The server did not return a package file.' %}"></div>
+    <div class="pa-admin-form-success" data-single-export-success hidden data-success-label="{% trans 'Package created. The download has started.' %}" role="status" aria-live="polite"></div>
+    <form method="post" class="pa-admin-card pa-admin-inline-form pa-admin-export-actions" data-paxalia-single-export data-paxalia-download-export>
+        {% csrf_token %}
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Scope" %}</span><h2>{% trans "Choose what to export" %}</h2><p>{% trans "The current selection is limited to records visible to this ModelAdmin." %}</p></div></div>
+        <div class="pa-admin-card-body">
+            <div class="pa-admin-option-list">
+                <label class="pa-admin-option-row"><input type="radio" name="scope" value="all" checked><span><strong>{% trans "All visible records" %}</strong><small>{% trans "Export the complete queryset available to this administrator." %}</small></span></label>
+                <label class="pa-admin-option-row"><input type="radio" name="scope" value="filtered"><span><strong>{% trans "Current filtered result" %}</strong><small>{% trans "Export the filter state currently represented by this page." %}</small></span></label>
+            </div>
+            <div class="pa-admin-option-list pa-admin-option-list--compact">
+                <label class="pa-admin-option-row"><input type="checkbox" name="encrypted" data-single-export-encrypted><span><strong>{% trans "Encrypt this package" %}</strong><small>{% trans "Protect the payload with authenticated encryption and a password." %}</small></span></label>
+                <label class="pa-admin-option-row"><input type="checkbox" name="translations_only"><span><strong>{% trans "Export translation data only" %}</strong><small>{% trans "Use only supported translation payloads for this model." %}</small></span></label>
+            </div>
+            <label class="pa-admin-form-field pa-admin-password-field" data-single-export-password><span>{% trans "Encryption password" %}</span><input type="password" name="password" autocomplete="new-password" placeholder="{% trans 'Required when encryption is enabled' %}"><small class="form-hint">{% trans "The password is never stored in package history." %}</small></label>
+            <p class="pa-admin-note">{% trans "Sensitive fields are excluded from ordinary package content. The resulting .paxalia file is returned as a direct download." %}</p>
+        </div>
+        <div class="pa-admin-form-actions"><button class="btn btn-primary" type="submit" data-single-export-submit data-busy-label="{% trans 'Creating package…' %}">{% trans "Create package" %}</button><a class="btn btn-secondary" href="{{ overview_url }}">{% trans "Cancel" %}</a></div>
+    </form>
+</div>
+{% endblock %}
+{% block page_scripts %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/admin-center.js' %}"></script>{% endblock %}

@@ -35,11 +35,11 @@
         <table class="analytics-table">
             <thead><tr><th>{% trans "Data type" %}</th><th>{% trans "Retention" %}</th></tr></thead>
             <tbody>
-                <tr><td>PageView</td><td>{{ data_retention_days.pageview|default:_("Kept forever") }}{% if data_retention_days.pageview %} {% trans "days" %}{% endif %}</td></tr>
-                <tr><td>AnalyticsEvent</td><td>{{ data_retention_days.analytics_event|default:_("Kept forever") }}{% if data_retention_days.analytics_event %} {% trans "days" %}{% endif %}</td></tr>
-                <tr><td>JSError</td><td>{{ data_retention_days.js_error|default:_("Kept forever") }}{% if data_retention_days.js_error %} {% trans "days" %}{% endif %}</td></tr>
-                <tr><td>UptimeCheck</td><td>{{ data_retention_days.uptime_check|default:_("Kept forever") }}{% if data_retention_days.uptime_check %} {% trans "days" %}{% endif %}</td></tr>
-                <tr><td>SlowQuery</td><td>{{ data_retention_days.slow_query|default:_("Kept forever") }}{% if data_retention_days.slow_query %} {% trans "days" %}{% endif %}</td></tr>
+                <tr><td>PageView</td><td>{{ data_retention_days.pageview|default:"Kept forever" }}{% if data_retention_days.pageview %} {% trans "days" %}{% endif %}</td></tr>
+                <tr><td>AnalyticsEvent</td><td>{{ data_retention_days.analytics_event|default:"Kept forever" }}{% if data_retention_days.analytics_event %} {% trans "days" %}{% endif %}</td></tr>
+                <tr><td>JSError</td><td>{{ data_retention_days.js_error|default:"Kept forever" }}{% if data_retention_days.js_error %} {% trans "days" %}{% endif %}</td></tr>
+                <tr><td>UptimeCheck</td><td>{{ data_retention_days.uptime_check|default:"Kept forever" }}{% if data_retention_days.uptime_check %} {% trans "days" %}{% endif %}</td></tr>
+                <tr><td>SlowQuery</td><td>{{ data_retention_days.slow_query|default:"Kept forever" }}{% if data_retention_days.slow_query %} {% trans "days" %}{% endif %}</td></tr>
                 <tr><td>LoginEvent / SecurityAuditLog</td><td>{{ security_log_retention_days }} {% trans "days (SECURITY_LOG_RETENTION_DAYS, separate setting)" %}</td></tr>
                 <tr><td>ServerMetricSnapshot</td><td>{{ server_metric_retention_days }} {% trans "days (SERVER_METRIC_RETENTION_DAYS, pruned inline by record_server_metrics)" %}</td></tr>
             </tbody>

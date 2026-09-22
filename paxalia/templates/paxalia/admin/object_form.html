@@ -1,0 +1,84 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{{ page_title }} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{{ page_subtitle }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    <header class="pa-admin-page-head">
+        <div class="pa-admin-page-head__copy">
+            <div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{{ definition.verbose_name_plural }}</span><span class="pa-admin-breadcrumbs__separator">/</span><span>{{ page_title }}</span></div>
+            <span class="pa-admin-page-head__eyebrow">{{ definition.label }}</span>
+            <h2>{{ page_title }}</h2>
+            <p>{{ page_subtitle }}</p>
+        </div>
+        <div class="pa-admin-page-head__actions"><a class="btn btn-secondary" href="{{ cancel_url }}">{% trans "Cancel" %}</a></div>
+    </header>
+
+    <form method="post" enctype="multipart/form-data" class="pa-admin-form">
+        {% csrf_token %}
+        {{ form.media }}
+        {% if form.non_field_errors %}<div class="pa-admin-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+        {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+
+        {% for section in form_sections %}
+        <section class="pa-admin-form-card">
+            <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{{ definition.label }}</span><h2>{{ section.title }}</h2></div></div>
+            <div class="pa-admin-card-body">
+                {% for field in section.fields %}
+                <div class="pa-admin-form-field {% if field.errors %}has-error{% endif %}">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>
+                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                    {{ field }}
+                    {% for error in field.errors %}<div class="pa-admin-field-error">{{ error }}</div>{% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+
+        {% if readonly_rows %}
+        <section class="pa-admin-form-card">
+            <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Read only" %}</span><h2>{% trans "Protected fields" %}</h2></div></div>
+            <div class="pa-admin-readonly-grid">
+                {% for row in readonly_rows %}<div class="pa-admin-detail-row"><div><strong>{{ row.label }}</strong></div><pre class="pa-admin-detail-value {% if row.sensitive %}is-protected{% endif %}">{{ row.display }}</pre></div>{% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% for inline in formsets %}
+        <section class="pa-admin-inline-card">
+            <div class="pa-admin-card-header">
+                <div><span class="pa-admin-eyebrow">{% trans "Related records" %}</span><h2>{{ inline.inline.opts.verbose_name_plural|capfirst }}</h2></div>
+                <div class="pa-admin-inline-permissions">
+                    {% if inline.can_add %}<span>{% trans "Add" %}</span>{% endif %}
+                    {% if inline.can_change %}<span>{% trans "Change" %}</span>{% endif %}
+                    {% if inline.can_delete %}<span>{% trans "Delete" %}</span>{% endif %}
+                </div>
+            </div>
+            {{ inline.formset.management_form }}
+            {% if inline.formset.non_form_errors %}<div class="pa-admin-form-errors">{{ inline.formset.non_form_errors }}</div>{% endif %}
+            <div class="pa-admin-inline-list">
+                {% for inline_form in inline.forms %}
+                <article class="pa-admin-inline-row">
+                    {% for hidden in inline_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    {% for field in inline_form.visible_fields %}
+                    <div class="pa-admin-form-field {% if field.errors %}has-error{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="pa-admin-field-error">{{ error }}</div>{% endfor %}</div>
+                    {% endfor %}
+                </article>
+                {% empty %}<p class="pa-admin-empty">{% trans "No related forms are available." %}</p>{% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+
+        <div class="pa-admin-form-actions">
+            <button class="btn btn-primary" type="submit">{{ submit_label }}</button>
+            <button class="btn btn-secondary" type="submit" name="_continue" value="1">{% trans "Save and continue" %}</button>
+            {% if not object %}<button class="btn btn-secondary" type="submit" name="_addanother" value="1">{% trans "Save and add another" %}</button>{% endif %}
+            <a class="btn btn-secondary" href="{{ cancel_url }}">{% trans "Cancel" %}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

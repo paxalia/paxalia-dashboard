@@ -1,0 +1,43 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Import" %} · {{ definition.verbose_name_plural }} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{% trans "Import" %} {{ definition.verbose_name_plural }}{% endblock %}
+{% block page_subtitle %}{% trans "Validate a .paxalia package before applying it" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    <header class="pa-admin-page-head">
+        <div class="pa-admin-page-head__copy"><div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><a href="{{ overview_url }}">{{ definition.verbose_name_plural }}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Import" %}</span></div><span class="pa-admin-page-head__eyebrow">{{ definition.label }}</span><h2>{% trans "Import data" %}</h2><p>{% trans "Validation happens before mutations. Imported content is never rendered as trusted HTML." %}</p></div>
+        <div class="pa-admin-page-head__actions"><a class="btn btn-secondary" href="{{ list_url }}">{% trans "Back to records" %}</a></div>
+    </header>
+
+    {% if preview %}
+    <section class="pa-admin-card">
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Preview" %}</span><h2>{% trans "Ready to import" %}</h2></div><span class="pa-admin-status pa-admin-status--ok">{% trans "Validated" %}</span></div>
+        <div class="pa-admin-package-summary">
+            <div class="pa-admin-package-stat"><span>{% trans "Create" %}</span><strong>{{ preview.created }}</strong></div>
+            <div class="pa-admin-package-stat"><span>{% trans "Update" %}</span><strong>{{ preview.updated }}</strong></div>
+            <div class="pa-admin-package-stat"><span>{% trans "Skip" %}</span><strong>{{ preview.skipped }}</strong></div>
+            <div class="pa-admin-package-stat"><span>{% trans "Relationships" %}</span><strong>{{ preview.relationship_count }}</strong></div>
+        </div>
+        <form method="post" class="pa-admin-inline-form">
+            {% csrf_token %}
+            <input type="hidden" name="pending_id" value="{{ pending_id }}">
+            <input type="hidden" name="commit" value="1">
+            <div class="pa-admin-card-body"><div class="pa-admin-inline-form__grid"><label class="pa-admin-form-field"><span>{% trans "Conflicts" %}</span><select name="conflict"><option value="update" {% if conflict == 'update' %}selected{% endif %}>{% trans "Update existing" %}</option><option value="skip" {% if conflict == 'skip' %}selected{% endif %}>{% trans "Skip existing" %}</option></select></label><label class="pa-admin-form-field"><span>{% trans "Package password" %}</span><input type="password" name="password" autocomplete="current-password"></label></div><label class="pa-admin-form-field"><span>{% trans "Import mode" %}</span><select name="mode"><option value="atomic">{% trans "Atomic — roll back on failure" %}</option><option value="partial">{% trans "Partial success — isolate failed records" %}</option></select></label><label class="pa-admin-form-field"><span>{% trans "Safety" %}</span><span><input type="checkbox" name="dry_run" value="1"> {% trans "Dry run — make no database changes" %}</span></label></div>
+            <div class="pa-admin-form-actions"><button class="btn btn-primary" type="submit">{% trans "Apply import" %}</button><a class="btn btn-secondary" href="{{ list_url }}">{% trans "Cancel" %}</a></div>
+        </form>
+    </section>
+    {% else %}
+    <form method="post" enctype="multipart/form-data" class="pa-admin-card pa-admin-inline-form">
+        {% csrf_token %}
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Package" %}</span><h2>{% trans "Upload a .paxalia file" %}</h2></div></div>
+        <div class="pa-admin-card-body">
+            <div class="pa-admin-upload-zone"><input type="file" name="package" accept=".paxalia,application/zip" required></div>
+            <div class="pa-admin-inline-form__grid"><label class="pa-admin-form-field"><span>{% trans "Conflict strategy" %}</span><select name="conflict"><option value="update">{% trans "Update existing" %}</option><option value="skip">{% trans "Skip existing" %}</option></select></label><label class="pa-admin-form-field"><span>{% trans "Package password" %}</span><input type="password" name="password" autocomplete="current-password" placeholder="{% trans 'Required for encrypted packages' %}"></label><div class="pa-admin-card-body"><p class="form-hint">{% trans "The package is copied to a private temporary location for the preview step and removed after completion." %}</p></div></div>
+        </div>
+        <div class="pa-admin-form-actions"><button class="btn btn-primary" type="submit">{% trans "Validate package" %}</button><a class="btn btn-secondary" href="{{ list_url }}">{% trans "Cancel" %}</a></div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

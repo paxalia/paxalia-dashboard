@@ -1,0 +1,63 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{{ page_title }} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{{ page_subtitle }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    <header class="pa-admin-page-head">
+        <div class="pa-admin-page-head__copy">
+            <div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><a href="{{ list_url }}">{{ definition.verbose_name_plural }}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Record" %}</span></div>
+            <span class="pa-admin-page-head__eyebrow">{{ definition.label }}</span>
+            <h2>{% trans "Object detail" %}</h2>
+            <p>{% trans "Safe field and relationship inspection using the registered ModelAdmin queryset." %}</p>
+        </div>
+        <div class="pa-admin-page-head__actions">
+            <a class="btn btn-secondary" href="{{ list_url }}">{% trans "Back to records" %}</a>
+            {% if can_change %}<a class="btn btn-primary" href="{{ change_url }}">{% trans "Edit" %}</a>{% endif %}
+            {% if can_delete %}<a class="btn btn-danger" href="{{ delete_url }}">{% trans "Delete" %}</a>{% endif %}
+        </div>
+    </header>
+
+    <div class="pa-admin-two-col pa-admin-detail-grid">
+        <section class="pa-admin-card pa-admin-detail-fields">
+            <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Identity" %}</span><h2>{% trans "Record fields" %}</h2></div></div>
+            {% for item in identity_values %}<div class="pa-admin-detail-row"><div><strong>{{ item.field }}</strong></div><pre class="pa-admin-detail-value {% if item.value == '••••••••' %}is-protected{% endif %}">{{ item.value }}</pre></div>{% endfor %}
+            {% for field in fields %}
+            <div class="pa-admin-detail-row"><div><strong>{{ field.label }}</strong>{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</div><pre class="pa-admin-detail-value {% if field.sensitive %}is-protected{% endif %}">{% if field.display.url %}<a class="analytics-table-link" href="{{ field.display.url }}">{{ field.display.value }}</a>{% else %}{{ field.display }}{% endif %}</pre></div>
+            {% empty %}<p class="pa-admin-empty">{% trans "No displayable fields are available." %}</p>{% endfor %}
+        </section>
+        <aside class="pa-admin-card">
+            <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Capabilities" %}</span><h2>{% trans "Model state" %}</h2></div></div>
+            <div class="pa-admin-capability-list">{% for label,key in capabilities.items %}<div class="pa-admin-capability-row"><span>{{ label|title }}</span><strong class="pa-admin-status {% if key %}pa-admin-status--ok{% else %}pa-admin-status--muted{% endif %}">{% if key %}{% trans "Available" %}{% else %}{% trans "Unavailable" %}{% endif %}</strong></div>{% endfor %}</div>
+            <hr class="pa-admin-divider">
+            <div class="pa-admin-card-body">
+                <div class="pa-admin-kv"><span>{% trans "Primary key" %}</span><strong>{% if 'id' in sensitive_fields %}••••••••{% else %}{{ object.pk }}{% endif %}</strong></div>
+                <div class="pa-admin-kv"><span>{% trans "Total records" %}</span><strong>{{ statistics.total }}</strong></div>
+            </div>
+        </aside>
+    </div>
+
+    <section class="pa-admin-card">
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Relationships" %}</span><h2>{% trans "Related records" %}</h2></div></div>
+        <div class="pa-admin-relations">
+            {% for relation in relations %}
+            <article class="pa-admin-relation">
+                <div><span class="pa-admin-eyebrow">{{ relation.name }}</span><h3>{{ relation.label }}</h3></div>
+                <div>
+                    {% if relation.error %}
+                        <span class="pa-admin-status pa-admin-status--muted">{% trans "Unavailable" %}</span>
+                    {% else %}
+                        <span class="pa-admin-count">{{ relation.count }}</span>
+                        {% for item in relation.items %}<div class="pa-admin-related-item">{% if item.url %}<a class="analytics-table-link" href="{{ item.url }}">{{ item.value }}</a>{% else %}{{ item.value }}{% endif %}</div>{% endfor %}
+                        {% if relation.more %}<small class="pa-admin-note">{% blocktrans with count=relation.more %}{{ count }} more records{% endblocktrans %}</small>{% endif %}
+                    {% endif %}
+                </div>
+            </article>
+            {% empty %}<p class="pa-admin-empty">{% trans "No relationships are defined for this object." %}</p>{% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+

@@ -1,0 +1,45 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{{ page_title }} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}{{ page_subtitle }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    <header class="pa-admin-page-head">
+        <div class="pa-admin-page-head__copy">
+            <div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Audit" %}</span></div>
+            <span class="pa-admin-page-head__eyebrow">{% trans "Administration" %}</span>
+            <h2>{% trans "Admin Audit" %}</h2>
+            <p>{% trans "Trace model mutations and privileged Paxalia Admin operations without exposing protected values." %}</p>
+        </div>
+        <div class="pa-admin-page-head__actions"><a class="btn btn-secondary" href="{% url 'paxalia:admin_models' %}">{% trans "Models" %}</a><a class="btn btn-secondary" href="{% url 'paxalia:admin_home' %}">{% trans "Admin overview" %}</a></div>
+    </header>
+
+    <form method="get" class="pa-admin-filterbar">
+        <label class="pa-admin-search"><span>{% trans "Search audit entries" %}</span><span class="pa-admin-search__control"><span class="pa-admin-search__icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M15.5 15.5 21 21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></span><input id="audit-search" type="search" name="q" value="{{ search }}" placeholder="{% trans 'Action or detail' %}"></span></label>
+        <div class="pa-admin-form-field"><label for="audit-action">{% trans "Operation" %}</label><select id="audit-action" name="action"><option value="">{% trans "All operations" %}</option>{% for value in actions %}<option value="{{ value }}" {% if selected_action == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></div>
+        <div class="pa-admin-actions"><button class="btn btn-primary" type="submit">{% trans "Apply filters" %}</button><a class="btn btn-secondary" href="{% url 'paxalia:admin_audit' %}">{% trans "Clear" %}</a></div>
+    </form>
+
+    <section class="pa-admin-table-card">
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Trace" %}</span><h2>{% trans "Administrative operations" %}</h2></div><span class="pa-admin-status pa-admin-status--muted">{% blocktrans count count=paginator.count %}{{ count }} entry{% plural %}{{ count }} entries{% endblocktrans %}</span></div>
+        <div class="pa-admin-table-wrap">
+            <table class="analytics-table pa-admin-data-table">
+                <thead><tr><th>{% trans "Time" %}</th><th>{% trans "Operation" %}</th><th>{% trans "User" %}</th><th>{% trans "Detail" %}</th></tr></thead>
+                <tbody>
+                {% for entry in audit_entries %}
+                    <tr><td><time datetime="{{ entry.created_at|date:'c' }}">{{ entry.created_at|date:'Y-m-d H:i:s' }}</time></td><td><span class="pa-admin-status pa-admin-status--ok">{{ entry.action }}</span></td><td>{% if entry.user %}{{ entry.user.get_username }}{% else %}{% trans "System" %}{% endif %}</td><td><span class="pa-admin-audit-detail">{{ entry.detail|default:"—" }}</span></td></tr>
+                {% empty %}
+                    <tr><td colspan="4"><div class="pa-admin-empty">{% trans "No administrative operations match the current filters." %}</div></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if paginator.num_pages > 1 %}
+        <div class="pa-admin-pagination"><span>{% blocktrans with start=page_obj.start_index end=page_obj.end_index count=paginator.count %}Showing {{ start }}–{{ end }} of {{ count }}{% endblocktrans %}</span><nav aria-label="{% trans 'Admin audit pagination' %}">{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}{% if search %}&q={{ search|urlencode }}{% endif %}{% if selected_action %}&action={{ selected_action|urlencode }}{% endif %}">{% trans "Previous" %}</a>{% endif %}<strong>{{ page_obj.number }} / {{ paginator.num_pages }}</strong>{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}{% if search %}&q={{ search|urlencode }}{% endif %}{% if selected_action %}&action={{ selected_action|urlencode }}{% endif %}">{% trans "Next" %}</a>{% endif %}</nav></div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+

@@ -107,7 +107,7 @@
                    data-feed-url="{% url 'paxalia:log_feed' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
                    data-detail-url-template="{% url 'paxalia:log_detail' '00000000-0000-0000-0000-000000000000' %}"
                    data-refresh-seconds="{{ log_refresh_seconds }}">
-            {% blocktrans with seconds=log_refresh_seconds %}Auto refresh every {{ seconds }} seconds{% endblocktrans %}
+            {% trans "Auto refresh every" %} {{ log_refresh_seconds }} {% trans "seconds" %}
         </label>
         <span class="logging-toolbar__hint">{% trans "The feed is permission-checked and bounded." %}</span>
         <div class="logging-actions">
@@ -166,3 +166,4 @@
 <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/logging-filter.js' %}"></script>
 <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/logs.js' %}"></script>
 {% endblock %}
+

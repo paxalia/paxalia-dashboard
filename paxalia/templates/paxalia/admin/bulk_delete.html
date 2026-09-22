@@ -1,0 +1,38 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Delete selected" %} · Paxalia{% endblock %}
+{% block page_title %}{% trans "Delete selected" %}{% endblock %}
+{% block page_subtitle %}{% trans "Confirm this bulk destructive operation" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    <header class="pa-admin-page-head pa-admin-page-head--danger">
+        <div class="pa-admin-page-head__copy">
+            <div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{{ definition.verbose_name_plural }}</span><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Delete selected" %}</span></div>
+            <span class="pa-admin-page-head__eyebrow">{% trans "Destructive action" %}</span>
+            <h2>{% blocktrans with count=selected_count %}Delete {{ count }} records?{% endblocktrans %}</h2>
+            <p>{% trans "Review the selection before confirming. The registered ModelAdmin delete_queryset behavior and Django's normal deletion semantics will be used." %}</p>
+        </div>
+    </header>
+
+    <section class="pa-admin-danger-card" aria-labelledby="bulk-delete-warning">
+        <div class="pa-admin-danger-icon" aria-hidden="true">!</div>
+        <div><span class="pa-admin-eyebrow">{% trans "Please review" %}</span><h2 id="bulk-delete-warning">{% trans "This action cannot be undone" %}</h2><p>{% trans "Only proceed after confirming that the selected records are safe to remove." %}</p></div>
+    </section>
+
+    <div class="pa-admin-summary-strip">
+        <div class="pa-admin-summary-item"><span>{% trans "Selected" %}</span><strong>{{ selected_count }}</strong></div>
+        <div class="pa-admin-summary-item"><span>{% trans "Preview" %}</span><strong>{{ objects|length }}</strong></div>
+        <div class="pa-admin-summary-item"><span>{% trans "Not shown" %}</span><strong>{{ remaining_count }}</strong></div>
+    </div>
+
+    <section class="pa-admin-card">
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Selected records" %}</span><h2>{% trans "Review" %}</h2></div></div>
+        <div class="pa-admin-selected-list">{% for obj in objects %}<div>{{ obj.display }}</div>{% empty %}<p class="pa-admin-empty">{% trans "No objects remain selected." %}</p>{% endfor %}{% if remaining_count %}<p class="pa-admin-note">{% blocktrans with count=remaining_count %}Plus {{ count }} additional records not displayed here.{% endblocktrans %}</p>{% endif %}</div>
+    </section>
+
+    <div class="pa-admin-form-actions"><a class="btn btn-secondary" href="{{ cancel_url }}">{% trans "Cancel" %}</a><form method="post" data-paxalia-confirm-form>{% csrf_token %}<button class="btn btn-danger" type="submit">{% trans "Confirm deletion" %}</button></form></div>
+</div>
+{% endblock %}
+{% block page_scripts %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/admin-center.js' %}"></script>{% endblock %}
+

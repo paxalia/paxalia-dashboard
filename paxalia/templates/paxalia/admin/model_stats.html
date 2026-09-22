@@ -1,0 +1,40 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Statistics" %} · {{ definition.verbose_name }} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{{ definition.verbose_name }} {% trans "Statistics" %}{% endblock %}
+{% block page_subtitle %}{% trans "Bounded aggregates from the registered ModelAdmin queryset" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    <header class="pa-admin-page-head">
+        <div class="pa-admin-page-head__copy">
+            <div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><a href="{{ overview_url }}">{{ definition.verbose_name_plural }}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Statistics" %}</span></div>
+            <span class="pa-admin-page-head__eyebrow">{{ definition.label }}</span>
+            <h2>{% trans "Statistics" %}</h2>
+            <p>{% trans "Bounded model-level aggregates based on the registered Django queryset." %}</p>
+        </div>
+        <div class="pa-admin-page-head__actions"><a class="btn btn-secondary" href="{{ overview_url }}">{% trans "Overview" %}</a><a class="btn btn-primary" href="{{ list_url }}">{% trans "Records" %}</a></div>
+    </header>
+
+    <div class="pa-admin-stat-grid pa-admin-stat-grid--four">
+        <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Total" %}</span><strong>{{ stats.total }}</strong><span>{% trans "visible records" %}</span></article>
+        <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Created today" %}</span><strong>{% if stats.created_today is not None %}{{ stats.created_today }}{% else %}—{% endif %}</strong><span>{% if stats.timestamp_field %}{{ stats.timestamp_field }}{% else %}{% trans "Not detected" %}{% endif %}</span></article>
+        <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Updated today" %}</span><strong>{% if stats.updated_today is not None %}{{ stats.updated_today }}{% else %}—{% endif %}</strong><span>{% if stats.updated_field %}{{ stats.updated_field }}{% else %}{% trans "Not detected" %}{% endif %}</span></article>
+        <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Relations" %}</span><strong>{{ stats.related_fields }}</strong><span>{% trans "relationship fields" %}</span></article>
+    </div>
+
+    {% if stats.choice_breakdowns %}
+    <section class="pa-admin-card">
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Choices" %}</span><h2>{% trans "Field distributions" %}</h2></div></div>
+        <div class="pa-admin-breakdown-grid">
+            {% for breakdown in stats.choice_breakdowns %}
+            <div class="pa-admin-breakdown"><h3>{{ breakdown.label }}</h3>{% for row in breakdown.rows %}<div class="pa-admin-breakdown-row"><span>{% if row.value %}{{ row.value }}{% else %}{% trans "Empty" %}{% endif %}</span><strong>{{ row.count }}</strong></div>{% endfor %}</div>
+            {% endfor %}
+        </div>
+    </section>
+    {% else %}
+    <div class="pa-admin-empty-state"><h2>{% trans "No choice distributions available" %}</h2><p>{% trans "This model does not expose bounded choice fields for the statistics view." %}</p></div>
+    {% endif %}
+</div>
+{% endblock %}
+

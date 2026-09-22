@@ -32,6 +32,7 @@ from .views import notifications as notifications_views
 from .views import logs as logs_views
 from .views import login_activity as login_activity_views
 from .views.dependencies import dependencies, dependency_status
+from .admin_center import urls as admin_center_urls
 
 app_name = 'paxalia'
 
@@ -98,6 +99,10 @@ dashboard_urlpatterns = [
     path('server/queues/', server_views.server_queues, name='server_queues'),
     path('server/deployments/', server_views.server_deployments, name='server_deployments'),
 
+    # Paxalia Admin — Django Admin-compatible administrative surface.
+    path('', include(admin_center_urls)),
+
+    # Backward-compatible admin overview URL.
     path('admin-overview/', admin_overview, name='admin_overview'),
 
     path('security/', security_views.security_center, name='security'),
@@ -166,3 +171,4 @@ urlpatterns = dashboard_urlpatterns + [
     path('api/', include(api_urlpatterns)),
     path('paxalia-api/v1/', include(paxalia_api_urlpatterns)),
 ]
+
