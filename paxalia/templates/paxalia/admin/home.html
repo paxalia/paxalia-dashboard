@@ -1,0 +1,85 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{% trans "Paxalia Admin" %}{% endblock %}
+{% block page_subtitle %}{% trans "Your Django administration command center inside Paxalia Dashboard" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell pa-admin-shell--overview">
+    <header class="pa-admin-page-head pa-admin-page-head--hero">
+        <div class="pa-admin-page-head__copy">
+            <div class="pa-admin-breadcrumbs" aria-label="{% trans 'Breadcrumb' %}"><a href="{% url 'paxalia:dashboard' %}">{% trans "Dashboard" %}</a><span class="pa-admin-breadcrumbs__separator" aria-hidden="true">/</span><span>{% trans "Administration" %}</span></div>
+            <span class="pa-admin-page-head__eyebrow">{% trans "Paxalia control plane" %}</span>
+            <h2>{% trans "Administration, organized" %}</h2>
+            <p>{% trans "Inspect registered models, manage records, review activity, localize content, move structured data, and fall back to Django Admin only when a project-specific surface needs it." %}</p>
+        </div>
+        <div class="pa-admin-page-head__actions">
+            <a class="btn btn-primary" href="{% url 'paxalia:admin_models' %}">{% trans "Browse models" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_packages' %}">{% trans "Packages" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_audit' %}">{% trans "Audit" %}</a>
+        </div>
+    </header>
+
+    {% if configuration_issues %}
+    <section class="pa-admin-alert-card" aria-labelledby="admin-config-title">
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Configuration" %}</span><h2 id="admin-config-title">{% trans "Review Admin configuration" %}</h2></div><span class="pa-admin-status pa-admin-status--warning">{{ configuration_issues|length }} {% trans "issue(s)" %}</span></div>
+        <div class="pa-admin-alert-list">{% for issue in configuration_issues|slice:":8" %}<div class="pa-admin-alert-row"><strong>{{ issue.level|upper }}</strong><span>{{ issue.message }}</span></div>{% endfor %}</div>
+    </section>
+    {% endif %}
+
+    <section aria-labelledby="admin-summary-title">
+        <div class="pa-admin-section-head"><div><span class="pa-admin-eyebrow">{% trans "At a glance" %}</span><h2 id="admin-summary-title">{% trans "Administration summary" %}</h2></div></div>
+        <div class="pa-admin-stat-grid">
+            <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Applications" %}</span><strong>{{ application_count }}</strong><span>{% trans "registered Django apps" %}</span></article>
+            <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Models" %}</span><strong>{{ model_count }}</strong><span>{% trans "available through the registry" %}</span></article>
+            <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Writable" %}</span><strong>{{ writable_count }}</strong><span>{% trans "models with management permissions" %}</span></article>
+            <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Localized" %}</span><strong>{{ localized_count }}</strong><span>{% trans "translation-aware models" %}</span></article>
+            <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Protected" %}</span><strong>{{ protected_count }}</strong><span>{% trans "models needing extra care" %}</span></article>
+        </div>
+    </section>
+
+    <section aria-labelledby="admin-tools-title">
+        <div class="pa-admin-section-head"><div><span class="pa-admin-eyebrow">{% trans "Tools" %}</span><h2 id="admin-tools-title">{% trans "Admin workspace" %}</h2><p>{% trans "Open a focused surface for the task instead of carrying the full registry everywhere." %}</p></div></div>
+        <div class="pa-admin-action-grid pa-admin-action-grid--tools">
+            <a class="pa-admin-action-tile" href="{% url 'paxalia:admin_models' %}"><strong>{% trans "Models" %}</strong><span>{% trans "Search, inspect, create, edit, delete, and run registered actions." %}</span></a>
+            <a class="pa-admin-action-tile" href="{% url 'paxalia:admin_packages' %}"><strong>{% trans "Packages" %}</strong><span>{% trans "Export, validate, preview, import, and review structured data operations." %}</span></a>
+            <a class="pa-admin-action-tile" href="{% url 'paxalia:admin_audit' %}"><strong>{% trans "Audit" %}</strong><span>{% trans "Trace privileged administrative activity without exposing protected values." %}</span></a>
+            <a class="pa-admin-action-tile" href="{% url 'paxalia:logs' %}"><strong>{% trans "Paxalia Logs" %}</strong><span>{% trans "Move from an administrative change to operational evidence when investigation is needed." %}</span></a>
+        </div>
+    </section>
+
+    <section class="pa-admin-capability-hero" aria-label="{% trans 'Administration capabilities' %}">
+        <article class="pa-admin-card"><div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Localization" %}</span><h2>{% trans "Multilingual content" %}</h2></div></div><div class="pa-admin-card-body"><p>{% blocktrans with count=localized_count %}{{ count }} registered models expose a recognized localization capability. Open a model's Localization workspace to inspect language completeness and manage translations.{% endblocktrans %}</p><div class="pa-admin-capability-list"><div class="pa-admin-capability-row"><span>{% trans "Detection" %}</span><strong class="pa-admin-status pa-admin-status--ok">{% trans "Automatic" %}</strong></div><div class="pa-admin-capability-row"><span>{% trans "Language source" %}</span><strong class="pa-admin-status pa-admin-status--muted">{% trans "Django settings" %}</strong></div><div class="pa-admin-capability-row"><span>{% trans "Bulk workflow" %}</span><strong class="pa-admin-status pa-admin-status--ok">{% trans "Package ready" %}</strong></div></div></div></article>
+        <article class="pa-admin-card"><div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Integrations" %}</span><h2>{% trans "Operational command surfaces" %}</h2></div></div><div class="pa-admin-card-body"><p>{% trans "Chat-oriented operations stay separate from record management so each surface remains focused." %}</p><div class="pa-admin-capability-list"><div class="pa-admin-capability-row"><span>{% trans "Slack commands" %}</span><strong class="pa-admin-status {% if analytics_config.SLACK_SIGNING_SECRET %}pa-admin-status--ok{% else %}pa-admin-status--muted{% endif %}">{% if analytics_config.SLACK_SIGNING_SECRET %}{% trans "Configured" %}{% else %}{% trans "Not configured" %}{% endif %}</strong></div><div class="pa-admin-capability-row"><span>{% trans "Discord interactions" %}</span><strong class="pa-admin-status {% if analytics_config.DISCORD_PUBLIC_KEY %}pa-admin-status--ok{% else %}pa-admin-status--muted{% endif %}">{% if analytics_config.DISCORD_PUBLIC_KEY %}{% trans "Configured" %}{% else %}{% trans "Not configured" %}{% endif %}</strong></div><div class="pa-admin-capability-row"><span>{% trans "Django Admin fallback" %}</span><strong class="pa-admin-status {% if analytics_config.ADMIN_DJANGO_FALLBACK_ENABLED %}pa-admin-status--ok{% else %}pa-admin-status--muted{% endif %}">{% if analytics_config.ADMIN_DJANGO_FALLBACK_ENABLED %}{% trans "Available" %}{% else %}{% trans "Disabled" %}{% endif %}</strong></div></div></div></article>
+    </section>
+
+    <section aria-labelledby="admin-registry-title">
+        <div class="pa-admin-section-head"><div><span class="pa-admin-eyebrow">{% trans "Registry" %}</span><h2 id="admin-registry-title">{% trans "Registered models" %}</h2><p>{% trans "Django's admin registry remains the source of truth for the model surface." %}</p></div><a class="btn btn-secondary btn-sm" href="{% url 'paxalia:admin_models' %}">{% trans "View all models" %}</a></div>
+        <div class="pa-admin-app-grid">
+            {% for app in app_cards %}
+            <section class="pa-admin-app-card" aria-labelledby="home-app-{{ forloop.counter }}">
+                <div class="pa-admin-app-card__header">
+                    <div class="pa-admin-app-card__heading"><span class="pa-admin-eyebrow">{{ app.app_label }}</span><h3 id="home-app-{{ forloop.counter }}">{{ app.app_verbose_name }}</h3></div>
+                    <div class="pa-admin-app-card__controls"><span class="pa-admin-count">{{ app.definitions|length }}</span><button class="pa-admin-app-card__toggle" type="button" data-pa-app-toggle aria-controls="home-model-grid-{{ forloop.counter }}" aria-expanded="true"><span class="sr-only">{% trans "Toggle models" %}</span><span aria-hidden="true">⌄</span></button></div>
+                </div>
+                <div class="pa-admin-model-grid" id="home-model-grid-{{ forloop.counter }}">
+                    {% for item in app.definitions %}
+                    <article class="pa-admin-model-card"><div><span class="pa-admin-eyebrow">{{ item.definition.label }}</span><h3>{{ item.definition.verbose_name_plural }}</h3></div><div class="pa-admin-capabilities" aria-label="{% trans 'Model capabilities' %}">{% if item.capabilities.search %}<span>{% trans "Search" %}</span>{% endif %}{% if item.capabilities.filters %}<span>{% trans "Filters" %}</span>{% endif %}{% if item.capabilities.actions %}<span>{% trans "Actions" %}</span>{% endif %}{% if item.capabilities.relationships %}<span>{% trans "Relations" %}</span>{% endif %}{% if item.capabilities.localization %}<span>{% trans "Localization" %}</span>{% endif %}{% if item.capabilities.import_export %}<span>{% trans "Packages" %}</span>{% endif %}{% if item.capabilities.protected %}<span class="pa-admin-pill--warning">{% trans "Protected" %}</span>{% endif %}</div><div class="pa-admin-model-card__footer"><a class="btn btn-secondary btn-sm" href="{% url 'paxalia:admin_model_overview' app_label=item.definition.app_label model_name=item.definition.model_name %}">{% trans "Overview" %}</a><a class="btn btn-primary btn-sm" href="{% url 'paxalia:admin_model_list' app_label=item.definition.app_label model_name=item.definition.model_name %}">{% trans "Records" %}</a></div></article>
+                    {% endfor %}
+                </div>
+            </section>
+            {% empty %}<div class="pa-admin-empty-state"><h2>{% trans "No models are available" %}</h2><p>{% trans "Register models with Django's admin.site to make them available in Paxalia Admin." %}</p></div>{% endfor %}
+        </div>
+    </section>
+
+    <section aria-labelledby="admin-activity-title">
+        <div class="pa-admin-section-head"><div><span class="pa-admin-eyebrow">{% trans "Activity" %}</span><h2 id="admin-activity-title">{% trans "Recent activity" %}</h2><p>{% trans "Recent administrative changes and operational signals." %}</p></div><a class="btn btn-secondary btn-sm" href="{% url 'paxalia:admin_audit' %}">{% trans "Open audit" %}</a></div>
+        <div class="pa-admin-activity-grid">
+            <section class="pa-admin-activity-card"><div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Paxalia audit" %}</span><h2>{% trans "Administrative changes" %}</h2></div></div><div class="pa-admin-feed">{% for item in recent_changes %}<div class="pa-admin-feed-row"><div><strong>{{ item.action }}</strong><small>{% if item.user %}{{ item.user }}{% else %}{% trans "System" %}{% endif %} · {{ item.detail }}</small></div><time datetime="{{ item.created_at|date:'c' }}">{{ item.created_at }}</time></div>{% empty %}<p class="pa-admin-empty">{% trans "No Paxalia Admin changes have been recorded yet." %}</p>{% endfor %}</div></section>
+            <section class="pa-admin-activity-card"><div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Django audit" %}</span><h2>{% trans "Admin log entries" %}</h2></div></div><div class="pa-admin-feed">{% for item in recent_django_actions %}<div class="pa-admin-feed-row"><div><strong>{{ item.action.get_action_flag_display }}</strong><small>{% if item.action.content_type %}{{ item.action.content_type }}{% else %}{% trans "Unknown model" %}{% endif %} · {{ item.object_repr }}</small></div><time datetime="{{ item.action.action_time|date:'c' }}">{{ item.action.action_time }}</time></div>{% empty %}<p class="pa-admin-empty">{% trans "No Django Admin log entries are available." %}</p>{% endfor %}</div></section>
+            <section class="pa-admin-activity-card"><div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Authentication" %}</span><h2>{% trans "Login activity" %}</h2></div></div><div class="pa-admin-feed">{% for item in recent_logins %}<div class="pa-admin-feed-row"><div><strong>{{ item.event_type }} · {{ item.result }}</strong><small>{% if item.user %}{{ item.user }}{% elif item.username_attempted %}{{ item.username_attempted }}{% else %}{% trans "Unresolved account" %}{% endif %}</small></div><time datetime="{{ item.created_at|date:'c' }}">{{ item.created_at }}</time></div>{% empty %}<p class="pa-admin-empty">{% trans "No login activity is available." %}</p>{% endfor %}</div></section>
+        </div>
+    </section>
+</div>
+{% endblock %}
+{% block page_scripts %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/admin-center.js' %}"></script>{% endblock %}

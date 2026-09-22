@@ -1,0 +1,44 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Models" %} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{% trans "Models" %}{% endblock %}
+{% block page_subtitle %}{% trans "Registered Django models and their available administrative capabilities" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    {% if configuration_issues %}
+    <section class="pa-admin-alert-card"><div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Configuration" %}</span><h2>{% trans "Admin configuration needs attention" %}</h2></div><span class="pa-admin-status pa-admin-status--warning">{{ configuration_issues|length }} {% trans "issue(s)" %}</span></div><div class="pa-admin-alert-list">{% for issue in configuration_issues|slice:":6" %}<div class="pa-admin-alert-row"><strong>{{ issue.level|upper }}</strong><span>{{ issue.message }}</span></div>{% endfor %}</div></section>
+    {% endif %}
+
+    <section class="pa-admin-model-browser" data-paxalia-model-browser>
+        <div class="pa-admin-browser-head">
+            <div><span class="pa-admin-eyebrow">{% trans "Registry" %}</span><h2>{% trans "Find a model" %}</h2><p>{% trans "Search by app, model, or capability. App groups stay compact until you need them." %}</p></div>
+            <div class="pa-admin-browser-meta"><span><strong data-pa-model-result-count>{{ model_count }}</strong> {% trans "models" %}</span><button class="btn btn-secondary btn-sm" type="button" data-pa-show-all-models>{% trans "Expand all" %}</button><a class="btn btn-secondary btn-sm" href="{% url 'paxalia:admin_home' %}">{% trans "Overview" %}</a></div>
+        </div>
+        <div class="pa-admin-filterbar pa-admin-filterbar--models">
+            <label class="pa-admin-search"><span>{% trans "Search models" %}</span><span class="pa-admin-search__control"><span class="pa-admin-search__icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M15.5 15.5 21 21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></span><input type="search" data-pa-model-search autocomplete="off" placeholder="{% trans 'Search app, model, or capability…' %}"></span></label>
+        </div>
+        <div class="pa-admin-model-browser__groups">
+            {% for app in app_cards %}
+            <section class="pa-admin-model-section" data-pa-app-group aria-labelledby="model-app-{{ forloop.counter }}">
+                <div class="pa-admin-app-card__header">
+                    <div class="pa-admin-app-card__heading"><span class="pa-admin-eyebrow">{{ app.app_label }}</span><h3 id="model-app-{{ forloop.counter }}">{{ app.app_verbose_name }}</h3></div>
+                    <div class="pa-admin-app-card__controls"><span class="pa-admin-count">{{ app.definitions|length }}</span><button class="pa-admin-app-card__toggle" type="button" data-pa-app-toggle aria-controls="model-grid-{{ forloop.counter }}" aria-expanded="false"><span class="sr-only">{% trans "Toggle models" %}</span><span aria-hidden="true">⌄</span></button></div>
+                </div>
+                <div class="pa-admin-model-grid pa-admin-model-grid--browser" id="model-grid-{{ forloop.counter }}" hidden>
+                    {% for item in app.definitions %}
+                    <article class="pa-admin-model-card" data-pa-model-card data-model-search="{{ item.definition.label|lower }} {{ item.definition.verbose_name_plural|lower }} {{ app.app_verbose_name|lower }} {% if item.capabilities.search %}search{% endif %} {% if item.capabilities.filters %}filters{% endif %} {% if item.capabilities.actions %}actions{% endif %} {% if item.capabilities.relationships %}relations{% endif %} {% if item.capabilities.localization %}localization{% endif %} {% if item.capabilities.import_export %}packages{% endif %} {% if item.capabilities.protected %}protected{% endif %}">
+                        <div class="pa-admin-model-card__main"><span class="pa-admin-eyebrow">{{ item.definition.label }}</span><h3>{{ item.definition.verbose_name_plural }}</h3></div>
+                        <div class="pa-admin-capabilities" aria-label="{% trans 'Model capabilities' %}">{% if item.capabilities.search %}<span>{% trans "Search" %}</span>{% endif %}{% if item.capabilities.filters %}<span>{% trans "Filters" %}</span>{% endif %}{% if item.capabilities.actions %}<span>{% trans "Actions" %}</span>{% endif %}{% if item.capabilities.relationships %}<span>{% trans "Relations" %}</span>{% endif %}{% if item.capabilities.localization %}<span>{% trans "Localization" %}</span>{% endif %}{% if item.capabilities.import_export %}<span>{% trans "Packages" %}</span>{% endif %}{% if item.capabilities.protected %}<span class="pa-admin-pill--warning">{% trans "Protected" %}</span>{% endif %}</div>
+                        <div class="pa-admin-model-card__footer"><a class="btn btn-secondary btn-sm" href="{% url 'paxalia:admin_model_overview' app_label=item.definition.app_label model_name=item.definition.model_name %}">{% trans "Overview" %}</a><a class="btn btn-primary btn-sm" href="{% url 'paxalia:admin_model_list' app_label=item.definition.app_label model_name=item.definition.model_name %}">{% trans "Records" %}</a></div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+            {% empty %}<div class="pa-admin-empty-state" data-pa-model-empty-state><h2>{% trans "No models are available" %}</h2><p>{% trans "Register models with Django's admin.site to make them available in Paxalia Admin." %}</p></div>{% endfor %}
+        </div>
+        <div class="pa-admin-empty pa-admin-empty--browser" data-pa-model-no-results hidden><strong>{% trans "No matching models" %}</strong><span>{% trans "Try a different app, model name, or capability." %}</span></div>
+    </section>
+</div>
+{% endblock %}
+{% block page_scripts %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/admin-center.js' %}"></script>{% endblock %}

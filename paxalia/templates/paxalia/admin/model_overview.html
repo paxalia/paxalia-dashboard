@@ -1,0 +1,74 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{{ definition.verbose_name_plural }} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{{ definition.verbose_name_plural }}{% endblock %}
+{% block page_subtitle %}{{ definition.label }} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    <header class="pa-admin-page-head">
+        <div class="pa-admin-page-head__copy">
+            <div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><a href="{% url 'paxalia:admin_models' %}">{% trans "Models" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{{ definition.verbose_name_plural }}</span></div>
+            <span class="pa-admin-page-head__eyebrow">{{ definition.label }}</span>
+            <h2>{% trans "Model overview" %}</h2>
+            <p>{% trans "Capabilities, permissions, and safe management surfaces derived from the registered ModelAdmin." %}</p>
+        </div>
+        <div class="pa-admin-page-head__actions">
+            <a class="btn btn-primary" href="{{ url_list }}">{% trans "Records" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_model_stats' app_label=definition.app_label model_name=definition.model_name %}">{% trans "Statistics" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_model_localization' app_label=definition.app_label model_name=definition.model_name %}">{% trans "Localization" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_model_import' app_label=definition.app_label model_name=definition.model_name %}">{% trans "Import" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_model_export' app_label=definition.app_label model_name=definition.model_name %}">{% trans "Export" %}</a>
+            {% if url_add %}<a class="btn btn-secondary" href="{{ url_add }}">{% trans "Add" %}</a>{% endif %}
+            {% if django_fallback_url %}<a class="btn btn-secondary" href="{{ django_fallback_url }}">{% trans "Django Admin" %}</a>{% endif %}
+        </div>
+    </header>
+
+    <div class="pa-admin-stat-grid pa-admin-stat-grid--four">
+        <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Records" %}</span><strong>{{ stats.total }}</strong><span>{% trans "visible through ModelAdmin queryset" %}</span></article>
+        <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Created today" %}</span><strong>{% if stats.created_today is not None %}{{ stats.created_today }}{% else %}—{% endif %}</strong><span>{% if stats.timestamp_field %}{{ stats.timestamp_field }}{% else %}{% trans "No recognized timestamp field" %}{% endif %}</span></article>
+        <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Updated today" %}</span><strong>{% if stats.updated_today is not None %}{{ stats.updated_today }}{% else %}—{% endif %}</strong><span>{% if stats.updated_field %}{{ stats.updated_field }}{% else %}{% trans "No recognized update field" %}{% endif %}</span></article>
+        <article class="pa-admin-stat-card"><span class="pa-admin-eyebrow">{% trans "Relations" %}</span><strong>{{ stats.related_fields }}</strong><span>{% trans "model relationship fields" %}</span></article>
+    </div>
+
+    <div class="pa-admin-two-col pa-admin-detail-grid">
+        <section class="pa-admin-card">
+            <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Capabilities" %}</span><h2>{% trans "Available surfaces" %}</h2></div></div>
+            <div class="pa-admin-capability-list">
+                {% for label,key in capabilities.items %}
+                <div class="pa-admin-capability-row"><span>{{ label|title }}</span><strong class="pa-admin-status {% if key %}pa-admin-status--ok{% else %}pa-admin-status--muted{% endif %}">{% if key %}{% trans "Available" %}{% else %}{% trans "Unavailable" %}{% endif %}</strong></div>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="pa-admin-card">
+            <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Configuration" %}</span><h2>{% trans "Model policy" %}</h2></div></div>
+            <div class="pa-admin-card-body">
+                <div class="pa-admin-kv"><span>{% trans "Identity fields" %}</span><strong>{{ identity_fields|join:", " }}</strong></div>
+                <div class="pa-admin-kv"><span>{% trans "Sensitive fields" %}</span><strong>{{ sensitive_fields|length }}</strong></div>
+                <div class="pa-admin-kv"><span>{% trans "Protected" %}</span><strong>{% if capabilities.protected %}{% trans "Yes" %}{% else %}{% trans "No" %}{% endif %}</strong></div>
+                <div class="pa-admin-kv"><span>{% trans "Admin actions" %}</span><strong>{% if capabilities.actions %}{% trans "Configured" %}{% else %}{% trans "None" %}{% endif %}</strong></div>
+            </div>
+        </section>
+    </div>
+
+    {% if stats.choice_breakdowns %}
+    <section class="pa-admin-card">
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Distribution" %}</span><h2>{% trans "Choice field summaries" %}</h2></div></div>
+        <div class="pa-admin-breakdown-grid">
+            {% for breakdown in stats.choice_breakdowns %}
+            <div class="pa-admin-breakdown"><h3>{{ breakdown.label }}</h3>{% for row in breakdown.rows %}<div class="pa-admin-breakdown-row"><span>{% if row.value %}{{ row.value }}{% else %}{% trans "Empty" %}{% endif %}</span><strong>{{ row.count }}</strong></div>{% endfor %}</div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="pa-admin-activity-card">
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Recent activity" %}</span><h2>{% trans "Latest Django Admin changes" %}</h2></div></div>
+        <div class="pa-admin-feed">
+            {% for item in recent_changes %}
+            <div class="pa-admin-feed-row"><div><strong>{{ item.action.get_action_flag_display }}</strong><small>{{ item.object_repr }} · {{ item.action.user }}</small></div><time datetime="{{ item.action.action_time|date:'c' }}">{{ item.action.action_time }}</time></div>
+            {% empty %}<p class="pa-admin-empty">{% trans "No changes recorded for this model yet." %}</p>{% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -166,8 +166,7 @@
                         </span>
                 </td>
                 <td>{{ e.ip_address|default:"—" }}</td>
-                <td>{% if e.city or e.country_name %}{{ e.city }}{% if e.city and e.country_name %}, {% endif %}{{
-                    e.country_name }}{% else %}—{% endif %}
+                <td>{% if e.city or e.country_name %}{{ e.city }}{% if e.city and e.country_name %}, {% endif %}{{ e.country_name }}{% else %}—{% endif %}
                 </td>
                 <td>{{ e.browser }} / {{ e.os }}</td>
                 <td>{% if e.is_new_location %}<span class="status-flag-new">{% trans "Yes" %}</span>{% else %}—{% endif %}

@@ -4,6 +4,7 @@
 include paxalia/*.py
 include paxalia/views/*.py
 recursive-include paxalia/logging *.py
+recursive-include paxalia/admin_center *.py
 include paxalia/templatetags/*.py
 recursive-include paxalia/management *.py
 recursive-include paxalia/migrations *.py
@@ -29,3 +30,4 @@ include paxalia/locale/pt-br/LC_MESSAGES/django.po
 exclude paxalia/geoip/*.mmdb
 global-exclude *.pyc *.pyo __pycache__
 global-exclude *.mo
+

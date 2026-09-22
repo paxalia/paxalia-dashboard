@@ -1,0 +1,34 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "History" %} · {{ definition.verbose_name }} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{% trans "History" %}{% endblock %}
+{% block page_subtitle %}{{ definition.verbose_name }} · {{ object }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    <div class="pa-admin-toolbar">
+        <div><span class="pa-admin-eyebrow">{{ definition.label }}</span><h2>{% trans "Object history" %}</h2><p>{% trans "Traceable Django Admin changes for this object. Change messages contain operation metadata, not secret values." %}</p></div>
+        <div class="pa-admin-actions"><a class="btn btn-secondary" href="{{ back_url }}">{% trans "Back to object" %}</a>{% if change_url %}<a class="btn btn-primary" href="{{ change_url }}">{% trans "Edit" %}</a>{% endif %}</div>
+    </div>
+    <section class="table-card">
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Audit trail" %}</span><h2>{% blocktrans with count=page_obj.paginator.count %}{{ count }} history entries{% endblocktrans %}</h2></div></div>
+        <div class="pa-admin-feed">
+            {% for entry in entries %}
+            <article class="pa-admin-feed-row">
+                <div>
+                    <strong>{{ entry.get_action_flag_display }}</strong>
+                    <small>{% if entry.user %}{{ entry.user }}{% else %}{% trans "System" %}{% endif %} · {{ entry.get_change_message }}</small>
+                </div>
+                <time datetime="{{ entry.action_time|date:'c' }}">{{ entry.action_time }}</time>
+            </article>
+            {% empty %}
+            <p class="pa-admin-empty">{% trans "No Django Admin history is available for this object yet." %}</p>
+            {% endfor %}
+        </div>
+    </section>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pa-admin-pagination"><span>{% blocktrans with count=page_obj.paginator.count %}{{ count }} total{% endblocktrans %}</span><nav aria-label="{% trans 'Page navigation' %}">{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">{% trans "Previous" %}</a>{% endif %}<strong aria-current="page">{{ page_obj.number }}</strong>{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">{% trans "Next" %}</a>{% endif %}</nav></div>
+    {% endif %}
+</div>
+{% endblock %}
+

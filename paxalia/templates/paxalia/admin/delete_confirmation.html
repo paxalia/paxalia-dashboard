@@ -1,0 +1,33 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Delete" %} · {{ definition.verbose_name }} · Paxalia{% endblock %}
+{% block page_title %}{% trans "Delete" %} {{ definition.verbose_name }}{% endblock %}
+{% block page_subtitle %}{% trans "Review the affected objects before confirming" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell">
+    <header class="pa-admin-page-head pa-admin-page-head--danger">
+        <div class="pa-admin-page-head__copy">
+            <div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><a href="{{ cancel_url }}">{{ definition.verbose_name_plural }}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Delete" %}</span></div>
+            <span class="pa-admin-page-head__eyebrow">{% trans "Destructive action" %}</span>
+            <h2>{% trans "Delete this object?" %}</h2>
+            <p>{% trans "Review the object and the deletion impact before confirming." %}</p>
+        </div>
+    </header>
+
+    <section class="pa-admin-danger-card" aria-labelledby="delete-object-title">
+        <div class="pa-admin-danger-icon" aria-hidden="true">!</div>
+        <div><span class="pa-admin-eyebrow">{{ definition.label }}</span><h2 id="delete-object-title">{{ object_display }}</h2><p>{% trans "Deletion uses Django's normal cascade and protection semantics. Any blocking dependency reported below must be resolved before deletion can proceed." %}</p></div>
+        {% if impact.blocked %}<div class="pa-admin-form-errors">{{ impact.error }}</div>{% endif %}
+    </section>
+
+    <section class="pa-admin-card">
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Impact" %}</span><h2>{% trans "Objects affected" %}</h2></div><span class="pa-admin-status pa-admin-status--muted">{% if impact.blocked %}{% trans "Blocked" %}{% else %}{% trans "Ready to review" %}{% endif %}</span></div>
+        <div class="pa-admin-breakdown-grid">{% for model,count in impact.counts.items %}<div class="pa-admin-breakdown"><span>{{ model }}</span><strong>{{ count }}</strong></div>{% empty %}<p class="pa-admin-empty">{% trans "No related objects were collected." %}</p>{% endfor %}</div>
+    </section>
+
+    <div class="pa-admin-form-actions"><a class="btn btn-secondary" href="{{ cancel_url }}">{% trans "Cancel" %}</a>{% if not impact.blocked %}<form method="post" data-paxalia-confirm-form>{% csrf_token %}<button class="btn btn-danger" type="submit">{% trans "Yes, delete this object" %}</button></form>{% endif %}</div>
+</div>
+{% endblock %}
+{% block page_scripts %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/admin-center.js' %}"></script>{% endblock %}
+

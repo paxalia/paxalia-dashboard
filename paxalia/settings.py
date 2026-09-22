@@ -1,3 +1,4 @@
+
 # paxalia/settings.py
 from django.conf import settings
 
@@ -81,6 +82,35 @@ DEFAULTS = {
     'SECURITY_STORE_FAILED_USERNAME': True,
     # Configurable host application log model adapters.
     'APPLICATION_LOGS': [],
+
+    # ── Paxalia Packages ──
+    'PACKAGE_MAX_FILE_SIZE_MB': 100,
+    'PACKAGE_MAX_OBJECTS': 10000,
+    'PACKAGE_MAX_RELATIONS': 50000,
+    'PACKAGE_REQUIRE_ENCRYPTION_FOR_PROTECTED': True,
+    'PACKAGE_ALLOWED_CONFLICTS': ['update', 'skip'],
+
+    # ── Paxalia Admin ──
+    # The Paxalia Admin UI is a Django-native presentation over models that
+    # are already registered with django.contrib.admin.
+    'ADMIN_ENABLED': True,
+    'ADMIN_MODEL_ALLOWLIST': [],
+    'ADMIN_MODEL_DENYLIST': [],
+    'ADMIN_MODELS': {},
+    'ADMIN_LIST_PER_PAGE': 50,
+    'ADMIN_MAX_RELATION_ITEMS': 10,
+    'ADMIN_MAX_BULK_OPERATIONS': 500,
+    'ADMIN_SENSITIVE_FIELDS': [
+        'password', 'password_hash', 'token', 'access_token', 'refresh_token',
+        'secret', 'client_secret', 'signing_secret', 'api_key', 'apikey',
+        'private_key', 'session_key', 'csrf_token', 'authorization', 'cookie',
+        'credential', 'credentials', 'secret_key', 'encryption_key',
+    ],
+    'ADMIN_DJANGO_FALLBACK_ENABLED': True,
+    'ADMIN_LIST_EDITABLE_ENABLED': True,
+    'ADMIN_MAX_DELETE_PREVIEW': 100,
+    'ADMIN_OBJECT_HISTORY_PER_PAGE': 30,
+    'ADMIN_PROTECTED_NO_STORE': True,
     # Consecutive failed logins (any account) from one IP within
     # SECURITY_FAILED_LOGIN_WINDOW_MINUTES before it's surfaced as a
     # "brute force suspected" alert on the Security Center.
@@ -157,3 +187,5 @@ def get_config():
     config = DEFAULTS.copy()
     config.update(user_config)
     return config
+
+

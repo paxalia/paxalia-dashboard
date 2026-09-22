@@ -1,0 +1,57 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+{% block title %}{% trans "Paxalia Packages" %} · {% trans "Paxalia Admin" %}{% endblock %}
+{% block page_title %}{% trans "Paxalia Packages" %}{% endblock %}
+{% block page_subtitle %}{% trans "Portable, validated application-data packages for Django" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/admin.css' %}">{% endblock %}
+{% block dashboard_content %}
+<div class="pa-admin-shell pa-admin-shell--packages">
+    <header class="pa-admin-page-head pa-admin-page-head--hero">
+        <div class="pa-admin-page-head__copy">
+            <div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Packages" %}</span></div>
+            <span class="pa-admin-page-head__eyebrow">{% trans "Paxalia data layer" %}</span>
+            <h2>{% trans "Move structured application data safely" %}</h2>
+            <p>{% trans "Create, validate, import, export, and review .paxalia packages without turning the package workspace into another crowded dashboard." %}</p>
+        </div>
+        <div class="pa-admin-page-head__actions"><a class="btn btn-primary" href="{% url 'paxalia:admin_package_export' %}">{% trans "Export package" %}</a><a class="btn btn-secondary" href="{% url 'paxalia:admin_package_import' %}">{% trans "Import package" %}</a><a class="btn btn-secondary" href="{% url 'paxalia:admin_package_history' %}">{% trans "History" %}</a></div>
+    </header>
+
+    <div class="pa-admin-package-summary">
+        <div class="pa-admin-package-stat"><span>{% trans "Applications" %}</span><strong>{{ application_count }}</strong></div>
+        <div class="pa-admin-package-stat"><span>{% trans "Registered models" %}</span><strong>{{ model_count }}</strong></div>
+        <div class="pa-admin-package-stat"><span>{% trans "Localization-ready" %}</span><strong>{{ localization_count }}</strong></div>
+        <div class="pa-admin-package-stat"><span>{% trans "Protected models" %}</span><strong>{{ protected_count }}</strong></div>
+    </div>
+
+    <section class="pa-admin-package-actions">
+        <article class="pa-admin-primary-action">
+            <div><span class="pa-admin-eyebrow">{% trans "Export" %}</span><h2>{% trans "Create a Paxalia package" %}</h2><p>{% trans "Choose the registered models that should travel together. Relationships and supported translations are preserved by the package engine." %}</p></div>
+            <a class="btn btn-primary" href="{% url 'paxalia:admin_package_export' %}">{% trans "Start export" %}</a>
+        </article>
+        <article class="pa-admin-primary-action">
+            <div><span class="pa-admin-eyebrow">{% trans "Import" %}</span><h2>{% trans "Validate a Paxalia package" %}</h2><p>{% trans "Upload a package, inspect the preview, choose conflict behavior, and commit only after validation succeeds." %}</p></div>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_package_import' %}">{% trans "Start import" %}</a>
+        </article>
+    </section>
+
+    <details class="pa-admin-disclosure">
+        <summary><span><strong>{% trans "Safety and workflow" %}</strong><small>{% trans "Integrity, sensitive-field rules, encryption, preview, and atomic/partial import behavior" %}</small></span><span class="pa-admin-disclosure__chevron" aria-hidden="true">⌄</span></summary>
+        <div class="pa-admin-disclosure__body">
+            <div class="pa-admin-capability-list">
+                <div class="pa-admin-capability-row"><span>{% trans "Format" %}</span><strong class="pa-admin-status pa-admin-status--ok">.paxalia v1</strong></div>
+                <div class="pa-admin-capability-row"><span>{% trans "Integrity" %}</span><strong class="pa-admin-status pa-admin-status--ok">SHA-256</strong></div>
+                <div class="pa-admin-capability-row"><span>{% trans "Sensitive data" %}</span><strong class="pa-admin-status pa-admin-status--muted">{% trans "Redacted" %}</strong></div>
+                <div class="pa-admin-capability-row"><span>{% trans "Encrypted packages" %}</span><strong class="pa-admin-status pa-admin-status--ok">AES-GCM</strong></div>
+            </div>
+        </div>
+    </details>
+
+    <section class="pa-admin-card">
+        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Recent" %}</span><h2>{% trans "Package operations" %}</h2></div><a class="btn btn-secondary btn-sm" href="{% url 'paxalia:admin_package_history' %}">{% trans "View all" %}</a></div>
+        <div class="pa-admin-feed">
+            {% for item in recent_operations %}<div class="pa-admin-feed-row"><div><strong>{{ item.action }}</strong><small>{% if item.user %}{{ item.user }}{% else %}{% trans "System" %}{% endif %} · {{ item.detail }}</small></div><time datetime="{{ item.created_at|date:'c' }}">{{ item.created_at }}</time></div>
+            {% empty %}<p class="pa-admin-empty">{% trans "No package operations have been recorded yet." %}</p>{% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}
