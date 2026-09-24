@@ -1,6 +1,6 @@
 # paxalia/views/uptime.py
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
@@ -12,7 +12,7 @@ from ..uptime import compute_uptime_percentage, validate_monitor_url
 from .utils import get_date_range, section_enabled, scoped_object_or_404
 
 
-@staff_member_required
+@admin_security_required
 def uptime_overview(request):
     """Single page combining the monitor list/add-form and recent
     incident history, same pattern as sites_management()."""
@@ -92,7 +92,7 @@ def uptime_overview(request):
     return render(request, 'paxalia/uptime.html', context)
 
 
-@staff_member_required
+@admin_security_required
 @require_POST
 def uptime_monitor_toggle(request, monitor_id):
     if not section_enabled('uptime'):
@@ -105,7 +105,7 @@ def uptime_monitor_toggle(request, monitor_id):
     return redirect('paxalia:uptime')
 
 
-@staff_member_required
+@admin_security_required
 @require_POST
 def uptime_monitor_delete(request, monitor_id):
     if not section_enabled('uptime'):

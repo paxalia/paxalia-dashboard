@@ -2,7 +2,7 @@ import urllib.error
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from .bot_classification import classify_bot
@@ -41,7 +41,7 @@ class FileUploadModelTests(TestCase):
 
 class ServerAccessTests(TestCase):
     def test_server_overview_requires_staff(self):
-        response = self.client.get(reverse('server_overview'))
+        response = self.client.get(reverse('paxalia:server_overview'))
         self.assertIn(response.status_code, (302, 403))
 
     def test_server_metrics_requires_staff(self):
@@ -248,7 +248,10 @@ class UptimeCheckTests(TestCase):
         mock_resp.status = 200
         mock_resp.__enter__ = MagicMock(return_value=mock_resp)
         mock_resp.__exit__ = MagicMock(return_value=False)
-        with patch('paxalia.uptime.urllib.request.urlopen', return_value=mock_resp):
+        mock_opener = MagicMock()
+        mock_opener.open.return_value = mock_resp
+        with patch('paxalia.uptime.validate_monitor_url', return_value=(True, '')), \
+             patch('paxalia.uptime.urllib.request.build_opener', return_value=mock_opener):
             result = perform_check(monitor)
         self.assertEqual(result['status'], 'up')
         self.assertEqual(result['status_code'], 200)
@@ -260,7 +263,10 @@ class UptimeCheckTests(TestCase):
         mock_resp.status = 503
         mock_resp.__enter__ = MagicMock(return_value=mock_resp)
         mock_resp.__exit__ = MagicMock(return_value=False)
-        with patch('paxalia.uptime.urllib.request.urlopen', return_value=mock_resp):
+        mock_opener = MagicMock()
+        mock_opener.open.return_value = mock_resp
+        with patch('paxalia.uptime.validate_monitor_url', return_value=(True, '')), \
+             patch('paxalia.uptime.urllib.request.build_opener', return_value=mock_opener):
             result = perform_check(monitor)
         self.assertEqual(result['status'], 'down')
         self.assertIn('503', result['error_message'])
@@ -271,7 +277,10 @@ class UptimeCheckTests(TestCase):
         # as success, not failure.
         monitor = self._monitor(expected_status_code=404)
         err = urllib.error.HTTPError(url='https://example.com/', code=404, msg='Not Found', hdrs=None, fp=None)
-        with patch('paxalia.uptime.urllib.request.urlopen', side_effect=err):
+        mock_opener = MagicMock()
+        mock_opener.open.side_effect = err
+        with patch('paxalia.uptime.validate_monitor_url', return_value=(True, '')), \
+             patch('paxalia.uptime.urllib.request.build_opener', return_value=mock_opener):
             result = perform_check(monitor)
         self.assertEqual(result['status'], 'up')
         self.assertEqual(result['status_code'], 404)
@@ -279,7 +288,10 @@ class UptimeCheckTests(TestCase):
     def test_perform_check_connection_error_is_down(self):
         monitor = self._monitor()
         err = urllib.error.URLError('Connection refused')
-        with patch('paxalia.uptime.urllib.request.urlopen', side_effect=err):
+        mock_opener = MagicMock()
+        mock_opener.open.side_effect = err
+        with patch('paxalia.uptime.validate_monitor_url', return_value=(True, '')), \
+             patch('paxalia.uptime.urllib.request.build_opener', return_value=mock_opener):
             result = perform_check(monitor)
         self.assertEqual(result['status'], 'down')
         self.assertIsNone(result['status_code'])
@@ -325,6 +337,14 @@ class UptimeCheckTests(TestCase):
 class ServerHistoryTests(TestCase):
     """Phase 13 — api_server_history now reads real ServerMetricSnapshot
     rows instead of generating synthetic random.randint() data."""
+
+    def setUp(self):
+        self.admin_gate_patch = patch(
+            'paxalia.admin_security.admin_session_is_valid',
+            return_value=True,
+        )
+        self.admin_gate_patch.start()
+        self.addCleanup(self.admin_gate_patch.stop)
 
     def test_history_empty_when_no_snapshots(self):
         user = get_user_model().objects.create_superuser(username='root', password='pw', email='r@example.com')
@@ -615,6 +635,7 @@ class ChatOpsTests(TestCase):
         self.assertIn('google.com', text)
 
 
+@override_settings(ALLOWED_HOSTS=['testserver'])
 class ChatOpsViewTests(TestCase):
     """Phase 16 — the actual endpoints, signature-gated."""
 
@@ -697,10 +718,10 @@ class V3HardeningRegressionTests(TestCase):
         from datetime import datetime, timedelta
         from .views.paxalia_api import _parse_date_range
 
-        request = self.client.get('/')
-        request.GET = request.GET.copy()
-        request.GET['start_date'] = '2026-09-12'
-        request.GET['end_date'] = '2026-09-12'
+        request = RequestFactory().get(
+            '/',
+            {'start_date': '2026-09-12', 'end_date': '2026-09-12'},
+        )
         start, end = _parse_date_range(request)
         self.assertEqual(start.date().isoformat(), '2026-09-12')
         self.assertEqual(end.date().isoformat(), '2026-09-13')
@@ -739,7 +760,7 @@ class LoggingUtilityTests(TestCase):
         group = PaxaliaLogGroup.objects.get(fingerprint=first.fingerprint)
         self.assertEqual(group.occurrence_count, 2)
         self.assertEqual(group.suppressed_count, 1)
-        self.assertEqual(PaxaliaLogEvent.objects.count(), 1)
+        self.assertEqual(PaxaliaLogEvent.objects.filter(fingerprint=first.fingerprint).count(), 1)
 
 
 class LoggingPublicApiTests(TestCase):

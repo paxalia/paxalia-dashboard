@@ -1,4 +1,3 @@
-
 # paxalia/settings.py
 from django.conf import settings
 
@@ -105,6 +104,8 @@ DEFAULTS = {
         'secret', 'client_secret', 'signing_secret', 'api_key', 'apikey',
         'private_key', 'session_key', 'csrf_token', 'authorization', 'cookie',
         'credential', 'credentials', 'secret_key', 'encryption_key',
+        'otp_secret', 'otp_key', 'code_hash', 'credential_id',
+        'credential_public_key', 'webauthn_user_handle', 'challenge',
     ],
     'ADMIN_DJANGO_FALLBACK_ENABLED': True,
     'ADMIN_LIST_EDITABLE_ENABLED': True,
@@ -127,6 +128,72 @@ DEFAULTS = {
     # minutes before they can download a backup archive. Re-checked on
     # every download attempt; re-authenticating resets the window.
     'BACKUP_REAUTH_MINUTES': 15,
+
+    # ── Mandatory Paxalia administrator security ──
+    # These are policy parameters, not switches. Layers 1/2/3 cannot be
+    # disabled for Paxalia Dashboard administrator access.
+    'ADMIN_MAX_DEVICES': 5,
+    'ADMIN_SESSION_MAX_AGE_SECONDS': 8 * 60 * 60,
+    'SECURITY_LOGIN_RATE_LIMIT_ATTEMPTS': 8,
+    'SECURITY_LOGIN_RATE_LIMIT_WINDOW_SECONDS': 15 * 60,
+    'SECURITY_2FA_RATE_LIMIT_ATTEMPTS': 5,
+    'SECURITY_2FA_RATE_LIMIT_WINDOW_SECONDS': 5 * 60,
+    'SECURITY_DEVICE_RATE_LIMIT_ATTEMPTS': 5,
+    'SECURITY_DEVICE_RATE_LIMIT_WINDOW_SECONDS': 5 * 60,
+    'WEBAUTHN_CHALLENGE_TTL_SECONDS': 120,
+    'WEBAUTHN_RP_NAME': 'Paxalia Dashboard',
+    # Leave unset to derive values from the current request in supported
+    # deployments. Explicit values are recommended when TLS terminates at a
+    # reverse proxy or when the dashboard is deployed behind a stable origin.
+    'WEBAUTHN_RP_ID': None,
+    'WEBAUTHN_ORIGIN': None,
+    'AUTH_BRAND_NAME': 'Paxalia',
+    'AUTH_HOME_URL': '/',
+    # Private server-side destination for completed Paxalia administrator auth.
+    # This must never be exposed through client-side configuration.
+    'AUTH_ADMIN_HOME_URL': None,
+    'AUTH_SUPPORT_URL': None,
+    # Paxalia owns its administrator Layer-1 login by default. This keeps the
+    # package's password/2FA flow independent from the host site's login and
+    # custom authentication middleware. Set True only when deliberately
+    # integrating Paxalia with the host login flow.
+    'AUTH_USE_HOST_LOGIN': False,
+    # Optional explicit URL/view name for the host login in compatibility mode.
+    # When unset, the package resolves Django's global LOGIN_URL.
+    'AUTH_LOGIN_URL': None,
+    # Optional backend list for Paxalia's isolated password check. When unset,
+    # the package deliberately uses Django's ModelBackend only, keeping host
+    # authentication backends such as Axes/SSO/LDAP out of the Paxalia login
+    # boundary. Set an explicit tuple/list when a host needs another credential
+    # source for Paxalia administrators.
+    'AUTH_ISOLATED_AUTHENTICATION_BACKENDS': None,
+    # URL names for the host application's successful second-factor endpoint.
+    # The package does not assume a host routing scheme; embedded projects
+    # opt in by naming their own 2FA view(s).
+    'AUTH_HOST_2FA_URL_NAMES': (),
+    # A host-login admin intent must not survive indefinitely in an abandoned
+    # browser tab and later hijack a normal login flow.
+    'AUTH_HOST_2FA_INTENT_TTL_SECONDS': 600,
+    # Short-lived signed cookie used to survive host auth session rotation
+    # when compatibility mode is explicitly enabled.
+    'AUTH_HOST_2FA_HANDOFF_COOKIE_NAME': 'paxalia_admin_handoff',
+    # Final Paxalia administrator authentication is isolated from the host
+    # Django authentication/session in the default mode. The package uses a
+    # real Django SessionStore with a separate cookie scoped to the dashboard.
+    'AUTH_ISOLATED_SESSION_COOKIE_NAME': 'paxalia_admin_session',
+    'AUTH_ISOLATED_SESSION_COOKIE_SAMESITE': 'Lax',
+    'AUTH_ISOLATED_SESSION_COOKIE_DOMAIN': None,
+    # Public-facing Paxalia authentication surfaces are available by default
+    # but can be disabled individually by a host project without editing
+    # installed package files. These do not disable the mandatory admin
+    # security layers.
+    'AUTH_SIGNUP_ENABLED': True,
+    'AUTH_PASSWORD_RESET_ENABLED': True,
+    'AUTH_PASSWORD_CHANGE_ENABLED': True,
+    'ERROR_BRAND_NAME': 'Paxalia',
+    'ERROR_HOME_URL': '/',
+    'ERROR_SUPPORT_URL': None,
+    'SECURITY_RECOVERY_CODE_COUNT': 10,
 
     # ── Ops/server monitoring (Phase 13) ──
     # How long ServerMetricSnapshot rows are kept — pruned by
@@ -187,5 +254,6 @@ def get_config():
     config = DEFAULTS.copy()
     config.update(user_config)
     return config
+
 
 

@@ -11,11 +11,23 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from ..logging.application import queryset_for, resolve_application_sources, serialize_row, source_summary
-from ..logging.redaction import redact
+from ..logging.handler import get_live_log_buffer
+from ..logging.redaction import redact, strip_ansi
 from ..models import PaxaliaLogEvent, PaxaliaLogGroup
 from ..permissions import require_section_permission
 from ..settings import get_config
 from .utils import detect_active_preset, get_current_site, get_date_range, section_enabled
+
+
+def _csv_safe(value):
+    """Neutralize spreadsheet formula prefixes before values enter CSV."""
+    if value is None:
+        return ""
+    value = str(value)
+    if value.startswith(("=", "+", "-", "@")):
+        return "'" + value
+    return value
+
 
 
 def _apply_filters(request, qs):
@@ -50,7 +62,7 @@ def _serialize_event(event):
         'source': event.source,
         'category': event.category,
         'action': event.action,
-        'message': event.message,
+        'message': strip_ansi(event.message),
         'logger_name': event.logger_name,
         'request_path': event.request_path,
         'request_method': event.request_method,
@@ -102,6 +114,10 @@ def logs_overview(request):
     groups = group_qs.select_related().order_by('-last_seen')[:25]
     paginator = Paginator(qs.order_by('-timestamp'), 50)
     page_obj = paginator.get_page(request.GET.get('page'))
+    for event in page_obj.object_list:
+        event.message = strip_ansi(event.message)
+    for group in groups:
+        group.normalized_message = strip_ansi(group.normalized_message)
     pagination_query = request.GET.copy()
     pagination_query.pop('page', None)
     return render(request, 'paxalia/logs.html', {
@@ -127,6 +143,23 @@ def logs_overview(request):
 
 
 @require_section_permission('logs')
+def live_log_feed(request):
+    """Return incremental sanitized process logs for the live console."""
+    if not section_enabled('logs'):
+        raise Http404
+    raw_since = request.GET.get('since')
+    try:
+        limit = max(1, min(2000, int(request.GET.get('limit', '2000') or 2000)))
+    except (TypeError, ValueError):
+        limit = 2000
+    payload = get_live_log_buffer().snapshot(since=raw_since, limit=limit)
+    response = JsonResponse(payload)
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    return response
+
+
+@require_section_permission('logs')
 def log_detail(request, event_id):
     if not section_enabled('logs'):
         raise Http404
@@ -143,6 +176,11 @@ def log_detail(request, event_id):
         relation_q |= Q(correlation_id=event.correlation_id)
         has_relation = True
     related = PaxaliaLogEvent.objects.none() if not has_relation else PaxaliaLogEvent.objects.filter(relation_q).exclude(id=event.id).distinct().order_by('-timestamp')[:50]
+    event.message = strip_ansi(event.message)
+    event.stack_trace = strip_ansi(event.stack_trace)
+    for row in related:
+        row.message = strip_ansi(row.message)
+        row.stack_trace = strip_ansi(row.stack_trace)
     metadata = redact(event.metadata or {}, extra_keys=())
     return render(request, 'paxalia/log_detail.html', {
         'active_page': 'logs', 'page_title': _('Log Detail'),
@@ -178,7 +216,7 @@ def logs_export(request):
         for event in rows:
             row = _serialize_event(event)
             row['metadata'] = redact(event.metadata or {})
-            row['stack_trace'] = event.stack_trace
+            row['stack_trace'] = strip_ansi(event.stack_trace)
             row['exception_type'] = event.exception_type
             row['file_name'] = event.file_name
             row['line_number'] = event.line_number
@@ -193,11 +231,14 @@ def logs_export(request):
         writer.writerow(['timestamp', 'severity', 'source', 'category', 'logger', 'message', 'method', 'path', 'status', 'traffic', 'request_id', 'correlation_id', 'exception_type', 'file', 'line', 'fingerprint', 'suppressed_count'])
         for event in rows:
             writer.writerow([
-                event.timestamp.isoformat(), event.severity, event.source, event.category,
-                event.logger_name, event.message, event.request_method, event.request_path,
-                event.response_status or '', event.traffic_type, event.request_id,
-                event.correlation_id, event.exception_type, event.file_name, event.line_number or '',
-                event.fingerprint, event.group.suppressed_count if event.group else 0,
+                _csv_safe(value)
+                for value in (
+                    event.timestamp.isoformat(), event.severity, event.source, event.category,
+                    event.logger_name, strip_ansi(event.message), event.request_method, event.request_path,
+                    event.response_status or '', event.traffic_type, event.request_id,
+                    event.correlation_id, event.exception_type, event.file_name, event.line_number or '',
+                    event.fingerprint, event.group.suppressed_count if event.group else 0,
+                )
             ])
     response['Cache-Control'] = 'no-store'
     return response

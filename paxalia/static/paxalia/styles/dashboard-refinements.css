@@ -555,3 +555,14 @@ button + .btn,
         margin-top: 6px;
     }
 }
+
+
+
+.security-admin-row--current {
+    background: var(--analytics-gold-dim);
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}

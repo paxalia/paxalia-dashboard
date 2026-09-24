@@ -47,11 +47,95 @@ def paxalia_version() -> str:
             return "development"
 
 
+def _canonicalize_payload_metadata(payload: dict) -> dict:
+    """Return a package payload whose derived counts match its actual records."""
+    if not isinstance(payload, dict):
+        raise ValueError("The Paxalia package payload must be a mapping.")
+
+    records = payload.get("records")
+    models = payload.get("models")
+    if not isinstance(records, list):
+        raise ValueError("The Paxalia package payload records must be a list.")
+    if not isinstance(models, list):
+        raise ValueError("The Paxalia package payload models must be a list.")
+
+    relationship_count = 0
+    translation_count = 0
+    for record in records:
+        # Semantic record validation is intentionally delegated to
+        # packages.engine.inspect_package(). The container builder only
+        # canonicalizes derived metadata; malformed records must remain
+        # serializable so the engine can report them as PackageError.
+        if not isinstance(record, dict):
+            continue
+        relationships = record.get("relationships", {})
+        many_to_many = record.get("many_to_many", {})
+        translations = record.get("translations", {})
+        if not isinstance(relationships, dict):
+            raise ValueError("The Paxalia package payload contains invalid relationship data.")
+        if not isinstance(many_to_many, dict):
+            raise ValueError("The Paxalia package payload contains invalid many-to-many data.")
+        if not isinstance(translations, dict):
+            raise ValueError("The Paxalia package payload contains invalid translation data.")
+        relationship_count += len(relationships)
+        relationship_count += sum(
+            len(values) for values in many_to_many.values() if isinstance(values, list)
+        )
+        translation_count += len(translations)
+
+    model_metadata = []
+    for item in models:
+        if not isinstance(item, dict):
+            raise ValueError("The Paxalia package payload contains invalid model metadata.")
+        metadata = dict(item)
+        label = str(metadata.get("label") or "")
+        # Identity fields are derived model metadata, not caller-owned counters.
+        # Rebuild them from the currently installed Django model so a payload
+        # assembled from an older package/schema cannot fail solely because the
+        # host application's effective identity definition has changed.
+        try:
+            from .engine import identity_fields, _model_from_label, _model_label
+            model = _model_from_label(label)
+            if label == _model_label(model):
+                metadata["identity_fields"] = list(identity_fields(model))
+        except Exception:
+            # Keep malformed/unknown metadata available for inspect_package(),
+            # which remains responsible for semantic package validation.
+            pass
+        metadata["record_count"] = sum(
+            1 for record in records
+            if isinstance(record, dict) and str(record.get("model") or "").lower() == label.lower()
+        )
+        model_metadata.append(metadata)
+
+    normalized = dict(payload)
+    normalized["models"] = model_metadata
+    normalized["records"] = records
+    normalized["record_count"] = len(records)
+    normalized["relationship_count"] = relationship_count
+    normalized["translation_count"] = translation_count
+    return normalized
+
+
 def build_package(payload: dict, *, encrypted_payload: bytes | None = None, package_id: str | None = None) -> bytes:
     package_id = package_id or str(uuid.uuid4())
-    data_bytes = encrypted_payload if encrypted_payload is not None else _json_bytes(payload)
-    encrypted = encrypted_payload is not None
 
+    # For normal package construction the payload is the authoritative source
+    # and derived counters are rebuilt from the actual records. This prevents
+    # callers that mutate records before packaging from creating an internally
+    # inconsistent package that fails only when it is imported.
+    if encrypted_payload is None:
+        package_payload = _canonicalize_payload_metadata(payload)
+        data_bytes = _json_bytes(package_payload)
+    else:
+        # Encrypted content has already been serialized/encrypted by the
+        # caller. Do not rewrite the metadata underneath those ciphertext bytes.
+        package_payload = payload
+        if not isinstance(package_payload, dict):
+            raise ValueError("The Paxalia package payload must be a mapping.")
+        data_bytes = encrypted_payload
+
+    encrypted = encrypted_payload is not None
     manifest = {
         "format": FORMAT_NAME,
         "format_version": FORMAT_VERSION,
@@ -61,11 +145,12 @@ def build_package(payload: dict, *, encrypted_payload: bytes | None = None, pack
         "django_version": ".".join(str(x) for x in DJANGO_VERSION[:3]),
         "encrypted": encrypted,
         "encoding": "utf-8",
+        "translations_only": bool(package_payload.get("translations_only", False)),
         "content_member": ENCRYPTED_MEMBER if encrypted else DATA_MEMBER,
-        "models": payload.get("models", []),
-        "record_count": int(payload.get("record_count", 0) or 0),
-        "relationship_count": int(payload.get("relationship_count", 0) or 0),
-        "translation_count": int(payload.get("translation_count", 0) or 0),
+        "models": package_payload.get("models", []),
+        "record_count": int(package_payload.get("record_count", 0) or 0),
+        "relationship_count": int(package_payload.get("relationship_count", 0) or 0),
+        "translation_count": int(package_payload.get("translation_count", 0) or 0),
     }
     manifest_bytes = _json_bytes(manifest)
     integrity = {

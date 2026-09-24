@@ -1,7 +1,7 @@
 {% extends 'paxalia/base.html' %}
 {% load static i18n %}
 
-{% block title %}{% trans "Security Center" %} – Paxalia Analytics{% endblock %}
+{% block title %}{% trans "Security Center" %} – Paxalia Dashboard{% endblock %}
 
 {% block page_title %}{% trans "Security Center" %}{% endblock %}
 {% block page_subtitle %}{% trans "Application posture, server runtime, authentication, and audit evidence" %}{% endblock %}
@@ -17,6 +17,40 @@
     <div class="security-banner security-banner--warn">
         {% blocktrans with version=dependency_health.django_version %}Running Django {{ version }}, which isn't in this
         package's known-supported list. Check djangoproject.com for your version's support status.{% endblocktrans %}
+    </div>
+    {% endif %}
+
+    <div class="security-hero security-hero--compact">
+        <div>
+            <span class="security-eyebrow">{% trans "Paxalia Security" %}</span>
+            <h2>{% trans "Security Overview" %}</h2>
+            <p>{% trans "Review effective controls, administrator authentication, authorized devices, and active sessions." %}</p>
+        </div>
+        <div class="security-hero-actions">
+            <a class="btn btn-primary" href="{% url 'paxalia:security_overview' %}">{% trans "Open Security Overview" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:security_authentication' %}">{% trans "Authentication" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_devices' %}">{% trans "Admin Devices" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_sessions' %}">{% trans "Admin Sessions" %}</a>
+        </div>
+    </div>
+
+    <section class="security-auth-callout" aria-labelledby="admin-auth-heading">
+        <div>
+            <span class="security-eyebrow">{% trans "Administrator access" %}</span>
+            <h2 id="admin-auth-heading" class="card-title">{% trans "Three-layer protection is mandatory" %}</h2>
+            <p>{% trans "Paxalia Dashboard administration requires Django authentication, confirmed 2FA, and an authorized WebAuthn device. These layers cannot be disabled through ordinary dashboard settings." %}</p>
+        </div>
+        <div class="security-hero-actions">
+            <a class="btn btn-primary" href="{% url 'paxalia:security_authentication' %}">{% trans "Manage authentication" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_devices' %}">{% trans "Manage devices" %}</a>
+        </div>
+    </section>
+
+    {% if security_health %}
+    <div class="security-health-summary security-health-summary--inline">
+        <div class="security-health-summary__item security-health-summary__item--pass"><span>{% trans "Pass" %}</span><strong>{{ security_health.summary.PASS|default:0 }}</strong></div>
+        <div class="security-health-summary__item security-health-summary__item--warning"><span>{% trans "Warning" %}</span><strong>{{ security_health.summary.WARNING|default:0 }}</strong></div>
+        <div class="security-health-summary__item security-health-summary__item--danger"><span>{% trans "Danger" %}</span><strong>{{ security_health.summary.DANGER|default:0 }}</strong></div>
     </div>
     {% endif %}
 
@@ -63,9 +97,6 @@
             {% trans "Scorecard" %}
             {% if scorecard.summary.fail %}<span class="scorecard-tab-badge scorecard-tab-badge--fail">{{ scorecard.summary.fail }}</span>{% elif scorecard.summary.warn %}<span class="scorecard-tab-badge scorecard-tab-badge--warn">{{ scorecard.summary.warn }}</span>{% endif %}
         </button>
-        {% if mfa_status is not None %}
-        <button type="button" class="security-tab" data-tab="mfa" role="tab">{% trans "MFA Status" %}</button>
-        {% endif %}
         <button type="button" class="security-tab" data-tab="runtime" role="tab">{% trans "Server Runtime" %}</button>
     </div>
 
@@ -173,7 +204,7 @@
                 </td>
                 <td>
                     {% if e.is_active_session %}
-                    <form method="post" action="{% url 'paxalia:security_revoke_session' e.id %}"
+                    <form method="post" action="{% url 'paxalia:admin_session_revoke' e.id %}"
                           style="display:inline;">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-danger"
@@ -216,7 +247,7 @@
                 <td>{{ e.ip_address|default:"—" }}</td>
                 <td>{{ e.browser }} / {{ e.os }}</td>
                 <td>
-                    <form method="post" action="{% url 'paxalia:security_revoke_session' e.id %}"
+                    <form method="post" action="{% url 'paxalia:admin_session_revoke' e.id %}"
                           style="display:inline;">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-danger"
@@ -481,39 +512,6 @@
         </table>
     </div>
 
-    {% if mfa_status is not None %}
-    <!-- ── MFA Status ── -->
-    <div class="security-panel table-card" data-panel="mfa" hidden>
-        <h2 class="card-title">{% trans "MFA Status (staff)" %}</h2>
-        <p class="form-hint">
-            <a href="{% url 'paxalia:mfa_enroll' %}">{% trans "Set up or manage two-factor authentication for your own account" %}</a>
-        </p>
-        {% if mfa_status %}
-        <table class="analytics-table">
-            <thead>
-            <tr>
-                <th>{% trans "User" %}</th>
-                <th>{% trans "2FA Enabled" %}</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for row in mfa_status %}
-            <tr>
-                <td>{{ row.user.get_username }}</td>
-                <td>
-                        <span class="security-status-badge {% if row.mfa_enabled %}security-status-ok{% else %}security-status-bad{% endif %}">
-                            {% if row.mfa_enabled %}{% trans "Enabled" %}{% else %}{% trans "Not enabled" %}{% endif %}
-                        </span>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="security-empty">{% trans "No staff accounts found." %}</div>
-        {% endif %}
-    </div>
-    {% endif %}
 
 </div>
 {% endblock %}
@@ -521,3 +519,4 @@
 {% block page_scripts %}
 <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/security.js' %}"></script>
 {% endblock %}
+

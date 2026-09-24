@@ -1,0 +1,87 @@
+{% extends 'paxalia/base.html' %}
+{% load i18n static %}
+
+{% block title %}{% trans "Authentication & Recovery" %} — Paxalia{% endblock %}
+{% block page_title %}{% trans "Authentication & Recovery" %}{% endblock %}
+{% block page_subtitle %}{% trans "Mandatory administrator authentication, second-factor enrollment, and recovery" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/security.css' %}">{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page analytics-page-stack">
+    <div class="security-subnav">
+        <a class="btn btn-secondary" href="{% url 'paxalia:security_overview' %}">{% trans "Security Overview" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:security_admins' %}">{% trans "Administrator Security" %}</a>
+        <a class="btn btn-primary" href="{% url 'paxalia:security_authentication' %}">{% trans "Authentication" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:admin_devices' %}">{% trans "Admin Devices" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:admin_sessions' %}">{% trans "Admin Sessions" %}</a>
+    </div>
+
+    <section class="security-auth-callout">
+        <div>
+            <span class="security-eyebrow">{% trans "Administrator security contract" %}</span>
+            <h2 class="card-title">{% trans "All three layers are required" %}</h2>
+            <p>{% trans "Paxalia Dashboard administration is available only after the host Django authentication succeeds, a mandatory second factor is verified, and an authorized WebAuthn credential is verified." %}</p>
+        </div>
+        <span class="security-status-badge security-status-ok">{% trans "Mandatory" %}</span>
+    </section>
+
+    <section class="table-card">
+        <div class="security-section-head"><div><span class="security-eyebrow">{% trans "Layer 1" %}</span><h2 class="card-title">{% trans "Primary authentication" %}</h2></div><span class="security-status-badge security-status-ok">{% trans "Active" %}</span></div>
+        <p class="form-hint">{% trans "The dashboard uses your host project's Django authentication backend and password handling. Paxalia adds bounded rate limiting and security event logging around the administrator flow rather than creating a second password store." %}</p>
+        <div class="security-policy-grid">
+            <div class="ops-card"><span class="ops-label">{% trans "Login limit" %}</span><span class="ops-value">{{ login_limit }}</span><span class="ops-help">{% blocktrans with seconds=login_window %}Attempts per {{ seconds }} second(s).{% endblocktrans %}</span></div>
+            <div class="ops-card"><span class="ops-label">{% trans "Password management" %}</span><span class="ops-value">{% if password_change_enabled %}{% trans "Available" %}{% else %}{% trans "Host controlled" %}{% endif %}</span><span class="ops-help">{% trans "Django password validators and session rotation remain authoritative." %}</span></div>
+        </div>
+        {% if password_change_enabled %}<div class="security-device-card__actions"><a class="btn btn-secondary" href="{% url 'paxalia:auth_password_change' %}">{% trans "Change password" %}</a></div>{% endif %}
+    </section>
+
+    <section class="table-card">
+        <div class="security-section-head"><div><span class="security-eyebrow">{% trans "Layer 2" %}</span><h2 class="card-title">{% trans "Mandatory 2FA" %}</h2></div><span class="security-status-badge {% if totp_enabled %}security-status-ok{% else %}security-status-danger{% endif %}">{% if totp_enabled %}{% trans "Enabled" %}{% else %}{% trans "Enrollment required" %}{% endif %}</span></div>
+        <p class="form-hint">{% trans "Paxalia uses the configured django-otp TOTP authenticator for privileged access. Password-only administrator sessions are never considered complete." %}</p>
+        <div class="security-policy-grid">
+            <div class="ops-card"><span class="ops-label">{% trans "Authenticator" %}</span><span class="ops-value">TOTP</span><span class="ops-help">{% trans "Compatible authenticator applications can generate the verification code." %}</span></div>
+            <div class="ops-card"><span class="ops-label">{% trans "Verification limit" %}</span><span class="ops-value">{{ twofa_limit }}</span><span class="ops-help">{% blocktrans with seconds=twofa_window %}Attempts per {{ seconds }} second(s).{% endblocktrans %}</span></div>
+            <div class="ops-card"><span class="ops-label">{% trans "Recovery codes" %}</span><span class="ops-value">{{ recovery_codes_remaining }}</span><span class="ops-help">{% trans "One-time recovery codes are hashed at rest and never displayed again after generation." %}</span></div>
+        </div>
+        <div class="security-device-card__actions">
+            {% if totp_enabled %}
+                <a class="btn btn-secondary" href="{% url 'paxalia:auth_2fa_setup' %}">{% trans "Verify authenticator" %}</a>
+                <form method="post" action="{% url 'paxalia:auth_2fa_reset' %}" class="security-inline-form">
+                    {% csrf_token %}
+                    <label class="sr-only" for="reset-2fa-token">{% trans "Current 2FA code" %}</label>
+                    <input id="reset-2fa-token" class="form-input" type="text" name="token" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="{% trans 'Current 2FA code' %}" required>
+                    <button class="btn btn-danger" type="submit" data-confirm="{% trans 'Reset the current authenticator and start a new 2FA enrollment? Existing recovery codes will be revoked.' %}">{% trans "Reset authenticator" %}</button>
+                </form>
+                <form method="post" action="{% url 'paxalia:auth_recovery_regenerate' %}">{% csrf_token %}<button class="btn btn-secondary" type="submit" data-confirm="{% trans 'Generate a new recovery-code set? Existing unused codes will be revoked.' %}">{% trans "Regenerate recovery codes" %}</button></form>
+            {% else %}
+                <a class="btn btn-primary" href="{% url 'paxalia:auth_2fa_setup' %}">{% trans "Activate 2FA" %}</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="table-card">
+        <div class="security-section-head"><div><span class="security-eyebrow">{% trans "Layer 3" %}</span><h2 class="card-title">{% trans "Authorized device credential" %}</h2></div><span class="security-status-badge {% if current_device %}security-status-ok{% else %}security-status-danger{% endif %}">{% if current_device %}{% trans "Verified" %}{% else %}{% trans "Required" %}{% endif %}</span></div>
+        <p class="form-hint">{% trans "The browser-accessible Layer 3 credential is WebAuthn. Paxalia stores only the public credential and safe authenticator metadata; the private key stays with the authenticator." %}</p>
+        <div class="security-policy-grid">
+            <div class="ops-card"><span class="ops-label">{% trans "Active devices" %}</span><span class="ops-value">{% if current_device %}1+{% else %}0{% endif %}</span><span class="ops-help">{% blocktrans with max=max_devices %}Up to {{ max }} active device(s) are allowed for this administrator.{% endblocktrans %}</span></div>
+            <div class="ops-card"><span class="ops-label">{% trans "Challenge TTL" %}</span><span class="ops-value">{{ challenge_ttl }}s</span><span class="ops-help">{% trans "Challenges are short-lived and single-use." %}</span></div>
+            <div class="ops-card"><span class="ops-label">{% trans "Verification limit" %}</span><span class="ops-value">{{ device_limit }}</span><span class="ops-help">{% blocktrans with seconds=device_window %}Attempts per {{ seconds }} second(s).{% endblocktrans %}</span></div>
+        </div>
+        <div class="security-device-card__actions"><a class="btn btn-primary" href="{% url 'paxalia:admin_devices' %}">{% trans "Manage authorized devices" %}</a><a class="btn btn-secondary" href="{% url 'paxalia:auth_device_register' %}">{% trans "Register another device" %}</a></div>
+    </section>
+
+    <section class="table-card">
+        <div class="security-section-head"><div><span class="security-eyebrow">{% trans "Session policy" %}</span><h2 class="card-title">{% trans "Privileged session lifetime" %}</h2></div></div>
+        <p class="form-hint">{% trans "A final administrator session is valid only while the user remains an administrator, the confirmed second factor still exists, and the authorized device credential remains active." %}</p>
+        <div class="security-policy-grid">
+            <div class="ops-card"><span class="ops-label">{% trans "Maximum age" %}</span><span class="ops-value">{{ session_max_age }}s</span><span class="ops-help">{% trans "The privileged state expires even if the browser remains open." %}</span></div>
+            <div class="ops-card"><span class="ops-label">{% trans "WebAuthn RP ID" %}</span><span class="ops-value">{{ webauthn_rp_id|default:_('Derived') }}</span><span class="ops-help">{% trans "Derived from the deployment origin unless explicitly configured." %}</span></div>
+            <div class="ops-card"><span class="ops-label">{% trans "WebAuthn origin" %}</span><span class="ops-value">{{ webauthn_origin|default:_('Derived') }}</span><span class="ops-help">{% trans "Must match the real deployed browser origin." %}</span></div>
+        </div>
+        <div class="security-device-card__actions"><a class="btn btn-secondary" href="{% url 'paxalia:admin_sessions' %}">{% trans "Review sessions" %}</a></div>
+    </section>
+
+    <div class="security-device-callout"><div><strong>{% trans "Recovery safety" %}</strong><p>{% trans "Keep at least one backup authenticator and store recovery codes outside the browser. Recovery codes are not returned through ordinary logs, exports, or device metadata." %}</p></div></div>
+</div>
+{% endblock %}
+

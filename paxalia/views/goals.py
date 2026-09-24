@@ -1,6 +1,6 @@
 # paxalia/views/goals.py
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
@@ -12,7 +12,7 @@ from paxalia.models import Goal, Funnel, FunnelStep, PageView
 from .utils import get_date_range, section_enabled, get_current_site, site_scoped, scoped_object_or_404
 
 
-@staff_member_required
+@admin_security_required
 def goals_management(request):
     if not section_enabled('goals'):
         raise Http404
@@ -58,7 +58,7 @@ def goals_management(request):
     return render(request, 'paxalia/goals.html', context)
 
 
-@staff_member_required
+@admin_security_required
 @require_POST
 def goal_delete(request, goal_id):
     if not section_enabled('goals'):
@@ -69,7 +69,7 @@ def goal_delete(request, goal_id):
     return redirect('paxalia:goals')
 
 
-@staff_member_required
+@admin_security_required
 def funnels_management(request):
     if not section_enabled('funnels'):
         raise Http404
@@ -117,7 +117,7 @@ def funnels_management(request):
     return render(request, 'paxalia/funnels.html', context)
 
 
-@staff_member_required
+@admin_security_required
 @require_POST
 def funnel_delete(request, funnel_id):
     if not section_enabled('funnels'):

@@ -172,9 +172,9 @@ def record_check(monitor, result):
 
     alert = None
     with transaction.atomic():
-        locked_monitor = (
-            UptimeMonitor.objects.select_for_update().select_related('site').get(pk=monitor.pk)
-        )
+        # UptimeMonitor.site is nullable. Do not combine select_for_update()
+        # with a nullable outer join on PostgreSQL; lock the monitor row only.
+        locked_monitor = UptimeMonitor.objects.select_for_update().get(pk=monitor.pk)
         previous = locked_monitor.checks.order_by('-checked_at').first()
         was_up = previous is None or previous.status == 'up'
 

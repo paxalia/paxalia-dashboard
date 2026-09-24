@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import timedelta
 
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.core.cache import cache
 from django.db.models import Count
 from django.db.models.functions import TruncDate
@@ -310,7 +310,7 @@ def analytics_browser_log_api(request):
 
 # ─── Admin Dashboard View ─────────────────────────────────────────────
 
-@staff_member_required
+@admin_security_required
 def analytics_events(request):
     """Dashboard view showing event paxalia."""
     if not section_enabled('events'):

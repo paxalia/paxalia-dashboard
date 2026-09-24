@@ -1,7 +1,7 @@
 {% extends 'paxalia/base.html' %}
 {% load static i18n %}
 
-{% block title %}{% trans "Two-Factor Authentication" %} – Paxalia Analytics{% endblock %}
+{% block title %}{% trans "Two-Factor Authentication" %} – Paxalia Dashboard{% endblock %}
 {% block page_title %}{% trans "Two-Factor Authentication" %}{% endblock %}
 {% block page_subtitle %}{% trans "Protect your account with an authenticator app" %}{% endblock %}
 
@@ -15,16 +15,10 @@
     {% if already_enrolled %}
     <div class="table-card">
         <h2 class="card-title">{% trans "Two-factor authentication is enabled" %}</h2>
-        <p class="form-hint">{% trans "Your account is protected with an authenticator app." %}</p>
-        <form method="post" action="{% url 'paxalia:mfa_disable' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger" data-confirm="{% trans 'Disable two-factor authentication on your account?' %}">
-                {% trans "Disable 2FA" %}
-            </button>
-        </form>
-        <p class="form-hint">
-            <a href="?reset=1">{% trans "Set up a new authenticator instead" %}</a>
-        </p>
+        <p class="form-hint">{% trans "Your account is protected with a mandatory administrator authenticator. Use the Security Authentication workspace to verify, recover, or reset the authenticator through the protected flow." %}</p>
+        <div class="security-device-card__actions">
+            <a class="btn btn-primary" href="{% url 'paxalia:security_authentication' %}">{% trans "Open Authentication & Recovery" %}</a>
+        </div>
     </div>
     {% else %}
     <div class="table-card">

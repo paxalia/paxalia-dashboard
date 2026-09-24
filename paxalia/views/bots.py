@@ -1,11 +1,11 @@
 from django.shortcuts import render
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.db.models import Count
 from django.utils import timezone
 from datetime import timedelta
 from ..models import PageView, DailySiteStats
 
-@staff_member_required
+@admin_security_required
 def bots_overview(request):
     today = timezone.now().date()
     last_30_days = today - timedelta(days=30)

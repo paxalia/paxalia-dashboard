@@ -1,5 +1,5 @@
 # paxalia/views/export.py
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.db.models import Count
 from django.http import Http404
 from django.http import HttpResponse
@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from .utils import get_date_range, parse_user_agent, get_billing_models, get_current_site, site_scoped
 
 from paxalia.models import PageView, AnalyticsEvent
+from paxalia.logging.redaction import redact_text
 
 import json
 import csv
@@ -30,7 +31,14 @@ def _csv_safe(value):
     return value
 
 
-@staff_member_required
+def _no_store_response(response):
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
+
+
+@admin_security_required
 def analytics_export(request, export_type):
     """
     Export paxalia data as CSV or JSON, respecting the current date filter
@@ -44,22 +52,35 @@ def analytics_export(request, export_type):
 
     # Helper: return the correct HttpResponse for the chosen format
     def build_response(filename_base, headers, rows):
+        def safe_cell(value):
+            # Analytics values originate from public traffic and can contain
+            # credential-like query parameters. Reuse the central redaction
+            # rules for every exported representation.
+            return redact_text(value) if isinstance(value, str) else value
+
+        safe_rows = [[safe_cell(cell) for cell in row] for row in rows]
         if fmt == 'json':
-            payload = [dict(zip(headers, row)) for row in rows]
+            payload = [dict(zip(headers, row)) for row in safe_rows]
             response = HttpResponse(
                 json.dumps(payload, indent=2),
                 content_type='application/json'
             )
             response['Content-Disposition'] = f'attachment; filename="{filename_base}.json"'
-            return response
+            response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            return _no_store_response(response)
         else:  # csv
             response = HttpResponse(content_type='text/csv')
             response['Content-Disposition'] = f'attachment; filename="{filename_base}.csv"'
+            response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
             writer = csv.writer(response)
             writer.writerow(headers)
-            for row in rows:
+            for row in safe_rows:
                 writer.writerow([_csv_safe(cell) for cell in row])
-            return response
+            return _no_store_response(response)
 
     # ── 1. Overview – Top Pages table ──
     if export_type == 'overview_top_pages':

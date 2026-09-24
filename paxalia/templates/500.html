@@ -1,0 +1,13 @@
+{% extends 'paxalia/error_base.html' %}
+{% load i18n paxalia_tags %}
+{% block title %}{% trans "500 Server Error" %} — {% paxalia_setting 'ERROR_BRAND_NAME' 'Paxalia' %}{% endblock %}
+{% block description %}{% trans "Something went wrong on the server. Please try again later." %}{% endblock %}
+{% block content %}
+<section class="paxalia-error-card" aria-labelledby="error-heading">
+    <div class="paxalia-error-code" aria-hidden="true"><span class="paxalia-error-code__main">500</span><span class="paxalia-error-code__ghost paxalia-error-code__ghost--a">500</span><span class="paxalia-error-code__ghost paxalia-error-code__ghost--b">500</span></div>
+    <span class="paxalia-error-eyebrow">{% trans "Server error" %}</span>
+    <h1 id="error-heading">{% trans "Something went wrong on our side." %}</h1>
+    <p>{% trans "Please try again later. The technical details remain in Paxalia Logs for authorized administrators." %}</p>
+    <div class="paxalia-error-actions"><a class="btn btn-primary" data-error-home href="{% paxalia_setting 'ERROR_HOME_URL' '/' %}">{% trans "Back to homepage" %}</a><button class="btn btn-secondary" type="button" data-error-action="reload">{% trans "Try again" %}</button></div>
+</section>
+{% endblock %}

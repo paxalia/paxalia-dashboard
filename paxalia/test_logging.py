@@ -1,13 +1,14 @@
 """Database-backed regression tests for Paxalia canonical logging."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 
-from django.test import RequestFactory, TestCase
+from django.test import TestCase
 
 from paxalia import log as paxalia_log
-from paxalia.logging.handler import PaxaliaLogHandler, configure_logging
+from paxalia.logging.handler import PaxaliaLogHandler, configure_logging, get_last_handler_diagnostic
 from paxalia.logging.services import build_from_log_record, persist_event
 from paxalia.models import PaxaliaLogEvent
 
@@ -47,6 +48,32 @@ class PaxaliaLoggingTests(TestCase):
             )
         )
         self.assertTrue(PaxaliaLogEvent.objects.filter(message=message).exists())
+
+    async def test_handler_dispatch_from_async_context_is_non_blocking_and_persists(self):
+        handler = PaxaliaLogHandler(level=logging.ERROR)
+        marker = uuid.uuid4().hex
+        message = f"async handler dispatch {marker}"
+        handler.handle(
+            logging.LogRecord(
+                name="django.server",
+                level=logging.ERROR,
+                pathname=__file__,
+                lineno=1,
+                msg=message,
+                args=(),
+                exc_info=None,
+            )
+        )
+        diagnostic = get_last_handler_diagnostic()
+        self.assertTrue(diagnostic.get("queued"))
+        flushed = await asyncio.to_thread(PaxaliaLogHandler.flush_async, 5.0)
+        self.assertTrue(flushed)
+        from asgiref.sync import sync_to_async
+        exists = await sync_to_async(
+            PaxaliaLogEvent.objects.filter(message=message).exists,
+            thread_sensitive=True,
+        )()
+        self.assertTrue(exists)
 
     def test_stdlib_logger_dispatch_writes_event(self):
         configure_logging()

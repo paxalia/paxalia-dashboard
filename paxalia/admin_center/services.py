@@ -353,21 +353,51 @@ def object_sections(definition, request, obj):
             try:
                 related = getattr(obj, accessor)
                 if hasattr(related, "all"):
-                    count = related.count()
-                    values = list(related.all()[:max_items])
+                    # Never use the unrestricted manager count as the visible
+                    # relationship count: that would disclose the existence
+                    # of objects hidden by object-level ModelAdmin policy.
+                    candidates = list(related.all()[: max_items + 1])
                 else:
-                    count = 1 if related is not None else 0
-                    values = [related] if related is not None else []
+                    candidates = [related] if related is not None else []
+
+                related_definition = None
+                try:
+                    from .registry import registry
+                    related_model = getattr(field, "related_model", None)
+                    if related_model is not None:
+                        related_definition = registry.get(
+                            related_model._meta.app_label,
+                            related_model._meta.model_name,
+                            request=request,
+                        )
+                except Exception:
+                    related_definition = None
+
+                visible = []
+                hidden_seen = False
+                for item in candidates:
+                    if related_definition is None or not can_view(related_definition, request, item):
+                        hidden_seen = True
+                        continue
+                    visible.append(item)
+                    if len(visible) >= max_items:
+                        break
+
+                # `more` is deliberately an existence indicator rather than
+                # the raw hidden-object count. This prevents relationship
+                # cardinality from becoming a side-channel.
+                more = 1 if hidden_seen or len(candidates) > len(visible) else 0
                 rows.append({
                     "name": accessor,
                     "label": str(getattr(field, "verbose_name", accessor)),
                     "kind": "reverse_relation",
                     "items": [
                         {"value": safe_display_repr(item, 160), "url": _related_url(request, item)}
-                        for item in values
+                        for item in visible
                     ],
-                    "more": max(0, count - len(values)),
-                    "count": count,
+                    "more": more,
+                    "count": len(visible),
+                    "has_restricted": hidden_seen,
                 })
             except ObjectDoesNotExist:
                 rows.append({
@@ -377,6 +407,7 @@ def object_sections(definition, request, obj):
                     "items": [],
                     "more": 0,
                     "count": 0,
+                    "has_restricted": False,
                 })
             except Exception:
                 rows.append({
@@ -386,6 +417,7 @@ def object_sections(definition, request, obj):
                     "items": [],
                     "more": 0,
                     "count": 0,
+                    "has_restricted": False,
                     "error": True,
                 })
             continue
@@ -621,7 +653,17 @@ def execute_action(definition, request, action_name, selected_ids):
         raise PermissionDenied
 
     qs = _selected_queryset(definition, request, selected_ids)
-    count = qs.count()
+    objects = list(qs)
+    if not all(
+        any(
+            method(request, obj)
+            for permission in allowed_permissions
+            if (method := permission_methods.get(permission)) is not None
+        )
+        for obj in objects
+    ):
+        raise PermissionDenied
+    count = len(objects)
     if getattr(func, "__self__", None) is not None:
         response = func(request, qs)
     else:

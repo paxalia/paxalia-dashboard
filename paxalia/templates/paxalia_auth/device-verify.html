@@ -1,0 +1,37 @@
+{% extends 'paxalia/auth_base.html' %}
+{% load static i18n %}
+{% block title %}{% trans "Verify authorized device" %} · {{ brand_name }}{% endblock %}
+{% block content %}
+<section class="paxalia-auth-card" aria-labelledby="device-verify-heading" data-webauthn-mode="authenticate" data-webauthn-localhost-required="{{ webauthn_configuration_error|yesno:'true,false' }}" data-options-url="{% url 'paxalia:auth_device_login_options' %}" data-verify-url="{% url 'paxalia:auth_device_login_verify' %}"{% if not webauthn_available %} data-webauthn-server-unavailable="true"{% endif %}>
+    <header class="paxalia-auth-card__header">
+        <div class="paxalia-auth-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 16h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.6"/></svg></div>
+        <p class="paxalia-auth-eyebrow">{% trans "Layer 3" %}</p>
+        <h1 id="device-verify-heading">{% trans "Verify your authorized device" %}</h1>
+        <p>{% blocktrans with count=device_count %}Choose your registered authenticator. {{ count }} active credential(s) are available for this administrator.{% endblocktrans %}</p>
+    </header>
+    <div class="paxalia-auth-card__body">
+        <div class="paxalia-auth-stack paxalia-auth-device-stack">
+        {% if not webauthn_available %}
+            <div class="paxalia-auth-callout paxalia-auth-callout--danger" role="alert">
+                <strong>{% trans "WebAuthn is unavailable" %}</strong>
+                <p>{% trans "The server-side WebAuthn dependency is not installed. Install the supported 'webauthn' package before verifying an authorized device." %}</p>
+            </div>
+            <a href="{% url 'paxalia:auth_login' %}" class="paxalia-auth-secondary-link">{% trans "Start over" %}</a>
+        {% elif webauthn_configuration_error %}
+            <div class="paxalia-auth-callout paxalia-auth-callout--danger" role="alert">
+                <strong>{% trans "WebAuthn browser origin is not supported" %}</strong>
+                <p>{{ webauthn_configuration_detail }}</p>
+            </div>
+            {% if webauthn_localhost_url %}<a href="{{ webauthn_localhost_url }}" class="btn btn-primary paxalia-auth-submit">{% trans "Restart on localhost" %}</a>{% endif %}
+            <a href="{% url 'paxalia:auth_login' %}" class="paxalia-auth-secondary-link">{% trans "Start over" %}</a>
+        {% else %}
+            <div id="paxaliaWebAuthnStatus" class="paxalia-auth-callout" role="status" data-message-unsupported="{% trans 'This administrator account requires a supported WebAuthn authenticator in a secure browser context (HTTPS).' %}" data-message-prepare="{% trans 'Preparing secure authenticator verification…' %}" data-message-prepare-register="{% trans 'Preparing secure device registration…' %}" data-message-ready="{% trans 'Complete the authenticator prompt to verify this device.' %}" data-message-ready-register="{% trans 'Complete the authenticator prompt to register this device.' %}" data-message-incomplete="{% trans 'The authenticator challenge was incomplete.' %}" data-message-no-response="{% trans 'No authenticator response was returned.' %}" data-message-complete="{% trans 'Verification complete. Redirecting…' %}" data-message-error="{% trans 'The authenticator operation could not be completed.' %}" data-message-not-allowed="{% trans 'The authenticator operation was cancelled, timed out, or was not allowed by the selected authenticator.' %}" data-message-invalid-state="{% trans 'This authenticator is already registered for this administrator. Choose another authenticator.' %}" data-message-constraint="{% trans 'The selected authenticator cannot satisfy Paxalia’s required passkey and user-verification security policy.' %}" data-message-localhost-required="{% trans 'For local development, open Paxalia Dashboard using localhost instead of 127.0.0.1 or another IP address.' %}">{% trans "Your browser will prompt for the security authenticator associated with this administrator." %}</div>
+            <button type="button" class="btn btn-primary paxalia-auth-submit" id="paxaliaWebAuthnButton">{% trans "Verify device" %}</button>
+            <a href="{% url 'paxalia:auth_login' %}" class="paxalia-auth-secondary-link">{% trans "Start over" %}</a>
+        {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block extra_js %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/webauthn.js' %}"></script>{% endblock %}
+

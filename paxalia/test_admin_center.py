@@ -2,6 +2,8 @@ import io
 import types
 import zipfile
 
+from unittest.mock import patch
+
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase, override_settings
@@ -74,6 +76,13 @@ class PaxaliaAdminCenterTests(TestCase):
 
     def setUp(self):
         self.client.force_login(self.admin_user)
+        # Admin Center tests exercise Django ModelAdmin/registry behavior.
+        # The dedicated security test suite covers the mandatory three-layer
+        # authentication contract separately. Keep these tests isolated from
+        # that policy so they continue to verify the generic Admin subsystem.
+        self.admin_gate_patch = patch("paxalia.admin_security.admin_session_is_valid", return_value=True)
+        self.admin_gate_patch.start()
+        self.addCleanup(self.admin_gate_patch.stop)
         self.request = RequestFactory().get("/")
         self.request.user = self.admin_user
 
@@ -100,6 +109,12 @@ class PaxaliaAdminCenterTests(TestCase):
         self.assertIs(adapter.model, Site)
         self.assertTrue(adapter.permissions(self.request)["view"])
         self.assertEqual(adapter.metadata(self.request)["label"], "paxalia.site")
+        self.assertEqual(definition.identity_fields, ("domain",))
+
+    def test_package_identity_prefers_natural_unique_field_over_primary_key(self):
+        from .packages.engine import identity_fields
+
+        self.assertEqual(identity_fields(Site), ["domain"])
 
     def test_registry_model_policy_metadata_is_generic(self):
         with override_settings(PAXALIA_DASHBOARD={
@@ -463,6 +478,24 @@ class PaxaliaAdminCenterTests(TestCase):
         with self.assertRaises(ValueError):
             preview_package(output.getvalue(), conflict="update")
 
+    def test_package_manifest_preserves_translation_only_mode(self):
+        from .packages.engine import build_package, inspect_package
+
+        payload = {
+            "schema": 1,
+            "translations_only": True,
+            "models": [],
+            "records": [],
+            "record_count": 0,
+            "relationship_count": 0,
+            "translation_count": 0,
+        }
+
+        manifest, normalized, models = inspect_package(build_package(payload))
+        self.assertTrue(manifest["translations_only"])
+        self.assertTrue(normalized["translations_only"])
+        self.assertEqual(models, {})
+
     def test_paxalia_package_rejects_malformed_record_shape(self):
         from .packages.engine import build_package, PackageError, inspect_package
 
@@ -539,6 +572,8 @@ class PaxaliaAdminCenterTests(TestCase):
         second["fields"] = dict(second["fields"], domain="partial-two.test", created_at="not-a-date")
         payload["records"] = [first, second]
         payload["record_count"] = 2
+        payload["models"] = [dict(item) for item in payload["models"]]
+        payload["models"][0]["record_count"] = 2
         result = import_package(build_package(payload), self.request, conflict="update", atomic=False)
         self.assertEqual(result["created"], 1)
         self.assertEqual(result["failed"], 1)
@@ -674,7 +709,7 @@ class PaxaliaAdminCenterTests(TestCase):
         url = reverse("paxalia:admin_object_detail", kwargs={"app_label": "paxalia", "model_name": "site", "object_id": self.site.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        relation = next(item for item in response.context["relations"] if item["name"] == "pageview_set")
+        relation = next(item for item in response.context["relations"] if item["name"] == "page_views")
         self.assertEqual(relation["count"], 0)
         self.assertTrue(relation["has_restricted"])
         self.assertTrue(relation["more"])
@@ -779,12 +814,11 @@ class PaxaliaAdminCenterTests(TestCase):
         self.assertEqual(encoded["nested"]["safe"], "visible")
 
     def test_sensitive_column_rendering_cannot_fall_back_to_raw_value(self):
-        from unittest.mock import patch
         from .admin_center.query import render_column_value
 
         model_admin = admin.site._registry[Site]
         with override_settings(PAXALIA_DASHBOARD={"ADMIN_SENSITIVE_FIELDS": ["domain"]}):
-            with patch("django.contrib.admin.utils.lookup_field", side_effect=AttributeError("lookup failed")):
+            with patch("paxalia.admin_center.query.lookup_field", side_effect=AttributeError("lookup failed")):
                 self.assertEqual(
                     render_column_value(self.site, "domain", model_admin),
                     "••••••••",
@@ -798,6 +832,39 @@ class PaxaliaAdminCenterTests(TestCase):
         self.assertEqual(encoded["__paxalia_type__"], "bytes")
         self.assertEqual(encoded["encoding"], "base64")
         self.assertEqual(encoded["value"], "c2VjcmV0LWJ5dGVz")
+
+    def test_build_package_recomputes_derived_counts_from_records(self):
+        from .packages.engine import build_package, inspect_package
+
+        payload = {
+            "schema": 1,
+            "project": {"django_version": "6.0"},
+            "translations_only": False,
+            "models": [{
+                "label": "paxalia.site",
+                "identity_fields": ["domain"],
+                "record_count": 0,
+            }],
+            "records": [{
+                "model": "paxalia.site",
+                "identity": {"domain": "example.test"},
+                "fields": {"name": "Example"},
+                "relationships": {},
+                "many_to_many": {},
+                "translations": {},
+            }],
+            "record_count": 0,
+            "relationship_count": 99,
+            "translation_count": 42,
+        }
+
+        _, normalized, _ = inspect_package(build_package(payload))
+        self.assertEqual(normalized["models"][0]["identity_fields"], ["domain"])
+        self.assertEqual(normalized["record_count"], 1)
+        self.assertEqual(normalized["relationship_count"], 0)
+        self.assertEqual(normalized["translation_count"], 0)
+        self.assertEqual(normalized["models"][0]["record_count"], 1)
+
 
     def test_partial_package_import_rolls_back_record_when_relationship_fails(self):
         from uuid import uuid4
@@ -816,10 +883,17 @@ class PaxaliaAdminCenterTests(TestCase):
         new_id = uuid4()
         record["identity"] = {"id": str(new_id)}
         record["fields"] = dict(record["fields"], id=str(new_id))
+        original_site_identity = record["relationships"]["site"]["identity"]
+        missing_site_identity = {}
+        for name, value in original_site_identity.items():
+            missing_site_identity[name] = (
+                str(uuid4()) if name == "id"
+                else "missing-relationship-%s.test" % uuid4().hex
+            )
         record["relationships"] = {
             "site": {
                 "model": "paxalia.site",
-                "identity": {"id": str(uuid4())},
+                "identity": missing_site_identity,
             }
         }
         payload["records"] = [record]
@@ -894,12 +968,13 @@ class PaxaliaAdminCenterTests(TestCase):
         result = import_package(build_package(payload), self.request, conflict="update", atomic=False)
         self.assertEqual(result["failed"], 2)
         self.assertFalse(PageView.objects.filter(pk=new_page_id).exists())
-        self.assertTrue(
-            any(
-                "dependency" in str(error.get("reason", "")).lower()
-                for error in result["errors"]
-            )
-        )
+        self.assertEqual({error["index"] for error in result["errors"]}, {0, 1})
+        dependent_errors = [
+            error for error in result["errors"]
+            if error["index"] == 1
+        ]
+        self.assertEqual(len(dependent_errors), 1)
+        self.assertIn("dependency", str(dependent_errors[0]["reason"]).lower())
 
 
     def test_logs_csv_formula_like_values_are_neutralized(self):

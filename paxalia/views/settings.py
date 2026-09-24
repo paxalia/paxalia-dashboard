@@ -1,4 +1,4 @@
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -8,7 +8,7 @@ from paxalia.models import AnalyticsSettings
 from paxalia.views.utils import section_enabled
 
 
-@staff_member_required
+@admin_security_required
 def analytics_settings(request):
     if not section_enabled("settings"):
         raise Http404

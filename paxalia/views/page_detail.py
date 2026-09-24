@@ -1,5 +1,5 @@
 # paxalia/views/page_detail.py
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.shortcuts import render
 from django.db.models import Count
 from django.http import Http404
@@ -15,7 +15,7 @@ from urllib.parse import unquote
 
 # Create your views here.
 
-@staff_member_required
+@admin_security_required
 def analytics_page_detail(request, path):
     if not section_enabled('pages'):
         raise Http404

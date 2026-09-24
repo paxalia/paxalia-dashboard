@@ -2,7 +2,7 @@
 import json
 
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
@@ -14,7 +14,7 @@ from paxalia.segments import ALLOWED_FILTER_FIELDS
 from .utils import section_enabled, get_current_site, scoped_object_or_404
 
 
-@staff_member_required
+@admin_security_required
 def segments_management(request):
     if not section_enabled('segments'):
         raise Http404
@@ -51,7 +51,7 @@ def segments_management(request):
     return render(request, 'paxalia/segments.html', context)
 
 
-@staff_member_required
+@admin_security_required
 @require_POST
 def segment_delete(request, segment_id):
     if not section_enabled('segments'):

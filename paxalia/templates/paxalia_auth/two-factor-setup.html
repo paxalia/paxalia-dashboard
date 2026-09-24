@@ -1,0 +1,79 @@
+{% extends 'paxalia/auth_base.html' %}
+{% load static i18n %}
+{% block title %}{% trans "Set up two-factor authentication" %} · {{ brand_name }}{% endblock %}
+{% block content %}
+<section class="paxalia-auth-card paxalia-auth-card--wide" aria-labelledby="twofa-setup-heading">
+    <header class="paxalia-auth-card__header">
+        <div class="paxalia-auth-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+                <rect x="5" y="10" width="14" height="10" rx="1.7" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+        </div>
+        <p class="paxalia-auth-eyebrow">{% trans "Layer 2" %}</p>
+        <h1 id="twofa-setup-heading">{% trans "Set up two-factor authentication" %}</h1>
+        <p>{% trans "Administrator access requires a confirmed authenticator before a device can be authorized." %}</p>
+    </header>
+    <div class="paxalia-auth-card__body">
+        {% if configuration_error %}
+            <div class="paxalia-auth-callout paxalia-auth-callout--danger" role="alert">
+                <strong>{% trans "Two-factor configuration is incomplete." %}</strong>
+                <p>{% trans "Install django-otp and add django_otp plus django_otp.plugins.otp_totp to INSTALLED_APPS, then run migrations. There is no password-only fallback for Paxalia Dashboard administration." %}</p>
+            </div>
+        {% elif already_enabled %}
+            <div class="paxalia-auth-callout">{% trans "Two-factor authentication is already enabled for this administrator." %}</div>
+            <a class="btn btn-primary paxalia-auth-submit" href="{% url 'paxalia:security_authentication' %}">{% trans "Open security settings" %}</a>
+        {% else %}
+            <div class="paxalia-auth-steps">
+                <div><strong>1</strong><span>{% trans "Open your authenticator app." %}</span></div>
+                <div><strong>2</strong><span>{% trans "Scan the QR code below with your authenticator app." %}</span></div>
+                <div><strong>3</strong><span>{% trans "Enter the six-digit code your app generates to confirm enrollment." %}</span></div>
+            </div>
+
+            {% if qr_code_data_uri %}
+            <section class="paxalia-auth-qr-panel" aria-labelledby="totp-qr-heading">
+                <div class="paxalia-auth-qr-panel__copy">
+                    <p class="paxalia-auth-eyebrow" id="totp-qr-heading">{% trans "Scan to add Paxalia" %}</p>
+                    <p>{% trans "Open Google Authenticator, 1Password, Microsoft Authenticator, Authy, or another TOTP app and scan this code." %}</p>
+                </div>
+                <div class="paxalia-auth-qr-frame">
+                    <img src="{{ qr_code_data_uri }}" alt="{% trans 'QR code for adding Paxalia Dashboard to your authenticator app' %}" width="256" height="256" decoding="async">
+                </div>
+            </section>
+            {% endif %}
+
+            {% if totp_secret %}
+            <section class="paxalia-auth-secret paxalia-auth-secret--manual" aria-labelledby="totp-secret-heading">
+                <div>
+                    <span id="totp-secret-heading">{% trans "Manual setup key" %}</span>
+                    <code id="paxaliaTotpSecret">{{ formatted_totp_secret }}</code>
+                    <small>{% trans "Use this only when scanning the QR code is not possible." %}</small>
+                </div>
+                <button type="button" class="btn btn-secondary paxalia-auth-copy" data-copy-value="{{ totp_secret }}" data-copy-success="{% trans 'Copied' %}" data-copy-error="{% trans 'Copy failed' %}">
+                    {% trans "Copy key" %}
+                </button>
+            </section>
+            {% endif %}
+
+            {% if not qr_code_data_uri %}
+                <div class="paxalia-auth-callout paxalia-auth-callout--warning" role="status">{% trans "The QR image could not be generated here. Use the manual setup key above." %}</div>
+            {% endif %}
+
+            {% if rate_limited %}
+                <div class="paxalia-auth-callout paxalia-auth-callout--danger" role="alert">{% trans "Too many verification attempts. Please wait and try again." %}</div>
+            {% endif %}
+
+            <form method="post" class="paxalia-auth-form" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+                <div class="paxalia-auth-field">
+                    <label for="id_token">{% trans "Verification code" %}</label>
+                    <input id="id_token" name="token" class="paxalia-otp-single" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
+                </div>
+                <button class="btn btn-primary paxalia-auth-submit" type="submit">{% trans "Verify and continue" %}</button>
+            </form>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+

@@ -434,6 +434,10 @@ class LoginEvent(models.Model):
     traffic_type = models.CharField(max_length=12, choices=[('WEB','Web'),('API','API'),('BOT','Bot'),('INTERNAL','Internal')], default='WEB', db_index=True)
     failure_category = models.CharField(max_length=100, blank=True, db_index=True)
     identifier_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    admin_device = models.ForeignKey(
+        'PaxaliaDevice', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='login_events', db_index=True,
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='login_events'
@@ -483,6 +487,122 @@ class LoginEvent(models.Model):
     @property
     def is_active_session(self):
         return self.result == 'success' and self.logged_out_at is None
+
+
+class PaxaliaDevice(models.Model):
+    """Named WebAuthn authenticator owned by one Django administrator."""
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('revoked', 'Revoked'),
+        ('disabled', 'Disabled'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='paxalia_devices', db_index=True,
+    )
+    display_name = models.CharField(max_length=120, default='Paxalia Authenticator')
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='active', db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    last_authenticated_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Paxalia Device'
+        verbose_name_plural = 'Paxalia Devices'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status'], name='paxalia_dev_user_status_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.display_name} ({self.get_status_display()})"
+
+
+class PaxaliaDeviceCredential(models.Model):
+    """Server-side public WebAuthn credential metadata."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    device = models.OneToOneField(
+        PaxaliaDevice, on_delete=models.CASCADE, related_name='credential',
+    )
+    credential_id = models.CharField(max_length=1024, unique=True, db_index=True)
+    credential_public_key = models.BinaryField()
+    sign_count = models.PositiveBigIntegerField(default=0)
+    webauthn_user_handle = models.BinaryField(max_length=64)
+    device_type = models.CharField(max_length=32, blank=True)
+    authenticator_attachment = models.CharField(max_length=32, blank=True)
+    backed_up = models.BooleanField(default=False)
+    aaguid = models.CharField(max_length=64, blank=True)
+    transports = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    last_authenticated_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Paxalia Device Credential'
+        verbose_name_plural = 'Paxalia Device Credentials'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['device', '-last_authenticated_at'], name='paxalia_cred_last_auth_idx'),
+        ]
+
+    def __str__(self):
+        return self.device.display_name
+
+
+class PaxaliaWebAuthnChallenge(models.Model):
+    """Short-lived, single-use WebAuthn ceremony challenge."""
+    KIND_CHOICES = [
+        ('registration', 'Registration'),
+        ('authentication', 'Authentication'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='paxalia_webauthn_challenges',
+    )
+    device = models.ForeignKey(
+        PaxaliaDevice, on_delete=models.CASCADE, null=True, blank=True, related_name='webauthn_challenges',
+    )
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, db_index=True)
+    challenge = models.CharField(max_length=128, unique=True, db_index=True)
+    user_handle = models.BinaryField(max_length=64, null=True, blank=True)
+    session_key = models.CharField(max_length=64, blank=True, db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    expires_at = models.DateTimeField(db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Paxalia WebAuthn Challenge'
+        verbose_name_plural = 'Paxalia WebAuthn Challenges'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'kind', '-created_at'], name='paxalia_chal_user_kind_idx'),
+            models.Index(fields=['expires_at', 'used_at'], name='paxalia_chal_exp_used_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.kind} challenge for {self.user}"
+
+
+class PaxaliaRecoveryCode(models.Model):
+    """One-time recovery code hash; plaintext codes are never stored."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='paxalia_recovery_codes',
+    )
+    code_hash = models.CharField(max_length=255)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    revoked_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Paxalia Recovery Code'
+        verbose_name_plural = 'Paxalia Recovery Codes'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'used_at', 'revoked_at'], name='paxalia_recovery_state_idx'),
+        ]
 
 
 class PaxaliaLogGroup(models.Model):
@@ -1100,7 +1220,12 @@ class UptimeCheck(models.Model):
 
     class Meta:
         ordering = ['-checked_at']
-        indexes = [models.Index(fields=['monitor', 'checked_at'])]
+        indexes = [
+            models.Index(
+                fields=['monitor', 'checked_at'],
+                name='paxalia_upt_monitor_d38f8e_idx',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.monitor.name}: {self.status} @ {self.checked_at}"

@@ -1,5 +1,5 @@
 # paxalia/views/api_docs.py
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import render
 from django.utils.translation import gettext as _
@@ -7,7 +7,7 @@ from django.utils.translation import gettext as _
 from .utils import section_enabled
 
 
-@staff_member_required
+@admin_security_required
 def api_docs(request):
     if not section_enabled('api_keys'):
         raise Http404

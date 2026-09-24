@@ -1,0 +1,12 @@
+{% extends 'paxalia/auth_base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Two-factor verification" %} · {{ brand_name }}{% endblock %}
+{% block content %}
+<section class="paxalia-auth-card" aria-labelledby="twofa-heading" data-auth-step="2fa" data-otp-incomplete-message="{% trans 'Enter the complete verification code.' %}">
+    <header class="paxalia-auth-card__header"><div class="paxalia-auth-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="1.7" stroke="currentColor" stroke-width="1.6"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6"/></svg></div><p class="paxalia-auth-eyebrow">{% trans "Layer 2" %}</p><h1 id="twofa-heading">{% trans "Two-factor verification" %}</h1><p>{% trans "Enter the code from your authenticator app, or use a one-time recovery code." %}</p></header>
+    <div class="paxalia-auth-card__body">
+        <form method="post" class="paxalia-auth-form" id="paxaliaTwoFactorForm">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}"><input type="hidden" name="token" id="paxaliaOtpToken"><div class="paxalia-otp-grid" data-otp-grid>{% for i in '123456' %}<input class="paxalia-otp-digit" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="{% trans 'OTP digit' %} {{ forloop.counter }}">{% endfor %}</div><div class="paxalia-auth-divider"><span>{% trans "or" %}</span></div><div class="paxalia-auth-field"><label for="id_recovery_code">{% trans "Recovery code" %}</label><input id="id_recovery_code" name="recovery_code" class="form-input" autocomplete="off" placeholder="ABCD-EFGH-IJKL-MNOP"></div>{% if rate_limited %}<div class="paxalia-auth-callout paxalia-auth-callout--danger">{% trans "Too many verification attempts. Please wait and try again." %}</div>{% endif %}<button class="btn btn-primary paxalia-auth-submit" type="submit">{% trans "Verify and continue" %}</button></form>
+    </div>
+</section>
+{% endblock %}
+

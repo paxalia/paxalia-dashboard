@@ -12,6 +12,7 @@ from django.utils.translation import gettext as _
 from honeypot.decorators import honeypot_exempt
 
 from ..logging.redaction import redact_text
+from ..admin_security import admin_security_required
 from ..models import LoginEvent, PaxaliaLogEvent, SecurityAuditLog
 from ..settings import get_config
 from .permissions import can_change, can_delete, require_add, require_change, require_delete, require_staff, require_view
@@ -144,6 +145,7 @@ def _protected_response(response, definition):
     return response
 
 
+@admin_security_required
 @staff_member_required
 
 def admin_home(request):
@@ -187,6 +189,7 @@ def admin_home(request):
     return render(request, "paxalia/admin/home.html", context)
 
 
+@admin_security_required
 @staff_member_required
 
 def admin_audit(request):
@@ -229,6 +232,7 @@ def admin_audit(request):
     return render(request, "paxalia/admin/audit.html", context)
 
 
+@admin_security_required
 @staff_member_required
 
 def admin_models(request):
@@ -246,6 +250,7 @@ def admin_models(request):
     return render(request, "paxalia/admin/models.html", context)
 
 
+@admin_security_required
 @staff_member_required
 
 def model_overview(request, app_label, model_name):
@@ -285,6 +290,7 @@ def model_overview(request, app_label, model_name):
     return _protected_response(render(request, "paxalia/admin/model_overview.html", context), definition)
 
 
+@admin_security_required
 @staff_member_required
 @honeypot_exempt
 
@@ -414,6 +420,7 @@ def model_changelist(request, app_label, model_name):
     return render(request, "paxalia/admin/model_list.html", context)
 
 
+@admin_security_required
 @staff_member_required
 @honeypot_exempt
 
@@ -469,6 +476,7 @@ def model_action(request, app_label, model_name):
     return redirect(definition.url("admin_model_list"))
 
 
+@admin_security_required
 @staff_member_required
 @honeypot_exempt
 
@@ -520,6 +528,7 @@ def model_add(request, app_label, model_name):
     return _protected_response(render(request, "paxalia/admin/object_form.html", context), definition)
 
 
+@admin_security_required
 @staff_member_required
 @honeypot_exempt
 
@@ -585,6 +594,7 @@ def model_change(request, app_label, model_name, object_id):
     return _protected_response(render(request, "paxalia/admin/object_form.html", context), definition)
 
 
+@admin_security_required
 @staff_member_required
 
 def model_detail(request, app_label, model_name, object_id):
@@ -628,6 +638,7 @@ def model_detail(request, app_label, model_name, object_id):
     return _protected_response(render(request, "paxalia/admin/object_detail.html", context), definition)
 
 
+@admin_security_required
 @staff_member_required
 
 def model_history(request, app_label, model_name, object_id):
@@ -658,6 +669,7 @@ def model_history(request, app_label, model_name, object_id):
     return _protected_response(render(request, "paxalia/admin/history.html", context), definition)
 
 
+@admin_security_required
 @staff_member_required
 @honeypot_exempt
 
@@ -701,6 +713,7 @@ def model_delete(request, app_label, model_name, object_id):
     return _protected_response(render(request, "paxalia/admin/delete_confirmation.html", context), definition)
 
 
+@admin_security_required
 @staff_member_required
 @honeypot_exempt
 
@@ -792,6 +805,7 @@ def model_bulk_delete(request, app_label, model_name):
     )
 
 
+@admin_security_required
 @staff_member_required
 
 def model_stats(request, app_label, model_name):

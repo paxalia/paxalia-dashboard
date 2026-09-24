@@ -1,0 +1,51 @@
+{% extends 'paxalia/base.html' %}
+{% load i18n static %}
+
+{% block title %}{% trans "Admin Sessions" %} — Paxalia{% endblock %}
+{% block page_title %}{% trans "Admin Sessions" %}{% endblock %}
+{% block page_subtitle %}{% trans "Active privileged sessions tied to the three-layer administrator security flow" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/security.css' %}">{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page analytics-page-stack">
+    <div class="security-subnav">
+        <a class="btn btn-secondary" href="{% url 'paxalia:security_overview' %}">{% trans "Security Overview" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:security_admins' %}">{% trans "Administrator Security" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:security_authentication' %}">{% trans "Authentication" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:admin_devices' %}">{% trans "Admin Devices" %}</a>
+    </div>
+
+    <section class="table-card">
+        <div class="security-section-head"><div><span class="security-eyebrow">{% trans "Session policy" %}</span><h2 class="card-title">{% trans "Privileged Sessions" %}</h2></div><div class="security-device-card__actions"><form method="post" action="{% url 'paxalia:admin_sessions_revoke_others' %}">{% csrf_token %}<button type="submit" class="btn btn-secondary" data-confirm="{% trans 'Revoke all other administrator sessions?' %}">{% trans "Revoke others" %}</button></form><form method="post" action="{% url 'paxalia:admin_sessions_revoke_all' %}">{% csrf_token %}<button type="submit" class="btn btn-danger" data-confirm="{% trans 'Revoke every administrator session, including this one?' %}">{% trans "Revoke all" %}</button></form></div></div>
+        <p class="form-hint">{% trans "Revocation uses Django's session framework. Database-backed sessions are immediately removed; other session engines remain subject to their own backend semantics." %}</p>
+
+        {% if sessions %}
+        <div class="security-session-list">
+            {% for session in sessions %}
+            <article class="security-session-card {% if session.session_key == current_session_key %}security-session-card--current{% endif %}">
+                <div class="security-session-card__main">
+                    <div>
+                        <span class="security-eyebrow">{% if session.session_key == current_session_key %}{% trans "Current session" %}{% else %}{% trans "Privileged session" %}{% endif %}</span>
+                        <h3>{% if session.admin_device %}{{ session.admin_device.display_name }}{% else %}{% trans "Unidentified authorized device" %}{% endif %}</h3>
+                    </div>
+                    <span class="security-status-badge security-status-ok">{% trans "Active" %}</span>
+                </div>
+                <dl class="security-device-meta">
+                    <div><dt>{% trans "Signed in" %}</dt><dd>{{ session.created_at|date:"Y-m-d H:i" }}</dd></div>
+                    <div><dt>{% trans "IP" %}</dt><dd>{{ session.ip_address|default:"—" }}</dd></div>
+                    <div><dt>{% trans "Browser / OS" %}</dt><dd>{{ session.browser|default:"—" }} / {{ session.os|default:"—" }}</dd></div>
+                </dl>
+                <form method="post" action="{% url 'paxalia:admin_session_revoke' session.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Revoke this administrator session?' %}">{% trans "Revoke session" %}</button>
+                </form>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="security-empty"><strong>{% trans "No active privileged sessions are recorded." %}</strong><span>{% trans "Your current session will appear here after authentication completes." %}</span></div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+

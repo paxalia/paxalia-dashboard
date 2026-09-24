@@ -198,11 +198,28 @@ class PaxaliaModelDefinition:
         configured = _option_list(self.model, "identity_fields")
         if configured:
             return configured
-        result = [self.model._meta.pk.name]
-        for field in self.model._meta.fields:
-            if field.name != self.model._meta.pk.name and getattr(field, "unique", False):
-                result.append(field.name)
-        return tuple(dict.fromkeys(result))
+
+        # Keep the Admin registry aligned with the package engine: prefer
+        # non-primary-key, non-null unique fields as logical/natural identity.
+        # The technical primary key is only the fallback when no safe natural
+        # identity is available.
+        natural_unique = [
+            field.name
+            for field in self.model._meta.concrete_fields
+            if (
+                not getattr(field, "primary_key", False)
+                and getattr(field, "unique", False)
+                and not getattr(field, "null", False)
+                and not is_sensitive_field(field, self.model)
+            )
+        ]
+        if natural_unique:
+            return tuple(natural_unique[:3])
+
+        pk = self.model._meta.pk
+        if is_sensitive_field(pk, self.model):
+            return ()
+        return (pk.name,)
 
     @property
     def import_export_supported(self):

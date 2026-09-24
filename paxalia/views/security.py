@@ -17,6 +17,8 @@ from ..models import BlockedIP, LoginEvent, SecurityAuditLog, CSPViolation
 from ..settings import get_config
 from ..security_audit import log_action
 from ..security_scorecard import run_scorecard_checks
+from ..security_health import run_security_health_checks
+from ..admin_security import current_device_credential
 from .utils import section_enabled
 
 User = get_user_model()
@@ -154,7 +156,7 @@ def security_center(request):
     last_30_days = now - timedelta(days=30)
 
     # ── Login Activity ──
-    recent_logins = LoginEvent.objects.select_related('user').filter(
+    recent_logins = LoginEvent.objects.select_related('user', 'admin_device').filter(
         event_type='login', created_at__gte=last_30_days
     )[:200]
 
@@ -181,7 +183,7 @@ def security_center(request):
     unknown_account_failures_30d = login_counts['unknown_account_failures'] or 0
 
     # ── Active Sessions (successful logins with no logout yet, last 30 days) ──
-    active_sessions = LoginEvent.objects.select_related('user').filter(
+    active_sessions = LoginEvent.objects.select_related('user', 'admin_device').filter(
         event_type='login', result='success',
         logged_out_at__isnull=True,
         created_at__gte=last_30_days,
@@ -232,10 +234,11 @@ def security_center(request):
         'blocked_ips': blocked_ips,
         'audit_entries': audit_entries,
         'csp_violations': csp_violations,
-        'mfa_status': _mfa_status(),
         'dependency_health': _dependency_health(),
         'scorecard': run_scorecard_checks(),
         'runtime_security': _runtime_security_snapshot(),
+        'security_health': run_security_health_checks(request),
+        'current_admin_device': current_device_credential(request),
     }
     return render(request, 'paxalia/security.html', context)
 

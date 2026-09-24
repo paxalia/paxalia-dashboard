@@ -21,6 +21,18 @@ _SECRET_PAIR_RE = re.compile(
 )
 
 
+_ANSI_ESCAPE_RE = re.compile(
+    r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"
+)
+
+
+def strip_ansi(value):
+    """Remove terminal/console ANSI control sequences from log text."""
+    if value is None:
+        return ""
+    return _ANSI_ESCAPE_RE.sub("", str(value))
+
+
 def _normalise_key(key):
     return re.sub(r"[^a-z0-9]", "", str(key).lower())
 

@@ -99,6 +99,14 @@ class Migration(migrations.Migration):
         ),
 
         # Final LoginEvent composite indexes.
+        # UptimeCheck: preserve the existing v3 database index while
+        # aligning its physical name with the stable v4 model state.
+        migrations.RenameIndex(
+            model_name="uptimecheck",
+            old_name="analytics_u_monitor_1a2b3c_idx",
+            new_name="paxalia_upt_monitor_d38f8e_idx",
+        ),
+
         migrations.AddIndex(
             model_name="loginevent",
             index=models.Index(

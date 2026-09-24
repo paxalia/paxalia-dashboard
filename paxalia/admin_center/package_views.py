@@ -22,6 +22,7 @@ from honeypot.decorators import honeypot_exempt
 from django.http import QueryDict
 
 from ..security_audit import log_action
+from ..admin_security import admin_security_required
 from ..settings import get_config
 from ..packages.engine import PackageError, export_model, export_models, import_package, inspect_package, preview_package, build_retry_package
 from ..packages.format import read_package
@@ -282,6 +283,8 @@ def _clear_retry(request):
     request.session.modified = True
 
 
+@admin_security_required
+@honeypot_exempt
 def package_center(request):
     _require_enabled()
     require_staff(request)
@@ -308,6 +311,8 @@ def package_center(request):
     return render(request, "paxalia/admin/package_center.html", context)
 
 
+@admin_security_required
+@honeypot_exempt
 def package_history(request):
     _require_enabled()
     require_staff(request)
@@ -341,6 +346,7 @@ def _filtered_queryset(definition, request, filter_query):
         request.GET = original
 
 
+@admin_security_required
 @staff_member_required
 @honeypot_exempt
 
@@ -398,6 +404,7 @@ def package_export_center(request):
     ))
 
 
+@admin_security_required
 @staff_member_required
 @honeypot_exempt
 
@@ -473,6 +480,7 @@ def package_import_center(request):
     ))
 
 
+@admin_security_required
 @staff_member_required
 @honeypot_exempt
 
@@ -539,6 +547,7 @@ def model_export(request, app_label, model_name):
     ))
 
 
+@admin_security_required
 @staff_member_required
 @honeypot_exempt
 
@@ -629,6 +638,7 @@ def model_import(request, app_label, model_name):
     ))
 
 
+@admin_security_required
 @staff_member_required
 @honeypot_exempt
 
@@ -697,6 +707,7 @@ def model_localization(request, app_label, model_name):
 
 
 
+@admin_security_required
 @staff_member_required
 def package_failure_report(request):
     _require_enabled()
@@ -712,6 +723,7 @@ def package_failure_report(request):
     return response
 
 
+@admin_security_required
 @staff_member_required
 def package_retry(request, retry_id):
     _require_enabled()

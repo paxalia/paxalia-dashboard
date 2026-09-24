@@ -21,6 +21,8 @@ your host project configures them.
 
 ## Table of Contents
 
+- [Paxalia Dashboard v4.0.0 — Final Security & Usage Overview](#paxalia-dashboard-v400--final-security--usage-overview)
+- [Runtime Dependency Set](#runtime-dependency-set)
 - [Why paxalia-dashboard?](#why-paxalia-dashboard)
 - [Comparison at a glance](#comparison-at-a-glance)
 - [The real value: features you notice later](#the-real-value-features-you-notice-later)
@@ -46,6 +48,8 @@ your host project configures them.
 - [Exporting Data](#exporting-data)
 - [Billing Integration](#billing-integration)
 - [Security Center](#security-center)
+- [Paxalia Auth & Administrator Security](#paxalia-auth--administrator-security)
+- [Paxalia Error Pages](#paxalia-error-pages)
 - [Advanced Analytics](#advanced-analytics)
 - [Reporting & Sharing](#reporting--sharing)
 - [Paxalia API](#paxalia-api)
@@ -64,6 +68,77 @@ your host project configures them.
 - [Ideas for contribution](#ideas-for-contribution)
 - [License](#license)
 - [Credits](#credits)
+
+---
+
+## Paxalia Dashboard v4.0.0 — Final Security & Usage Overview
+
+Paxalia Dashboard v4.0.0 is a complete Django-native operational workspace: analytics, runtime observability, persistent
+logging, security monitoring, administration, data portability, reporting, integrations, localization, and a dedicated
+administrator authentication boundary all live inside the Django application that owns the data.
+
+The v4 administrator security model is intentionally layered. The dashboard does not rely on a single password, a hidden
+URL, or a browser fingerprint as its only protection.
+
+```text
+Paxalia Administrator Access
+
+1. Password
+      ↓
+2. Mandatory 2FA
+      ↓
+3. Authorized Device
+      ↓
+4. Authentication Rate Limits
+      ↓
+5. CSRF Protection
+      ↓
+6. Isolated Administrator Authentication
+      ↓
+7. Secret Dashboard Path
+      ↓
+Protected Paxalia Dashboard
+```
+
+The first three layers are the required authentication chain. The remaining layers are defense-in-depth controls around
+that
+chain:
+
+```text
+Password → TOTP / recovery → WebAuthn device
+             │
+             ├── login / 2FA / device rate limits
+             ├── Django CSRF enforcement
+             ├── dedicated Paxalia SessionStore + cookie
+             └── deployment-specific private dashboard path
+```
+
+The default administrator mode is isolated:
+
+```text
+Host Website Authentication
+        │
+        └── host session / host cookies
+                 │
+                 │   completely separate
+                 ▼
+Paxalia Administrator Authentication
+        │
+        ├── password
+        ├── Paxalia TOTP
+        ├── authorized WebAuthn credential
+        └── paxalia_admin_session
+```
+
+The two systems can use the same Django user model and the same Django session backend without sharing the same session
+state.
+This keeps the package independently usable while preventing ordinary host login, host 2FA, host session rotation, or
+host
+logout behavior from becoming the Paxalia administrator session.
+
+The complete v4 presentation layer also includes twelve built-in themes built on shared design tokens, responsive
+desktop,
+tablet, and mobile layouts, RTL support, bundled chart/map assets, and reusable component styling.
 
 ---
 
@@ -258,7 +333,7 @@ support depends substantially on the specific product or deployment.
 | Security         | Optional blocking middleware                     |                ❌ |                                         Rare |                     ✅ |
 | Security         | CSP violation reporting                          |                ❌ |                                         Rare |                     ✅ |
 | Security         | Security scorecard                               |                ❌ |                                         Rare |                     ✅ |
-| Security         | MFA / 2FA integration                            |           Varies |                                         Rare |                     ✅ |
+| Security         | Mandatory administrator TOTP 2FA                 |                ❌ |                                         Rare |                     ✅ |
 | Security         | Backup-download re-authentication                |                ❌ |                                         Rare |                     ✅ |
 | Security         | Failed-login threshold detection                 |           Varies |                                         Rare |                     ✅ |
 | Security         | Security email alerts                            |           Varies |                                         Rare |                     ✅ |
@@ -775,11 +850,21 @@ needs.
 
 ### Security
 
+- **Mandatory Administrator Authentication** — privileged dashboard access requires password authentication, confirmed
+  TOTP/recovery verification, and an authorized WebAuthn device credential.
+- **Administrator Authentication Isolation** — the default mode stores the final Paxalia administrator session in a
+  dedicated Django `SessionStore` and a separate `paxalia_admin_session` cookie scoped to the dashboard path.
+- **Authentication Rate Limiting** — login, 2FA, and device ceremonies have independent configurable attempt/window
+  limits; failed-login thresholds also feed Security Center alerting.
+- **CSRF Protection** — authentication and state-changing browser operations are designed to remain behind Django's CSRF
+  middleware; the bundled WebAuthn JSON helper sends the current CSRF token with POST requests.
+- **Secret Dashboard Path** — the full administrator surface can be mounted below a deployment-specific private path;
+  production configuration requires a high-entropy URL-safe segment.
 - **Security Center** — authentication activity, active sessions, IP blocklists, security events, and posture.
 - **Security Scorecard** — security configuration findings in one operational view.
 - **CSP Violation Reporting** — application-level visibility into browser policy violations.
-- **MFA / 2FA Integration** — dashboard visibility and enrollment support where the host project provides compatible
-  MFA.
+- **Mandatory Administrator 2FA** — every privileged Paxalia Dashboard administrator must complete the configured
+  TOTP second-factor enrollment and verification before administrative access is established.
 - **Backup Re-authentication** — recent authentication can be required before sensitive backup downloads.
 - **Sensitive Data Redaction** — common credential and secret fields are sanitized before persistent
   presentation/storage where the package policy applies.
@@ -830,23 +915,47 @@ footprint remains focused on Django and the subsystems this dashboard actually p
 required
 unless the host project enables them.
 
-| Component                  | Technology                                                                    |
-|----------------------------|-------------------------------------------------------------------------------|
-| Backend                    | Django 5.0+ / Django 6.0 compatible                                           |
-| Python                     | Python 3.10+                                                                  |
-| Database                   | Any Django-supported database; PostgreSQL is a supported production target    |
-| Charts                     | Chart.js, bundled                                                             |
-| World Map                  | Datamaps + D3.js + TopoJSON, bundled                                          |
-| GeoIP                      | MaxMind GeoLite2-City + `geoip2`                                              |
-| User-Agent Parsing         | `user-agents`                                                                 |
-| Country Codes              | `pycountry`                                                                   |
-| Server Metrics             | `psutil`                                                                      |
-| Package Encryption         | `cryptography`                                                                |
-| Administrative Integration | `django.contrib.admin` / `ModelAdmin`                                         |
-| Authentication boundaries  | Django authentication, staff permissions, and existing host security controls |
+| Component                  | Technology                                                                 |
+|----------------------------|----------------------------------------------------------------------------|
+| Backend                    | Django 5.0+ / Django 6.0 compatible                                        |
+| Python                     | Python 3.10+                                                               |
+| Database                   | Any Django-supported database; PostgreSQL is a supported production target |
+| Charts                     | Chart.js, bundled                                                          |
+| World Map                  | Datamaps + D3.js + TopoJSON, bundled                                       |
+| GeoIP                      | MaxMind GeoLite2-City + `geoip2`                                           |
+| User-Agent Parsing         | `user-agents`                                                              |
+| Country Codes              | `pycountry`                                                                |
+| Server Metrics             | `psutil`                                                                   |
+| Package Encryption         | `cryptography`                                                             |
+| TOTP / Administrator 2FA   | `django-otp`                                                               |
+| WebAuthn / Device Auth     | `webauthn`                                                                 |
+| Administrative Integration | `django.contrib.admin` / `ModelAdmin`                                      |
+| Authentication boundaries  | Host Django authentication + mandatory 2FA + authorized WebAuthn device    |
 
 The current package metadata declares Python `>=3.10`, Django `>=5.0`, and includes Django 5.0 and Django 6.0
-classifiers. fileciteturn29file2L1-L34
+classifiers.
+
+### Runtime dependency set
+
+The current package declares the following runtime dependencies. This is the package dependency set rather than a list
+of optional dependencies from a particular host application:
+
+| Package           | Declared requirement | Used for                                                                     |
+|-------------------|----------------------|------------------------------------------------------------------------------|
+| `Django`          | `>=5.0`              | Core framework, ORM, sessions, authentication, forms, middleware, migrations |
+| `user-agents`     | `>=2.2.0`            | Browser, operating-system, and device classification                         |
+| `geoip2`          | `>=4.8.0`            | Offline GeoIP lookup support                                                 |
+| `psutil`          | `>=5.9.0`            | Server CPU, memory, disk, network, process, and service metrics              |
+| `pycountry`       | `>=22.3.5`           | Country-code and country-name support                                        |
+| `django-honeypot` | `>=1.2.1`            | Honeypot integration used by hardened host deployments                       |
+| `cryptography`    | `>=46.0.0`           | Authenticated package/data encryption primitives                             |
+| `django-otp`      | `>=1.7.0,<2.0`       | Mandatory administrator TOTP authentication                                  |
+| `qrcode`          | `>=8.0,<9.0`         | QR presentation for TOTP enrollment                                          |
+| `webauthn`        | `>=3.0.0,<4.0`       | Layer 3 WebAuthn registration and authentication                             |
+
+A host project can have additional dependencies such as its own Redis, Celery, Sentry, REST framework, or authentication
+packages. Those belong to the host application and are not silently counted as Paxalia Dashboard runtime requirements.
+fileciteturn29file2L1-L34
 
 ---
 
@@ -915,6 +1024,125 @@ MIDDLEWARE = [
 
 `AnalyticsMiddleware` resolves sites, classifies requests, records page-view/session information, and feeds the
 analytics subsystem.
+
+### 4a. Mount the dashboard under a deployment-specific secret path
+
+The administrator surface should live under a private, non-predictable route chosen by the host project.
+
+For development, a simple route such as `/insights/` is acceptable. Production deployments should use a dedicated
+32–128 character URL-safe random segment:
+
+```bash
+export ENVIRONMENT=production
+export DASHBOARD_URL="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+```
+
+Expose that value through the host settings:
+
+```python
+import os
+
+DASHBOARD_URL = os.environ["DASHBOARD_URL"]
+
+PAXALIA_DASHBOARD = {
+    # ...
+    "DASHBOARD_URL": DASHBOARD_URL,
+}
+```
+
+Then mount Paxalia below that path:
+
+```python
+from django.conf import settings
+from django.urls import include, path
+
+urlpatterns = [
+    path(
+        settings.DASHBOARD_URL.lstrip("/"),
+        include("paxalia.urls"),
+    ),
+]
+```
+
+Every administrator authentication route then lives below the same private mount:
+
+```text
+<secret-dashboard-path>/auth/login/
+<secret-dashboard-path>/auth/2fa/setup/
+<secret-dashboard-path>/auth/2fa/verify/
+<secret-dashboard-path>/auth/device/
+<secret-dashboard-path>/security/
+<secret-dashboard-path>/admin/...
+```
+
+The secret path is defense in depth, not authentication. The password, 2FA, device, rate-limit, CSRF, and session
+boundaries
+remain mandatory.
+
+### 4b. Enable the isolated Paxalia administrator session
+
+In the default mode, place the dedicated Paxalia session middleware immediately after Django's normal
+`SessionMiddleware`, and place the isolated administrator authentication middleware after Django's
+`AuthenticationMiddleware`:
+
+```python
+MIDDLEWARE = [
+    # ...
+    "django.contrib.sessions.middleware.SessionMiddleware",
+
+    "paxalia.auth_middleware.PaxaliaIsolatedSessionMiddleware",
+
+    # ...
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+
+    "paxalia.auth_middleware.PaxaliaIsolatedAdminAuthenticationMiddleware",
+
+    # ...
+    "paxalia.middleware.SecurityBlockMiddleware",
+    "paxalia.logging.middleware.PaxaliaLoggingMiddleware",
+    "paxalia.middleware.SlowQueryMiddleware",
+    "paxalia.middleware.AnalyticsMiddleware",
+]
+```
+
+The default isolated mode is:
+
+```python
+PAXALIA_DASHBOARD = {
+    # ...
+    "AUTH_USE_HOST_LOGIN": False,
+    "AUTH_ISOLATED_SESSION_COOKIE_NAME": "paxalia_admin_session",
+    "AUTH_ISOLATED_SESSION_COOKIE_SAMESITE": "Lax",
+    "ADMIN_SESSION_MAX_AGE_SECONDS": 8 * 60 * 60,
+}
+```
+
+The resulting administrator cookie is scoped to the dashboard path. Paxalia logout deletes the isolated administrator
+session without flushing the host website session.
+
+### 4c. Optional host-authentication compatibility mode
+
+Projects that deliberately want Paxalia to participate in an existing host login/2FA flow can opt in:
+
+```python
+PAXALIA_DASHBOARD = {
+    # ...
+    "AUTH_USE_HOST_LOGIN": True,
+    "AUTH_LOGIN_URL": None,
+    "AUTH_HOST_2FA_URL_NAMES": ("core:login-2fa",),
+    "AUTH_HOST_2FA_INTENT_TTL_SECONDS": 600,
+}
+```
+
+When this compatibility mode is enabled, the host project's successful second-factor route can hand the administrator
+back
+to the protected Paxalia destination through the signed, short-lived handoff implemented by
+`PaxaliaAdminHost2FARedirectMiddleware`.
+
+The middleware does not grant dashboard access by itself and does not change ordinary host login redirects when there is
+no
+active Paxalia administrator intent.
 
 ### 5. Run migrations
 
@@ -993,13 +1221,46 @@ The geography page can otherwise present an empty/limited state rather than fabr
 ### 9. Start the server
 
 ```bash
-python manage.py runserver
+python manage.py runserver localhost:8000
 ```
 
 Open the dashboard at the path you configured, for example:
 
 ```text
-http://127.0.0.1:8000/insights/
+http://localhost:8000/<secret-dashboard-path>/
+```
+
+### 10. Create or authorize a dashboard administrator
+
+By default, the package recognizes Django users that are `is_staff` or `is_superuser` as administrators. Projects with a
+custom administrator role can supply `SECURITY_ADMIN_USER_CHECK`.
+
+For a fresh local project, Django's standard command is sufficient:
+
+```bash
+python manage.py createsuperuser
+```
+
+Then use the Paxalia login route beneath the secret dashboard mount:
+
+```text
+http://localhost:8000/<secret-dashboard-path>/auth/login/
+```
+
+The final administrator session is created only after the full required authentication chain completes:
+
+```text
+password
+  ↓
+confirmed TOTP / recovery code
+  ↓
+authorized WebAuthn device
+  ↓
+Paxalia administrator session
+```
+
+```text
+http://localhost:8000/<secret-dashboard-path>/
 ```
 
 ---
@@ -1186,6 +1447,119 @@ PAXALIA_DASHBOARD = {
 ```
 
 The current package configuration surface include the Admin and logging sections above.
+
+### Mandatory administrator security configuration
+
+The administrator security controls are policy parameters rather than feature switches. The three authentication layers
+cannot be disabled through normal dashboard configuration.
+
+A complete security-focused configuration can be expressed as:
+
+```python
+PAXALIA_DASHBOARD = {
+    # ── Administrator security policy ─────────────────────────────
+    "ADMIN_MAX_DEVICES": 5,
+    "ADMIN_SESSION_MAX_AGE_SECONDS": 8 * 60 * 60,
+
+    # Layer 1 — password/login rate limiting
+    "SECURITY_LOGIN_RATE_LIMIT_ATTEMPTS": 8,
+    "SECURITY_LOGIN_RATE_LIMIT_WINDOW_SECONDS": 15 * 60,
+
+    # Layer 2 — TOTP rate limiting
+    "SECURITY_2FA_RATE_LIMIT_ATTEMPTS": 5,
+    "SECURITY_2FA_RATE_LIMIT_WINDOW_SECONDS": 5 * 60,
+
+    # Layer 3 — WebAuthn/device rate limiting
+    "SECURITY_DEVICE_RATE_LIMIT_ATTEMPTS": 5,
+    "SECURITY_DEVICE_RATE_LIMIT_WINDOW_SECONDS": 5 * 60,
+
+    # Layer 3 — WebAuthn ceremony
+    "WEBAUTHN_CHALLENGE_TTL_SECONDS": 120,
+    "WEBAUTHN_RP_NAME": "Paxalia Dashboard",
+    "WEBAUTHN_RP_ID": None,
+    "WEBAUTHN_ORIGIN": None,
+
+    # Separate Paxalia administrator session
+    "AUTH_USE_HOST_LOGIN": False,
+    "AUTH_ISOLATED_SESSION_COOKIE_NAME": "paxalia_admin_session",
+    "AUTH_ISOLATED_SESSION_COOKIE_SAMESITE": "Lax",
+    "AUTH_ISOLATED_SESSION_COOKIE_DOMAIN": None,
+
+    # Public authentication surfaces
+    "AUTH_SIGNUP_ENABLED": True,
+    "AUTH_PASSWORD_RESET_ENABLED": True,
+    "AUTH_PASSWORD_CHANGE_ENABLED": True,
+
+    # Recovery
+    "SECURITY_RECOVERY_CODE_COUNT": 10,
+
+    # Private destination / presentation
+    "AUTH_BRAND_NAME": "Paxalia",
+    "AUTH_HOME_URL": "/",
+    "AUTH_ADMIN_HOME_URL": None,
+    "AUTH_SUPPORT_URL": None,
+}
+```
+
+Important policy details:
+
+- `AUTH_USE_HOST_LOGIN=False` is the default and keeps Paxalia's administrator authentication separate from the host
+  website authentication.
+- `AUTH_ISOLATED_SESSION_COOKIE_NAME` defaults to `paxalia_admin_session`.
+- The isolated cookie path follows the configured dashboard path.
+- `ADMIN_MAX_DEVICES` limits the number of active administrator device credentials.
+- Login, TOTP, and WebAuthn/device ceremonies each have independent rate limits.
+- WebAuthn challenges are short-lived and single-use.
+- `WEBAUTHN_RP_ID` and `WEBAUTHN_ORIGIN` should be set explicitly in production when TLS terminates at a reverse proxy
+  or
+  when a stable deployed origin is known.
+- `SECURITY_RECOVERY_CODE_COUNT` controls the number of recovery codes generated for the administrator recovery path.
+- These settings tune policy values; they do not remove the mandatory authentication layers.
+
+### Secret-path deployment policy
+
+For production deployments, `DASHBOARD_URL` is validated as a 32–128 character URL-safe random path segment. Predictable
+paths such as `/admin/`, `/dashboard/`, `/insights/`, `/paxalia/`, or `/login/` must not be used as the production
+secret
+mount.
+
+A typical deployment shape is:
+
+```text
+Public application
+    ├── normal website login
+    ├── normal website sessions
+    └── public ingestion endpoints
+
+Private Paxalia mount
+    ├── auth/login/
+    ├── auth/2fa/
+    ├── auth/device/
+    ├── security/
+    ├── admin/
+    ├── logs/
+    ├── packages/
+    └── dashboard pages
+```
+
+The same private mount is used for the administrator UI and its authentication lifecycle, so the dashboard's privileged
+surfaces are not scattered across conventional public routes.
+
+### CSRF requirements
+
+Keep Django CSRF middleware enabled:
+
+```python
+MIDDLEWARE = [
+    # ...
+    "django.middleware.csrf.CsrfViewMiddleware",
+    # ...
+]
+```
+
+Do not add a blanket `csrf_exempt` around Paxalia authentication or package-management views. The bundled browser
+authentication helper sends the current CSRF token for JSON POST requests, including WebAuthn ceremonies.
+
 fileciteturn28file0L1-L20
 
 ### Configuration groups
@@ -1425,6 +1799,32 @@ Exact ordering depends on the host application's middleware stack.
 | Paxalia Admin       | `/admin/.../`           | Generic Django-native Admin under the dashboard's protected mount     |
 
 Exact route prefixes depend on the host project's dashboard mounting configuration.
+
+### Administrator authentication routes
+
+The routes below are relative to the dashboard's configured mount:
+
+| Route                                    | Purpose                                                         |
+|------------------------------------------|-----------------------------------------------------------------|
+| `/auth/login/`                           | Layer 1 administrator password login                            |
+| `/auth/logout/`                          | End the isolated Paxalia administrator session                  |
+| `/auth/signup/`                          | Public Paxalia-branded signup surface when enabled              |
+| `/auth/password-reset/`                  | Start password recovery                                         |
+| `/auth/password-reset/<uidb64>/<token>/` | Password-reset confirmation                                     |
+| `/auth/password-change/`                 | Change the current password                                     |
+| `/auth/2fa/setup/`                       | Enroll the mandatory Paxalia TOTP authenticator                 |
+| `/auth/2fa/verify/`                      | Verify the Layer 2 TOTP/recovery step                           |
+| `/auth/2fa/reset/`                       | Reset the Paxalia 2FA state through the supported recovery flow |
+| `/auth/recovery/regenerate/`             | Regenerate administrator recovery codes                         |
+| `/auth/device/`                          | Start Layer 3 authorized-device authentication                  |
+| `/auth/device/options/`                  | Select an available authorized-device option                    |
+| `/auth/device/verify/`                   | Complete WebAuthn authentication                                |
+| `/auth/device/register/`                 | Start authorized-device registration                            |
+| `/auth/device/register/verify/`          | Complete WebAuthn device registration                           |
+| `/auth/session-expired/`                 | Show the expired administrator-session state                    |
+| `/auth/access-denied/`                   | Show the protected access-denied state                          |
+
+These routes are intentionally part of the private dashboard mount in the normal deployment model.
 
 ### Cross-dashboard behavior
 
@@ -2184,14 +2584,412 @@ The Security Scorecard presents configuration/posture findings from the package'
 
 It is a visibility tool, not a replacement for an external security assessment.
 
-### MFA / 2FA
+The Security Overview is separate from this legacy scorecard surface: it uses explicit control states and actionable
+configuration details rather than reducing the administrator's security posture to one number.
 
-The dashboard integrates with compatible host-project MFA/2FA configuration and can expose enrollment/status workflows
-where the host application implements the required support.
+### Administrator authentication
+
+Paxalia Dashboard administration is protected by a mandatory three-layer authentication contract:
+
+```text
+Layer 1 — Host Django authentication
+    password / configured backend
+    rate limiting / brute-force protection
+            ↓
+Layer 2 — Mandatory 2FA
+    Paxalia TOTP authenticator / recovery path
+            ↓
+Layer 3 — Authorized device credential
+    WebAuthn challenge + signature verification
+            ↓
+Paxalia Dashboard Admin
+```
+
+The layers are enforced server-side. There is no ordinary dashboard setting that turns the three-layer administrator
+security model off. IP address, user-agent data, and browser fingerprints are context only; they are not treated as the
+identity of an authorized administrator device.
+
+### Defense-in-depth administrator controls
+
+The mandatory administrator security contract is broader than the three credential layers:
+
+```text
+1. Password
+   └─ Django authentication + password validation
+
+2. 2FA
+   └─ django-otp TOTP or one-time recovery code
+
+3. Device
+   └─ WebAuthn challenge + credential signature verification
+
+4. Rate limiting
+   └─ login + 2FA + device ceremony limits
+
+5. CSRF
+   └─ Django CSRF middleware + CSRF-aware bundled JSON helper
+
+6. Separate authentication
+   └─ dedicated Paxalia SessionStore + scoped cookie
+
+7. Secret path
+   └─ deployment-specific private dashboard mount
+```
+
+Additional hardening surrounds the chain:
+
+```text
+SecurityBlockMiddleware
+        +
+CSP / SecurityMiddleware
+        +
+honeypot integration
+        +
+sensitive-field redaction
+        +
+no-store protected responses
+        +
+package encryption/integrity
+        +
+bounded upload and log ingestion
+        +
+security/audit events
+```
+
+The dashboard's security tooling is therefore designed as a system rather than a single score.
+
+### Security Overview
+
+**Security Overview** is a read-only diagnostic surface that reports the effective state of supported controls instead
+of
+turning security into a single opaque score. Checks can be reported as `PASS`, `WARNING`, `DANGER`, `DISABLED`,
+`NOT CONFIGURED`, or `NOT APPLICABLE`, with the current state, expected state, reason, configuration source, and a
+relevant
+action/page where one exists.
+
+The checks cover the configured authentication and session stack, mandatory 2FA and enrollment, WebAuthn availability,
+HTTPS and cookie posture, CSRF and SecurityMiddleware, authentication/device rate limits, brute-force monitoring,
+`ALLOWED_HOSTS`, `DEBUG`, `SECRET_KEY`, CSP, persistent Paxalia logging and retention, protected package encryption,
+sensitive-field protection, admin-gate health, active administrator devices, and challenge/session policy.
 
 ### Backup re-authentication
 
 Sensitive backup downloads can require a recent password-authentication timestamp.
+
+---
+
+## Paxalia Auth & Administrator Security
+
+Paxalia Dashboard includes a standalone, override-friendly authentication experience for host Django projects. The
+main Paxalia application is not required; its authentication pages were used only as the UX/design reference for the
+Paxalia-branded presentation.
+
+### Public authentication surfaces
+
+The package can provide:
+
+- Login
+- Sign Up
+- Password reset request
+- Password reset confirmation
+- Password change
+- Session-expired state
+- Access-denied state
+
+These surfaces use Django's authentication, password validators, session framework, messages, CSRF protection, and
+configured user model rather than creating a second user/password database. Host projects can override the templates or
+route users to their existing authentication views.
+
+### Mandatory administrator authentication
+
+The privileged Paxalia Dashboard flow is separate from ordinary public-site authentication. A public user can use the
+host application's normal login/signup flow; a dashboard administrator must complete all three security layers before a
+privileged Paxalia session is created.
+
+```text
+Anonymous
+  ↓
+Paxalia Admin Login
+  ↓
+Layer 1: Django username/email + password
+  ↓
+Layer 2: confirmed TOTP / one-time recovery code
+  ↓
+Layer 3: authorized WebAuthn credential
+  ↓
+final Django/Paxalia administrator session
+```
+
+Intermediate authentication states are intentionally non-privileged. Reaching the password or 2FA step alone does not
+make the user an administrator for dashboard views, package operations, security settings, or protected APIs.
+
+### The seven security layers
+
+Paxalia's final administrator protection model is intentionally described as seven layers because authentication
+credentials
+and deployment hardening solve different problems:
+
+#### 1. Password
+
+The first layer uses the host project's configured Django user model. In isolated mode, Paxalia's default credential
+boundary deliberately uses Django's `ModelBackend` unless the host explicitly supplies another backend through
+`AUTH_ISOLATED_AUTHENTICATION_BACKENDS`.
+
+The package does not create a parallel user/password database. Password validation remains Django's responsibility.
+
+#### 2. Mandatory 2FA
+
+Every Paxalia administrator must have a confirmed TOTP device before normal privileged administration is permitted.
+Recovery codes provide a controlled recovery path without creating a password-only bypass.
+
+#### 3. Authorized device
+
+Layer 3 uses WebAuthn. The server stores the public credential and safe authenticator metadata; the private credential
+remains with the authenticator.
+
+Each ceremony uses a server-generated, short-lived, single-use challenge. Replay, expiry, wrong-user, and revoked-device
+cases are rejected.
+
+A Paxalia Authorized Device Credential is not a guaranteed permanent hardware UUID. It represents an authorized
+credential
+that an administrator can register, name, review, and revoke.
+
+#### 4. Rate limiting
+
+Authentication ceremonies are independently bounded:
+
+```text
+Login
+  8 attempts / 15 minutes
+
+2FA
+  5 attempts / 5 minutes
+
+Device / WebAuthn
+  5 attempts / 5 minutes
+```
+
+The package also surfaces broader failed-login thresholds through Security Center and keeps browser event ingestion
+bounded
+through the logging subsystem.
+
+#### 5. CSRF
+
+State-changing browser operations remain behind Django CSRF protection. The authentication JavaScript includes the CSRF
+token in JSON POST requests used by the WebAuthn ceremony.
+
+The secure deployment rule is simple:
+
+```text
+CsrfViewMiddleware stays enabled.
+Authentication views stay CSRF protected.
+Do not solve integration problems by disabling CSRF.
+```
+
+#### 6. Separate authentication boundaries
+
+In the default isolated mode, the public website and Paxalia administrator authentication do not share the same session
+state.
+
+The host website keeps its normal Django session while the dashboard uses:
+
+```text
+paxalia_admin_session
+        ↓
+dedicated Django SessionStore
+        ↓
+dashboard-path cookie scope
+```
+
+This means:
+
+```text
+host login      ≠      Paxalia admin login
+host logout     ≠      Paxalia admin logout
+host session    ≠      Paxalia admin session
+host rotation   ≠      Paxalia admin rotation
+```
+
+The package still uses the configured Django session engine/backend, so isolation does not require a second identity
+database.
+
+#### 7. Secret dashboard path
+
+The full administrator surface is mounted below a deployment-specific private path. Production configuration requires a
+32–128 character URL-safe random segment and rejects common predictable administrator paths.
+
+The path is defense in depth. It is deliberately not treated as an authentication mechanism.
+
+### Authentication lifecycle
+
+The normal administrator lifecycle is:
+
+```text
+GET private dashboard
+        ↓
+/auth/login/
+        ↓
+password accepted
+        ↓
+/auth/2fa/
+        ↓
+TOTP or one-time recovery code accepted
+        ↓
+/auth/device/
+        ↓
+WebAuthn credential accepted
+        ↓
+final Paxalia administrator session
+        ↓
+dashboard / Admin / Security / Packages
+```
+
+Logout returns to the Paxalia login surface and removes the dedicated administrator session. The host website session is
+left intact in isolated mode.
+
+### Layer 1 — primary authentication
+
+Paxalia uses the host project's configured Django authentication backend and existing user model wherever possible.
+Login
+attempts are rate-limited by source and identifier, and important authentication events are sent through the existing
+Paxalia structured logging/security infrastructure. Unknown-account failures use safe generic messages and can be
+tracked
+through the existing failed-login observability.
+
+### Layer 2 — mandatory TOTP
+
+Every administrator must have a confirmed TOTP device before normal Paxalia Dashboard administration is permitted. The
+package uses `django-otp` for the TOTP implementation and provides a Paxalia-branded enrollment and verification flow.
+
+The enrollment flow is: complete primary authentication, enroll the authenticator, verify a current code, generate
+recovery codes, and continue to the authorized-device step. There is no normal "skip for now" path.
+
+Recovery codes are generated with cryptographically secure randomness, stored as password hashes, individually consumed
+when used, revocable/regenerable, and never written to Paxalia logs.
+
+### Layer 3 — authorized device credential
+
+Browser-based Layer 3 uses the maintained Python `webauthn` library and the WebAuthn browser API. Paxalia stores the
+public credential and safe authenticator metadata; the private credential remains with the authenticator. Each ceremony
+uses a server-generated, short-lived, single-use challenge. Replay, expiry, wrong-user, and revoked-credential cases
+fail.
+
+The credential is a **Paxalia Authorized Device Credential**, not a guaranteed permanent hardware UUID. An administrator
+can register multiple credentials up to the configured active-device limit, name them, review safe metadata, and revoke
+them individually.
+
+### Device management
+
+**Security → Admin Devices** provides:
+
+- device name
+- active/revoked/disabled state
+- registration time
+- last authentication time
+- authenticator/device type where available
+- attachment information where available
+- backup state where safely available
+- rename operation
+- individual revocation
+
+Private keys, raw credential secrets, challenges, recovery codes, and other sensitive cryptographic material are never
+displayed as normal device data. Revocation is audited and invalidates future credential authentication; associated
+privileged sessions are also invalidated according to the configured session architecture.
+
+### Administrator sessions
+
+**Security → Admin Sessions** shows privileged sessions recorded by the existing login-event infrastructure. Sessions
+can
+be revoked individually, all other sessions can be revoked, or all administrator sessions can be revoked. The privileged
+session remains valid only while the administrator is active, the confirmed second factor still exists, the authorized
+device credential remains active, the session has not expired, and the session has not been revoked.
+
+### WebAuthn deployment requirements
+
+WebAuthn must use the actual deployed relying-party ID and browser origin. In production, the browser context must be
+HTTPS. `WEBAUTHN_RP_ID` and `WEBAUTHN_ORIGIN` can be explicitly configured for proxy/hosted deployments; otherwise the
+package derives them from the current request when safe. The dashboard does not silently fall back to password-only
+access if a secure WebAuthn ceremony cannot run.
+
+### Authentication events
+
+The authentication and device flow uses the existing structured logging/audit architecture. Examples include:
+
+```text
+admin_login_started
+admin_login_failed
+admin_login_rate_limited
+admin_2fa_required
+admin_2fa_success
+admin_2fa_failed
+admin_recovery_used
+admin_device_challenge_failed
+admin_device_authenticated
+admin_device_rejected
+admin_device_registered
+admin_device_revoked
+admin_device_renamed
+admin_session_created
+admin_all_sessions_revoked
+admin_logout
+```
+
+Exact presentation can vary by logging surface, but these events remain within the existing Paxalia observability and
+Security Center architecture rather than creating a parallel security-event store. Authentication secrets, TOTP codes,
+recovery codes, private keys, and raw WebAuthn assertions are not logged.
+
+### Security configuration
+
+The current settings expose policy details such as active-device limits, privileged-session lifetime, authentication and
+2FA/device rate limits, challenge lifetime, WebAuthn relying-party configuration, recovery-code count, and
+authentication
+page branding. These settings configure implementation details; they do not disable the mandatory administrator security
+layers.
+
+---
+
+## Paxalia Error Pages
+
+The package ships production-oriented Paxalia 404 and 500 templates that can be used by a generic Django project. Their
+visual language is adapted from the broader Paxalia product reference while using Paxalia Dashboard's own theme tokens,
+typography, spacing, surfaces, and responsive shell.
+
+### 404
+
+The 404 page is a branded, responsive error surface with a lightweight glitch/CRT treatment, a safe return-home action,
+and a browser-history action. Dynamic request information is not reflected into the page without escaping.
+
+### 500
+
+The 500 page is intentionally production-safe. It does not expose exception details, tracebacks, SQL, filesystem paths,
+request headers, environment variables, or secrets. The technical event belongs in Paxalia Logs, where authorized
+administrators can investigate the correlated application/request event.
+
+### Error-page overrides
+
+Host projects can override `templates/404.html` and `templates/500.html` using Django's normal template-loader
+precedence without editing the installed Paxalia package. Branding/home/support settings can be configured through the
+existing `PAXALIA_DASHBOARD` namespace.
+
+### Root URL configuration
+
+Because Django resolves `handler404` and `handler500` from the project's root URLconf, wire the packaged handlers there:
+
+```python
+handler404 = "paxalia.error_handlers.paxalia_404"
+handler500 = "paxalia.error_handlers.paxalia_500"
+```
+
+This keeps the error implementation inside Paxalia while leaving root routing and template overrides under the host
+project's control.
+
+### DEBUG behavior
+
+With production `DEBUG=False`, the packaged 500 page remains safe and user-facing. With `DEBUG=True`, Django's
+development
+exception machinery can still provide its normal development diagnostics to the developer; Paxalia does not treat DEBUG
+as
+a mechanism for bypassing administrator authentication.
 
 ---
 
@@ -3007,6 +3805,9 @@ The Admin does not hard-code a fixed number of language tabs.
 
 ### Package Center
 
+Package operations are protected by the same administrator security boundary as the rest of Paxalia. Export/import,
+protected models, encrypted packages, and retry-package workflows run only inside the privileged dashboard context.
+
 The package UI is available from Paxalia Admin and is divided into deliberate workflows:
 
 ```text
@@ -3344,6 +4145,19 @@ python manage.py paxalia_dashboard_test --keep --no-ui
 python manage.py paxalia_dashboard_test --keep
 ```
 
+### Administrator authentication/security tests
+
+The security/authentication suite can be run directly:
+
+```bash
+python manage.py test paxalia.test_security_auth -v 2
+python manage.py test paxalia.test_security_cleanup_fix22 -v 2
+python manage.py test paxalia.test_security_ux_fix21 -v 2
+```
+
+The focused security tests cover the password/2FA/device flow, isolated-session semantics, logout behavior,
+rate-limit enforcement, WebAuthn ceremony handling, and security UI contracts.
+
 ### Paxalia Admin diagnostics
 
 ```bash
@@ -3467,6 +4281,25 @@ This is useful as a defense-in-depth measure.
 
 It must not be treated as an authentication mechanism by itself.
 
+For the final v4.0.0 deployment model, the private path is configured through `DASHBOARD_URL` and, in production, is
+validated as a 32–128 character URL-safe random segment.
+
+All privileged dashboard routes and the Paxalia administrator authentication lifecycle can live beneath that same
+private
+mount:
+
+```text
+<secret-path>/
+├── auth/
+├── security/
+├── admin/
+├── logs/
+├── packages/
+└── dashboard/
+```
+
+The browser-facing public application can keep normal authentication and public ingestion routes outside this mount.
+
 ### Public ingestion endpoints
 
 Browser event ingestion is intentionally public because visitors send anonymous telemetry to it.
@@ -3537,21 +4370,21 @@ normal infrastructure controls.
 
 Paxalia Dashboard is an application package **for Django**, not a replacement for Django.
 
-| Responsibility                 | Django / host project    | Paxalia Dashboard                                             |
-|--------------------------------|--------------------------|---------------------------------------------------------------|
-| ORM and database models        | Authoritative            | Integrates with them                                          |
-| Authentication                 | Authoritative            | Reuses the host authentication/session context                |
-| Model permissions              | Authoritative            | Reuses Django permission and ModelAdmin hooks                 |
-| URL routing                    | Authoritative            | Adds dashboard/package routes                                 |
-| Business logic                 | Authoritative            | Observes and administrates without owning host business rules |
-| Django Admin registry          | Authoritative            | Uses it as the source of truth for generic Admin              |
-| Analytics                      | Host/application data    | Provides the analytics layer                                  |
-| Structured application logging | Host/Python logging APIs | Provides persistent observability and investigation           |
-| Server/runtime telemetry       | Host environment         | Provides application-facing monitoring                        |
-| Logical data portability       | Host data                | Provides `.paxalia` package workflows                         |
-| Physical backups               | Host infrastructure      | Provides complementary backup-management utilities            |
-| Deployment                     | Host infrastructure/CI   | Records deployment context                                    |
-| Final operational authority    | Host project             | Remains with the host project                                 |
+| Responsibility                 | Django / host project    | Paxalia Dashboard                                                           |
+|--------------------------------|--------------------------|-----------------------------------------------------------------------------|
+| ORM and database models        | Authoritative            | Integrates with them                                                        |
+| Authentication                 | Authoritative            | Reuses host authentication and adds the mandatory admin verification layers |
+| Model permissions              | Authoritative            | Reuses Django permission and ModelAdmin hooks                               |
+| URL routing                    | Authoritative            | Adds dashboard/package routes                                               |
+| Business logic                 | Authoritative            | Observes and administrates without owning host business rules               |
+| Django Admin registry          | Authoritative            | Uses it as the source of truth for generic Admin                            |
+| Analytics                      | Host/application data    | Provides the analytics layer                                                |
+| Structured application logging | Host/Python logging APIs | Provides persistent observability and investigation                         |
+| Server/runtime telemetry       | Host environment         | Provides application-facing monitoring                                      |
+| Logical data portability       | Host data                | Provides `.paxalia` package workflows                                       |
+| Physical backups               | Host infrastructure      | Provides complementary backup-management utilities                          |
+| Deployment                     | Host infrastructure/CI   | Records deployment context                                                  |
+| Final operational authority    | Host project             | Remains with the host project                                               |
 
 This separation is deliberate. Paxalia becomes powerful by integrating with Django rather than by trying to replace the
 framework it
@@ -3658,13 +4491,92 @@ Avoid hard-coding host application models into Paxalia itself.
 
 ---
 
+## Final v4.0.0 Security Checklist
+
+Before exposing Paxalia Dashboard to real users, verify the deployment as one complete boundary:
+
+```text
+[ ] Password authentication is active
+[ ] Administrator accounts are recognized by the configured admin policy
+[ ] TOTP enrollment is confirmed
+[ ] Recovery codes are generated and stored safely
+[ ] At least one authorized WebAuthn device is registered
+[ ] Device revocation is tested
+[ ] Login / 2FA / device rate limits are configured
+[ ] Django CSRF middleware is enabled
+[ ] Paxalia administrator session isolation is enabled
+[ ] The isolated administrator cookie is scoped to the private dashboard path
+[ ] Production DASHBOARD_URL is a long random segment
+[ ] WebAuthn RP ID and origin match the deployed HTTPS origin
+[ ] ALLOWED_HOSTS is configured correctly
+[ ] DEBUG=False in production
+[ ] SECRET_KEY is configured securely
+[ ] CSP/SecurityMiddleware remain enabled
+[ ] Sensitive fields are protected in Admin
+[ ] Security Overview reports the expected posture
+[ ] Backup downloads use the configured re-authentication policy
+[ ] Authentication and security events are visible in Paxalia observability
+```
+
+A secret path, a password, 2FA, or WebAuthn by itself is not the complete security model. The package is designed so
+these
+controls reinforce one another.
+
+---
+
 ## Project Structure
+
+The security/authentication layer is organized into separate policy, rate-limit, health-diagnostic, WebAuthn, and view
+modules:
+
+The v4 security/authentication implementation additionally includes dedicated session-isolation and host-authentication-
+bridge modules. The complete tree below is intentionally kept in the README so contributors can see the full package
+layout
+rather than a reduced feature summary:
+
+```text
+paxalia/
+├── admin_security.py
+├── error_handlers.py
+├── security_health.py
+├── security_rate_limit.py
+├── webauthn_services.py
+├── views/
+│   ├── auth.py
+│   ├── admin_security.py
+│   ├── mfa.py
+│   └── security.py
+├── migrations/
+│   └── 0022_paxalia_admin_security.py
+└── templates/
+    ├── 404.html
+    ├── 500.html
+    ├── paxalia/
+    │   ├── security_overview.html
+    │   ├── security_authentication.html
+    │   ├── admin_devices.html
+    │   └── admin_sessions.html
+    └── paxalia_auth/
+        ├── login.html
+        ├── signup.html
+        ├── forgot-password.html
+        ├── reset-password.html
+        ├── password_change.html
+        ├── two-factor.html
+        ├── two-factor-setup.html
+        ├── recovery-codes.html
+        ├── device-register.html
+        └── device-verify.html
+```
 
 A representative source tree looks like:
 
 ```text
 paxalia-dashboard/
+
+
 ├── paxalia
+│   ├── admin_auth_middleware.py
 │   ├── admin_center
 │   │   ├── adapter.py
 │   │   ├── __init__.py
@@ -3677,10 +4589,13 @@ paxalia-dashboard/
 │   │   ├── utils.py
 │   │   └── views.py
 │   ├── admin.py
+│   ├── admin_security.py
 │   ├── alerts.py
 │   ├── anomalies.py
 │   ├── api_keys.py
 │   ├── apps.py
+│   ├── auth_middleware.py
+│   ├── auth.py
 │   ├── bot_classification.py
 │   ├── bots_paths.txt
 │   ├── chat_ops.py
@@ -3690,6 +4605,8 @@ paxalia-dashboard/
 │   ├── context_processors.py
 │   ├── conversions.py
 │   ├── data_import.py
+│   ├── error_handlers.py
+│   ├── forms.py
 │   ├── geoip
 │   │   ├── GeoLite2-ASN.mmdb
 │   │   ├── GeoLite2-City.mmdb
@@ -3769,6 +4686,7 @@ paxalia-dashboard/
 │   │   ├── 0019_sharelink_password_hash.py
 │   │   ├── 0020_paxalia_observability.py
 │   │   ├── 0021_remove_loginevent_paxalia_log_is_ad_8ef5a0_idx_and_more.py
+│   │   ├── 0022_paxalia_admin_security.py
 │   │   └── __init__.py
 │   ├── models.py
 │   ├── packages
@@ -3785,6 +4703,8 @@ paxalia-dashboard/
 │   ├── revenue.py
 │   ├── rum.py
 │   ├── security_audit.py
+│   ├── security_health.py
+│   ├── security_rate_limit.py
 │   ├── security_scorecard.py
 │   ├── segments.py
 │   ├── settings.py
@@ -3822,6 +4742,7 @@ paxalia-dashboard/
 │   │       │   ├── admin-overview.js
 │   │       │   ├── analytics-events.js
 │   │       │   ├── api.js
+│   │       │   ├── auth.js
 │   │       │   ├── backups.js
 │   │       │   ├── billing-chart.js
 │   │       │   ├── bots.js
@@ -3829,6 +4750,7 @@ paxalia-dashboard/
 │   │       │   ├── d3.v3.min.js
 │   │       │   ├── datamaps.world.min.js
 │   │       │   ├── dependencies.js
+│   │       │   ├── error.js
 │   │       │   ├── events-chart.js
 │   │       │   ├── filter-bar.js
 │   │       │   ├── geography-map.js
@@ -3850,16 +4772,19 @@ paxalia-dashboard/
 │   │       │   ├── sidebar.js
 │   │       │   ├── theme-manager.js
 │   │       │   ├── topojson.v1.min.js
-│   │       │   └── upload-widget.js
+│   │       │   ├── upload-widget.js
+│   │       │   └── webauthn.js
 │   │       └── styles
 │   │           ├── base.css
 │   │           ├── components
 │   │           │   ├── about.css
 │   │           │   ├── admin.css
+│   │           │   ├── auth.css
 │   │           │   ├── backup.css
 │   │           │   ├── buttons.css
 │   │           │   ├── charts.css
 │   │           │   ├── dependencies.css
+│   │           │   ├── error.css
 │   │           │   ├── export-btn.css
 │   │           │   ├── filter-bar.css
 │   │           │   ├── icon.css
@@ -3882,145 +4807,177 @@ paxalia-dashboard/
 │   │           ├── themes.css
 │   │           └── tokens.css
 │   ├── templates
-│   │   └── paxalia
-│   │       ├── about.html
-│   │       ├── admin
-│   │       │   ├── audit.html
-│   │       │   ├── bulk_delete.html
-│   │       │   ├── delete_confirmation.html
-│   │       │   ├── history.html
-│   │       │   ├── home.html
-│   │       │   ├── model_list.html
-│   │       │   ├── model_localization.html
-│   │       │   ├── model_overview.html
-│   │       │   ├── models.html
-│   │       │   ├── model_stats.html
-│   │       │   ├── object_detail.html
-│   │       │   ├── object_form.html
-│   │       │   ├── package_center.html
-│   │       │   ├── package_export_center.html
-│   │       │   ├── package_export.html
-│   │       │   ├── package_history.html
-│   │       │   ├── package_import_center.html
-│   │       │   ├── package_import.html
-│   │       │   └── package_result.html
-│   │       ├── admin_overview.html
-│   │       ├── annotations.html
-│   │       ├── api_docs.html
-│   │       ├── api.html
-│   │       ├── api_keys.html
-│   │       ├── application_logs.html
-│   │       ├── backup_reauth.html
-│   │       ├── backups.html
-│   │       ├── base.html
-│   │       ├── billing.html
-│   │       ├── bots.html
-│   │       ├── broken_links.html
-│   │       ├── campaigns.html
-│   │       ├── cohorts.html
-│   │       ├── compliance.html
-│   │       ├── dashboard.html
-│   │       ├── data_import.html
-│   │       ├── dependencies.html
-│   │       ├── email
-│   │       │   └── report_digest.html
-│   │       ├── events.html
-│   │       ├── funnels.html
-│   │       ├── geography.html
-│   │       ├── goals.html
-│   │       ├── includes
-│   │       │   ├── filter_bar.html
-│   │       │   └── pagination.html
-│   │       ├── log_detail.html
-│   │       ├── login_activity.html
-│   │       ├── logs.html
-│   │       ├── mfa_enroll.html
-│   │       ├── notifications.html
-│   │       ├── page_detail.html
-│   │       ├── pages.html
-│   │       ├── realtime.html
-│   │       ├── releases.html
-│   │       ├── reports.html
-│   │       ├── rum.html
-│   │       ├── security.html
-│   │       ├── segments.html
-│   │       ├── server_cpu.html
-│   │       ├── server_deployments.html
-│   │       ├── server_disk.html
-│   │       ├── server_memory.html
-│   │       ├── server_network.html
-│   │       ├── server_overview.html
-│   │       ├── server_processes.html
-│   │       ├── server_queues.html
-│   │       ├── server_services.html
-│   │       ├── server_slow_queries.html
-│   │       ├── settings.html
-│   │       ├── shared_dashboard.html
-│   │       ├── share_links.html
-│   │       ├── sites.html
-│   │       ├── traffic.html
-│   │       └── uptime.html
+│   │   ├── 404.html
+│   │   ├── 500.html
+│   │   ├── paxalia
+│   │   │   ├── about.html
+│   │   │   ├── admin
+│   │   │   │   ├── audit.html
+│   │   │   │   ├── bulk_delete.html
+│   │   │   │   ├── delete_confirmation.html
+│   │   │   │   ├── history.html
+│   │   │   │   ├── home.html
+│   │   │   │   ├── model_list.html
+│   │   │   │   ├── model_localization.html
+│   │   │   │   ├── model_overview.html
+│   │   │   │   ├── models.html
+│   │   │   │   ├── model_stats.html
+│   │   │   │   ├── object_detail.html
+│   │   │   │   ├── object_form.html
+│   │   │   │   ├── package_center.html
+│   │   │   │   ├── package_export_center.html
+│   │   │   │   ├── package_export.html
+│   │   │   │   ├── package_history.html
+│   │   │   │   ├── package_import_center.html
+│   │   │   │   ├── package_import.html
+│   │   │   │   └── package_result.html
+│   │   │   ├── admin_devices.html
+│   │   │   ├── admin_overview.html
+│   │   │   ├── admin_sessions.html
+│   │   │   ├── annotations.html
+│   │   │   ├── api_docs.html
+│   │   │   ├── api.html
+│   │   │   ├── api_keys.html
+│   │   │   ├── application_logs.html
+│   │   │   ├── auth_base.html
+│   │   │   ├── backup_reauth.html
+│   │   │   ├── backups.html
+│   │   │   ├── base.html
+│   │   │   ├── billing.html
+│   │   │   ├── bots.html
+│   │   │   ├── broken_links.html
+│   │   │   ├── campaigns.html
+│   │   │   ├── cohorts.html
+│   │   │   ├── compliance.html
+│   │   │   ├── dashboard.html
+│   │   │   ├── data_import.html
+│   │   │   ├── dependencies.html
+│   │   │   ├── email
+│   │   │   │   └── report_digest.html
+│   │   │   ├── error_base.html
+│   │   │   ├── events.html
+│   │   │   ├── funnels.html
+│   │   │   ├── geography.html
+│   │   │   ├── goals.html
+│   │   │   ├── includes
+│   │   │   │   ├── filter_bar.html
+│   │   │   │   └── pagination.html
+│   │   │   ├── log_detail.html
+│   │   │   ├── login_activity.html
+│   │   │   ├── logs.html
+│   │   │   ├── mfa_enroll.html
+│   │   │   ├── notifications.html
+│   │   │   ├── page_detail.html
+│   │   │   ├── pages.html
+│   │   │   ├── realtime.html
+│   │   │   ├── releases.html
+│   │   │   ├── reports.html
+│   │   │   ├── rum.html
+│   │   │   ├── security_admins.html
+│   │   │   ├── security_authentication.html
+│   │   │   ├── security.html
+│   │   │   ├── security_overview.html
+│   │   │   ├── segments.html
+│   │   │   ├── server_cpu.html
+│   │   │   ├── server_deployments.html
+│   │   │   ├── server_disk.html
+│   │   │   ├── server_memory.html
+│   │   │   ├── server_network.html
+│   │   │   ├── server_overview.html
+│   │   │   ├── server_processes.html
+│   │   │   ├── server_queues.html
+│   │   │   ├── server_services.html
+│   │   │   ├── server_slow_queries.html
+│   │   │   ├── settings.html
+│   │   │   ├── shared_dashboard.html
+│   │   │   ├── share_links.html
+│   │   │   ├── sites.html
+│   │   │   ├── traffic.html
+│   │   │   └── uptime.html
+│   │   └── paxalia_auth
+│   │       ├── access-denied.html
+│   │       ├── device-register.html
+│   │       ├── device-verify.html
+│   │       ├── forgot-password.html
+│   │       ├── login.html
+│   │       ├── password_change_done.html
+│   │       ├── password_change.html
+│   │       ├── password_reset_complete.html
+│   │       ├── password_reset_done.html
+│   │       ├── password_reset_email.html
+│   │       ├── password_reset_subject.html
+│   │       ├── recovery-codes.html
+│   │       ├── reset-password.html
+│   │       ├── session-expired.html
+│   │       ├── signup.html
+│   │       ├── two-factor.html
+│   │       └── two-factor-setup.html
 │   ├── templatetags
 │   │   ├── analytics_tags.py
 │   │   └── __init__.py
 │   ├── test_admin_center.py
+│   ├── test_live_logging_fix26.py
 │   ├── test_logging.py
+│   ├── test_security_auth.py
+│   ├── test_security_cleanup_fix22.py
+│   ├── test_security_ux_fix21.py
 │   ├── tests.py
 │   ├── uptime.py
 │   ├── urls.py
-│   └── views
-│       ├── about.py
-│       ├── admin_overview.py
-│       ├── annotations.py
-│       ├── api_docs.py
-│       ├── api_keys.py
-│       ├── api.py
-│       ├── backup.py
-│       ├── billing.py
-│       ├── bots.py
-│       ├── broken_links.py
-│       ├── campaigns.py
-│       ├── chat_ops.py
-│       ├── cohorts.py
-│       ├── compliance.py
-│       ├── csp_reports.py
-│       ├── dashboard.py
-│       ├── data_import.py
-│       ├── dependencies.py
-│       ├── events.py
-│       ├── export.py
-│       ├── geography.py
-│       ├── goals.py
-│       ├── __init__.py
-│       ├── login_activity.py
-│       ├── logs.py
-│       ├── mfa.py
-│       ├── notifications.py
-│       ├── page_detail.py
-│       ├── pages.py
-│       ├── paxalia_api.py
-│       ├── realtime.py
-│       ├── releases.py
-│       ├── reports.py
-│       ├── rum.py
-│       ├── security.py
-│       ├── segments.py
-│       ├── server.py
-│       ├── settings.py
-│       ├── share_links.py
-│       ├── sites.py
-│       ├── traffic.py
-│       ├── uploads.py
-│       ├── uptime.py
-│       └── utils.py
+│   ├── views
+│   │   ├── about.py
+│   │   ├── admin_overview.py
+│   │   ├── admin_security.py
+│   │   ├── annotations.py
+│   │   ├── api_docs.py
+│   │   ├── api_keys.py
+│   │   ├── api.py
+│   │   ├── auth.py
+│   │   ├── backup.py
+│   │   ├── billing.py
+│   │   ├── bots.py
+│   │   ├── broken_links.py
+│   │   ├── campaigns.py
+│   │   ├── chat_ops.py
+│   │   ├── cohorts.py
+│   │   ├── compliance.py
+│   │   ├── csp_reports.py
+│   │   ├── dashboard.py
+│   │   ├── data_import.py
+│   │   ├── dependencies.py
+│   │   ├── events.py
+│   │   ├── export.py
+│   │   ├── geography.py
+│   │   ├── goals.py
+│   │   ├── __init__.py
+│   │   ├── login_activity.py
+│   │   ├── logs.py
+│   │   ├── mfa.py
+│   │   ├── notifications.py
+│   │   ├── page_detail.py
+│   │   ├── pages.py
+│   │   ├── paxalia_api.py
+│   │   ├── realtime.py
+│   │   ├── releases.py
+│   │   ├── reports.py
+│   │   ├── rum.py
+│   │   ├── security.py
+│   │   ├── segments.py
+│   │   ├── server.py
+│   │   ├── settings.py
+│   │   ├── share_links.py
+│   │   ├── sites.py
+│   │   ├── traffic.py
+│   │   ├── uploads.py
+│   │   ├── uptime.py
+│   │   └── utils.py
+│   └── webauthn_services.py
 ├── LICENSE
 ├── MANIFEST.in
 ├── pyproject.toml
 ├── README.md
 ├── setup.cfg
-├── setup.py
-├── .gitignore
-└── .gitattributes
+└── setup.py
 ```
 
 The `.mmdb` GeoIP database is intentionally excluded from Git because of its size.
@@ -4288,3 +5245,102 @@ If Paxalia helps your project, useful forms of support include:
 - supporting Paxalia through the project's official support/donation channels
 
 Thank you for using **paxalia-dashboard**.
+
+---
+
+## Future Security Setup & Bootstrap Tooling
+
+> **Planned / not implemented in the current release.**
+>
+> This section documents a future contribution direction only. None of the commands below are available from the
+> current package. Do not copy them into deployment automation expecting them to exist today.
+
+The long-term goal is to provide an interactive Paxalia project-setup layer that can diagnose a Django project, preview
+proposed security/configuration changes, create backups, and then apply only changes that the administrator explicitly
+approves.
+
+### Future `paxalia_check`
+
+A future command may provide a single read-only project health entry point:
+
+```bash
+python manage.py paxalia_check
+```
+
+The intended scope includes Django deployment checks, Paxalia security checks, authentication checks, configuration
+checks, logging checks, and Admin checks.
+
+### Future `paxalia_setup`
+
+A future interactive setup command may inspect the host project and show a preview before making changes:
+
+```bash
+python manage.py paxalia_setup
+```
+
+The future workflow could inspect the project, preview proposed changes, create backups, configure Paxalia, configure
+security, configure logging, and configure authentication while preserving existing project behavior.
+
+### Future security setup
+
+A future security-focused mode could be exposed as:
+
+```bash
+python manage.py paxalia_setup security
+python manage.py paxalia_setup security --apply
+```
+
+A future implementation should first inspect the project safely and present a deterministic preview. Depending on the
+project, it could eventually:
+
+- detect existing security/authentication packages
+- propose only compatible dependencies
+- back up files before mutation
+- update `.env` safely where the project uses environment-based settings
+- update `.env.example` and `.gitignore` when appropriate
+- configure security middleware
+- configure Paxalia logging
+- configure administrator authentication and security
+- run Django/Paxalia validation after applying changes
+
+The future tooling must preserve existing settings instead of blindly rewriting arbitrary `settings.py` files.
+
+### Future production security setup
+
+A future production-oriented mode could be exposed as:
+
+```bash
+python manage.py paxalia_setup security --production --apply
+```
+
+This would still need to preview its intended changes, create backups, detect conflicts, and stop rather than silently
+overwrite project-specific configuration. Production mode should maximize safe automation, not remove administrator
+control.
+
+### Explicitly outside the current release
+
+The current package does **not** automatically:
+
+- migrate `settings.py` secrets into `.env`
+- rewrite `.env` files
+- modify `requirements.txt`, `pyproject.toml`, Poetry configuration, or other dependency manifests
+- rewrite arbitrary Django settings files
+- bootstrap a deployment automatically
+- provide the future `paxalia_check` command
+- provide the future `paxalia_setup` command
+
+For the current release, Security Overview is intentionally diagnostic and read-only: it tells administrators what is
+active, what is missing, and what requires attention. Future setup tooling can build on those diagnostics later without
+changing the completed security architecture.
+
+---
+
+> **Created with love by the Paxalia team for the world — because detail matters.**
+>
+> Detail is in the layers you may not notice first: thoughtful security boundaries, password + 2FA + authorized-device
+> authentication, rate limits, CSRF protection, isolated administrator sessions, a private dashboard path, twelve
+> token-driven themes, a clean Django-native structure, careful data portability, persistent observability, and the
+> small
+> decisions that make the whole system feel considered.
+>
+> **Paxalia Dashboard is built around the belief that the details are part of the product.**

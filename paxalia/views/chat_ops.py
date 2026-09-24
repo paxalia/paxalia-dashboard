@@ -5,6 +5,7 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from honeypot.decorators import honeypot_exempt
 
 from paxalia.chat_ops import (
     format_snapshot_text,
@@ -19,6 +20,7 @@ logger = logging.getLogger('paxalia')
 
 
 @csrf_exempt
+@honeypot_exempt
 @require_POST
 def slack_command(request):
     """
@@ -50,6 +52,7 @@ def slack_command(request):
 
 
 @csrf_exempt
+@honeypot_exempt
 @require_POST
 def discord_interaction(request):
     """

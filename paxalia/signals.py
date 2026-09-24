@@ -16,6 +16,11 @@ from .middleware import _resolve_ip, AnalyticsMiddleware
 from .models import LoginEvent
 from .settings import get_config
 
+try:
+    from .admin_security import ADMIN_HOST_AUTH_PENDING_KEY
+except Exception:  # pragma: no cover - defensive import during app bootstrap
+    ADMIN_HOST_AUTH_PENDING_KEY = "paxalia.admin.host_auth_pending"
+
 logger = logging.getLogger('paxalia.security')
 User = get_user_model()
 
@@ -139,6 +144,18 @@ def _record_login(user, request, *, result, failure_category='', username_attemp
 def handle_login(sender, request, user, **kwargs):
     if not _should_track(user):
         return
+    # When /insights/ initiated an administrator flow through the host
+    # application's login, that host login is Layer 1, not a privileged
+    # Paxalia session. Consume the one-shot marker so only the final
+    # three-layer session creates the administrator LoginEvent.
+    try:
+        session = getattr(request, "session", None)
+        if session is not None and session.get(ADMIN_HOST_AUTH_PENDING_KEY):
+            session.pop(ADMIN_HOST_AUTH_PENDING_KEY, None)
+            session.modified = True
+            return
+    except Exception:
+        pass
     try:
         event, new_location = _record_login(user, request, result='success')
         if new_location:

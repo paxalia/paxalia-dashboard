@@ -1,5 +1,5 @@
 # paxalia/views/realtime.py
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.shortcuts import render
 from django.utils import timezone
 from django.http import JsonResponse, Http404
@@ -14,7 +14,7 @@ from paxalia.views.utils import section_enabled, get_current_site, site_scoped
 
 # Create your views here.
 
-@staff_member_required
+@admin_security_required
 def analytics_realtime(request):
     if not section_enabled('realtime'):
         raise Http404
@@ -27,7 +27,7 @@ def analytics_realtime(request):
     return render(request, 'paxalia/realtime.html', context)
 
 
-@staff_member_required
+@admin_security_required
 def analytics_realtime_data(request):
     """AJAX endpoint – returns live visitor counts as JSON."""
     current_site = get_current_site(request)

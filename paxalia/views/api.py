@@ -1,5 +1,5 @@
 # paxalia/views/api.py
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import render
 from django.utils import timezone
@@ -15,7 +15,7 @@ from datetime import timedelta
 
 # Create your views here.
 
-@staff_member_required
+@admin_security_required
 def analytics_api(request):
     if not section_enabled('api'):
         raise Http404

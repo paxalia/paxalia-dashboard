@@ -1,5 +1,5 @@
 # paxalia/views/broken_links.py
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.db.models import Count, Max
 from django.http import Http404
 from django.shortcuts import render
@@ -10,7 +10,7 @@ from paxalia.models import PageView
 from .utils import get_date_range, detect_active_preset, section_enabled, get_current_site, site_scoped
 
 
-@staff_member_required
+@admin_security_required
 def broken_links(request):
     """
     404 / broken-link report. Reuses PageView.status_code (already

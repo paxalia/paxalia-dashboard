@@ -1,6 +1,6 @@
 # paxalia/views/notifications.py
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
@@ -11,7 +11,7 @@ from paxalia.models import Notification
 from .utils import section_enabled, get_current_site, scoped_object_or_404
 
 
-@staff_member_required
+@admin_security_required
 def notifications_list(request):
     if not section_enabled('notifications'):
         raise Http404
@@ -32,7 +32,7 @@ def notifications_list(request):
     return render(request, 'paxalia/notifications.html', context)
 
 
-@staff_member_required
+@admin_security_required
 @require_POST
 def notification_mark_read(request, notification_id):
     if not section_enabled('notifications'):
@@ -43,7 +43,7 @@ def notification_mark_read(request, notification_id):
     return redirect('paxalia:notifications')
 
 
-@staff_member_required
+@admin_security_required
 @require_POST
 def notifications_mark_all_read(request):
     Notification.objects.filter(is_read=False).update(is_read=True)

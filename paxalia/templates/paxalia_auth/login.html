@@ -1,0 +1,51 @@
+{% extends 'paxalia/auth_base.html' %}
+{% load i18n %}
+{% block title %}{% if admin_flow %}{% trans "Paxalia Dashboard Admin Login" %}{% else %}{% trans "Log in" %}{% endif %} · {{ brand_name }}{% endblock %}
+{% block description %}{% trans "Secure authentication for Paxalia Dashboard." %}{% endblock %}
+{% block content %}
+<section class="paxalia-auth-card" aria-labelledby="login-heading">
+    <header class="paxalia-auth-card__header">
+        <div class="paxalia-auth-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3a9 9 0 0 0 0 18 9 9 0 0 0 0-18Zm-1 13.5h2M12 7v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
+        {% if admin_flow %}
+            <p class="paxalia-auth-eyebrow">{% trans "Paxalia Security" %}</p>
+            <h1 id="login-heading">{% trans "Administrator sign in" %}</h1>
+            <p>{% trans "Administrator access continues through mandatory 2FA and an authorized device." %}</p>
+        {% else %}
+            <h1 id="login-heading">{% trans "Log in" %}</h1>
+            <p>{% trans "Sign in with your Django account to continue." %}</p>
+        {% endif %}
+    </header>
+    <div class="paxalia-auth-card__body">
+        <form method="post" action="{% url 'paxalia:auth_login' %}" class="paxalia-auth-form" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            {% if form.non_field_errors %}<div class="paxalia-auth-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="paxalia-auth-field">
+                <label for="id_username">{% trans "Username or email" %}</label>
+                {{ form.username }}
+                {% for error in form.username.errors %}<div class="paxalia-auth-field-error">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="paxalia-auth-field">
+                <label for="id_password">{% trans "Password" %}</label>
+                <div class="paxalia-password-wrap">
+                    {{ form.password }}
+                    <button type="button" class="paxalia-password-toggle" data-password-toggle="id_password" aria-label="{% trans 'Show password' %}" data-show-label="{% trans 'Show' %}" data-hide-label="{% trans 'Hide' %}">{% trans "Show" %}</button>
+                </div>
+                {% for error in form.password.errors %}<div class="paxalia-auth-field-error">{{ error }}</div>{% endfor %}
+            </div>
+            {% if rate_limited %}
+                <div class="paxalia-auth-callout paxalia-auth-callout--danger" role="alert">{% trans "Too many authentication attempts. Please wait and try again." %}</div>
+            {% endif %}
+            <button class="btn btn-primary paxalia-auth-submit" type="submit">{% if admin_flow %}{% trans "Continue securely" %}{% else %}{% trans "Log in" %}{% endif %}</button>
+        </form>
+        <div class="paxalia-auth-links">
+            {% if auth_password_reset_enabled %}<a href="{% url 'paxalia:auth_password_reset' %}">{% trans "Forgot password?" %}</a>{% endif %}
+            {% if auth_password_reset_enabled and auth_signup_enabled %}<span aria-hidden="true">·</span>{% endif %}
+            {% if auth_signup_enabled %}<a href="{% url 'paxalia:auth_signup' %}">{% trans "Create account" %}</a>{% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+

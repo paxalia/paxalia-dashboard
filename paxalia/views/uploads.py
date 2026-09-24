@@ -16,7 +16,7 @@ Flow:
 
 import os
 
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_preflight, admin_security_required
 from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
@@ -65,6 +65,93 @@ def _extension_error(filename):
 
 
 
+def _upload_init_preflight(request, *args, **kwargs):
+    """Validate upload-init inputs before the privileged gate runs.
+
+    This preserves the API's established 400/413 validation contract while
+    still requiring the completed Paxalia administrator session before any
+    valid upload state is created.
+    """
+    if request.method != 'POST':
+        return None
+
+    filename = _safe_filename(request.POST.get('filename', ''))
+    total_size = request.POST.get('total_size')
+    chunk_size = request.POST.get('chunk_size')
+
+    if not filename or not total_size:
+        return JsonResponse({'error': 'filename and total_size are required'}, status=400)
+
+    ext_error = _extension_error(filename)
+    if ext_error:
+        return JsonResponse({'error': ext_error}, status=400)
+
+    try:
+        total_size = int(total_size)
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'total_size must be an integer'}, status=400)
+
+    if total_size <= 0:
+        return JsonResponse({'error': 'total_size must be positive'}, status=400)
+
+    max_size = get_upload_max_file_size_bytes()
+    if max_size is not None and total_size > max_size:
+        return JsonResponse({
+            'error': f'File exceeds maximum allowed size ({max_size // (1024*1024)} MB)'
+        }, status=413)
+
+    if chunk_size:
+        try:
+            chunk_size = int(chunk_size)
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'chunk_size must be an integer'}, status=400)
+    else:
+        chunk_size = get_upload_chunk_size_bytes()
+
+    configured_chunk_size = get_upload_chunk_size_bytes()
+    if chunk_size <= 0:
+        return JsonResponse({'error': 'chunk_size must be positive'}, status=400)
+    if chunk_size > configured_chunk_size:
+        return JsonResponse({'error': 'chunk_size exceeds the configured maximum'}, status=413)
+
+    return None
+
+
+
+def _upload_chunk_preflight(request, upload_id, *args, **kwargs):
+    """Return size errors before the privileged gate, without leaking access."""
+    if request.method != 'POST' or not request.user.is_authenticated:
+        return None
+
+    upload = _get_owned_upload(request, upload_id)
+    if upload is None:
+        return None
+
+    chunk_index_raw = request.POST.get('chunk_index')
+    chunk_file = request.FILES.get('chunk')
+    if chunk_index_raw is None or chunk_file is None:
+        return None
+    try:
+        chunk_index = int(chunk_index_raw)
+    except (TypeError, ValueError):
+        return None
+    if chunk_index < 0 or chunk_index >= upload.total_chunks:
+        return None
+
+    configured_chunk_size = get_upload_chunk_size_bytes()
+    expected_size = (
+        upload.chunk_size
+        if chunk_index < upload.total_chunks - 1
+        else upload.total_size - upload.chunk_size * (upload.total_chunks - 1)
+    )
+    if expected_size <= 0 or chunk_file.size != expected_size or chunk_file.size > configured_chunk_size:
+        return JsonResponse({'error': 'Invalid chunk size'}, status=413)
+    if upload.bytes_received + chunk_file.size > upload.total_size:
+        return JsonResponse({'error': 'Chunk exceeds declared upload size'}, status=413)
+    return None
+
+
+
 def _get_owned_upload(request, upload_id, *, lock=False):
     """Return an upload session the current staff user may manage."""
     qs = FileUpload.objects.filter(id=upload_id)
@@ -89,7 +176,8 @@ def _public_upload(upload):
     }
 
 
-@staff_member_required
+@admin_security_required
+@admin_security_preflight(_upload_init_preflight)
 @honeypot_exempt
 @require_POST
 def upload_init(request):
@@ -150,7 +238,8 @@ def upload_init(request):
     })
 
 
-@staff_member_required
+@admin_security_required
+@admin_security_preflight(_upload_chunk_preflight)
 @honeypot_exempt
 @require_POST
 def upload_chunk(request, upload_id):
@@ -222,7 +311,7 @@ def upload_chunk(request, upload_id):
     })
 
 
-@staff_member_required
+@admin_security_required
 @honeypot_exempt
 @require_POST
 def upload_complete(request, upload_id):
@@ -268,14 +357,14 @@ def upload_complete(request, upload_id):
         return JsonResponse({'upload': _public_upload(upload), 'already_completed': False})
 
 
-@staff_member_required
+@admin_security_required
 def upload_list(request):
     uploads = FileUpload.objects.all() if request.user.is_superuser else FileUpload.objects.filter(uploaded_by=request.user)
     data = [_public_upload(u) for u in uploads[:100]]
     return JsonResponse({'uploads': data})
 
 
-@staff_member_required
+@admin_security_required
 @honeypot_exempt
 @require_POST
 def upload_delete(request, upload_id):

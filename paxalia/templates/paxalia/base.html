@@ -9,7 +9,7 @@
     <meta charset="UTF-8"/>
     <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <link rel="icon" href="{% static 'assets/icons/brand/icon-logo.svg' %}" type="image/svg+xml"/>
+    <link rel="icon" href="{% static 'paxalia/icons/brand/icon-brand.svg' %}" type="image/svg+xml"/>
     <title>{% block title %}Paxalia Analytics{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'paxalia/styles/themes.css' %}">
     <link rel="stylesheet" href="{% static 'paxalia/styles/tokens.css' %}">
@@ -46,12 +46,7 @@
         <aside class="analytics-sidebar" role="region" aria-label="Dashboard sections" id="analytics-sidebar">
             <div class="sidebar__branding">
                 <a href="{% url 'paxalia:dashboard' %}" class="sidebar__logo">
-            <span class="icon icon--md" aria-hidden="true">
-                <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                          d="M5 21v-6m7 6V3m7 18V9"></path>
-                </svg>
-            </span>
+                    <img src="{% static 'paxalia/icons/brand/icon-brand.svg' %}" alt="" width="32" height="32" class="sidebar__brand-icon">
                     <span class="sidebar__title">Paxalia Dashboard</span>
                 </a>
 
@@ -600,69 +595,49 @@
                         <span class="sidebar-group__marker" aria-hidden="true"></span>
                         <span class="sidebar-group__title">{% trans "Security & Access" %}</span>
                         <span class="sidebar-group__chevron" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor"
-                                                                                  d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"></path></svg>
+                            <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"></path></svg>
                         </span>
                     </button>
                     <div class="sidebar-group__panel" id="sidebar-group-security" hidden>
-                        {% if 'security' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_security %}
-                        <a href="{% url 'paxalia:security' %}"
-                           class="analytics-sidebar-link {% if active_page == 'security' %}active{% endif %}">
-                                                    <span class="icon icon--sm" aria-hidden="true">
-                                                        <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                                            <path fill="currentColor"
-                                                                  d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5zm0 9.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11z"/>
-                                                        </svg>
-                                                    </span>
+                        <a href="{% url 'paxalia:security' %}" class="analytics-sidebar-link {% if active_page == 'security' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path fill="currentColor" d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5zm0 9.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11z"/></svg></span>
                             {% trans "Security Center" %}
                         </a>
-                        {% endif %}
 
-                        {% if 'security' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_security %}
-                        <a href="{% url 'paxalia:user_login_activity' %}"
-                           class="analytics-sidebar-link {% if active_page == 'user_login_activity' %}active{% endif %}">
-                                                    <span class="icon icon--sm" aria-hidden="true">
-                                                        <svg viewBox="0 0 24 24" fill="none">
-                                                            <path fill="currentColor"
-                                                                  d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4m0 2c-4.42 0-8 2.24-8 5v1h8v-2H6.2c.75-1.75 2.92-2 5.8-2s5.05.25 5.8 2H12v2h8v-1c0-2.76-3.58-5-8-5"/>
-                                                            <path fill="currentColor"
-                                                                  d="M15 6h6v6h-2V9.41l-4.29 4.3-1.42-1.42L17.59 8H15z"/>
-                                                        </svg>
-                                                    </span>
-                            {% trans "User Login Activity" %}
+                        <a href="{% url 'paxalia:security_overview' %}" class="analytics-sidebar-link {% if active_page == 'security_overview' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path fill="currentColor" d="M4 4h16v3H4zm0 6h16v3H4zm0 6h9v3H4z"/></svg></span>
+                            {% trans "Security Overview" %}
                         </a>
-                        {% endif %}
 
-                        {% if 'security' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_security %}
-                        <a href="{% url 'paxalia:admin_login_activity' %}"
-                           class="analytics-sidebar-link {% if active_page == 'admin_login_activity' %}active{% endif %}">
-                                                    <span class="icon icon--sm" aria-hidden="true">
-                                                        <svg viewBox="0 0 24 24" fill="none">
-                                                            <path fill="currentColor"
-                                                                  d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5zm0 3.08 5 1.88v4.04c0 3.86-2.38 7.38-5 8.69-2.62-1.31-5-4.83-5-8.69V6.96z"/>
-                                                            <path fill="currentColor"
-                                                                  d="M12 8a2.25 2.25 0 1 0 0 4.5A2.25 2.25 0 0 0 12 8m-4 8.25c0-1.53 1.79-2.75 4-2.75s4 1.22 4 2.75V17H8z"/>
-                                                        </svg>
-                                                    </span>
+                        <a href="{% url 'paxalia:security_admins' %}" class="analytics-sidebar-link {% if active_page == 'security_admins' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path fill="currentColor" d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0m-12 9c0-3.31 3.58-6 8-6s8 2.69 8 6v1H4z"/></svg></span>
+                            {% trans "Administrator Security" %}
+                        </a>
+
+                        <a href="{% url 'paxalia:security_authentication' %}" class="analytics-sidebar-link {% if active_page == 'security_authentication' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H5v12h14V10h-2V7a5 5 0 0 0-5-5m-3 8V7a3 3 0 0 1 6 0v3z"/></svg></span>
+                            {% trans "Authentication & Recovery" %}
+                        </a>
+
+                        <a href="{% url 'paxalia:admin_devices' %}" class="analytics-sidebar-link {% if active_page == 'admin_devices' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path fill="currentColor" d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2m2 3v14h6V5z"/></svg></span>
+                            {% trans "Authorized Devices" %}
+                        </a>
+
+                        <a href="{% url 'paxalia:admin_sessions' %}" class="analytics-sidebar-link {% if active_page == 'admin_sessions' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path fill="currentColor" d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2 2v6h12V7zM8 20h8v2H8z"/></svg></span>
+                            {% trans "Admin Sessions" %}
+                        </a>
+
+                        <a href="{% url 'paxalia:admin_login_activity' %}" class="analytics-sidebar-link {% if active_page == 'admin_login_activity' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path fill="currentColor" d="M12 3a4 4 0 1 0 4 4 4 4 0 0 0-4-4m0 10c-4.42 0-8 2.24-8 5v3h16v-3c0-2.76-3.58-5-8-5"/></svg></span>
                             {% trans "Admin Login Activity" %}
                         </a>
-                        {% endif %}
 
-                        {% if 'security' in analytics_config.SIDEBAR_SECTIONS and perms.paxalia.view_security %}
-                        <a href="{% url 'paxalia:failed_login_activity' %}"
-                           class="analytics-sidebar-link {% if active_page == 'failed_login_activity' %}active{% endif %}">
-                                                    <span class="icon icon--sm" aria-hidden="true">
-                                                        <svg viewBox="0 0 24 24" fill="none">
-                                                            <path fill="currentColor"
-                                                                  d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5zm0 3.08 5 1.88v4.04c0 3.86-2.38 7.38-5 8.69-2.62-1.31-5-4.83-5-8.69V6.96z"/>
-                                                            <path d="m9.25 9.25 5.5 5.5m0-5.5-5.5 5.5"
-                                                                  stroke="currentColor" stroke-width="1.8"
-                                                                  stroke-linecap="round"/>
-                                                        </svg>
-                                                    </span>
+                        <a href="{% url 'paxalia:failed_login_activity' %}" class="analytics-sidebar-link {% if active_page == 'failed_login_activity' %}active{% endif %}">
+                            <span class="icon icon--sm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path fill="currentColor" d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5zm3.5 7.5-1.4-1.4L12 10.2l-2.1-2.1-1.4 1.4 2.1 2.1-2.1 2.1 1.4 1.4 2.1-2.1 2.1 2.1 1.4-1.4-2.1-2.1z"/></svg></span>
                             {% trans "Failed Login Activity" %}
                         </a>
-                        {% endif %}
                     </div>
                 </section>
                 {% endif %}
@@ -947,6 +922,50 @@
                 </section>
             </nav>
 
+            <div class="sidebar-account">
+                <details class="sidebar-account__details">
+                    <summary class="sidebar-account__summary" data-sidebar-account-toggle>
+                        <span class="sidebar-account__avatar" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+                                <circle cx="12" cy="8" r="3.25" stroke="currentColor" stroke-width="1.7"/>
+                                <path d="M5.5 20c.9-3.1 3.15-4.7 6.5-4.7s5.6 1.6 6.5 4.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span class="sidebar-account__identity">
+                            <strong>{{ request.user.get_username }}</strong>
+                            <small>{% trans "Administrator" %}</small>
+                        </span>
+                        <span class="sidebar-account__chevron" aria-hidden="true">›</span>
+                    </summary>
+                    <div class="sidebar-account__menu">
+                        <a href="{% url 'paxalia:security' %}" class="sidebar-account__item">
+                            <span class="sidebar-account__item-icon" aria-hidden="true">⚙</span>
+                            <span>{% trans "Security Center" %}</span>
+                        </a>
+                        <a href="{% url 'paxalia:security_authentication' %}" class="sidebar-account__item">
+                            <span class="sidebar-account__item-icon" aria-hidden="true">⌁</span>
+                            <span>{% trans "Authentication" %}</span>
+                        </a>
+                        <a href="{% url 'paxalia:admin_devices' %}" class="sidebar-account__item">
+                            <span class="sidebar-account__item-icon" aria-hidden="true">◉</span>
+                            <span>{% trans "Authorized devices" %}</span>
+                        </a>
+                        <a href="{% url 'paxalia:admin_sessions' %}" class="sidebar-account__item">
+                            <span class="sidebar-account__item-icon" aria-hidden="true">◷</span>
+                            <span>{% trans "Active sessions" %}</span>
+                        </a>
+                        <div class="sidebar-account__divider"></div>
+                        <form method="post" action="{% url 'paxalia:auth_logout' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="sidebar-account__item sidebar-account__item--danger">
+                                <span class="sidebar-account__item-icon" aria-hidden="true">↪</span>
+                                <span>{% trans "Log out" %}</span>
+                            </button>
+                        </form>
+                    </div>
+                </details>
+            </div>
+
             <div class="sidebar__footer">
                 <span class="sidebar__credit">
                     {% trans "Dashboard by" %} <a href="https://www.paxalia.com/" target="_blank"
@@ -1029,3 +1048,4 @@
 {% endblock %}
 </body>
 </html>
+

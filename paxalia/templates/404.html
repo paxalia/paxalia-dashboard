@@ -1,0 +1,13 @@
+{% extends 'paxalia/error_base.html' %}
+{% load i18n paxalia_tags %}
+{% block title %}{% trans "404 Not Found" %} — {% paxalia_setting 'ERROR_BRAND_NAME' 'Paxalia' %}{% endblock %}
+{% block description %}{% trans "The page you’re looking for doesn’t exist or may have moved." %}{% endblock %}
+{% block content %}
+<section class="paxalia-error-card" aria-labelledby="error-heading">
+    <div class="paxalia-error-code" aria-hidden="true"><span class="paxalia-error-code__main">404</span><span class="paxalia-error-code__ghost paxalia-error-code__ghost--a">404</span><span class="paxalia-error-code__ghost paxalia-error-code__ghost--b">404</span></div>
+    <span class="paxalia-error-eyebrow">{% trans "Page not found" %}</span>
+    <h1 id="error-heading">{% trans "This page is no longer here." %}</h1>
+    <p>{% trans "The resource may have moved, been removed, or never existed. You can return to the site's home page and continue from there." %}</p>
+    <div class="paxalia-error-actions"><a class="btn btn-primary" data-error-home href="{% paxalia_setting 'ERROR_HOME_URL' '/' %}">{% trans "Back to homepage" %}</a><button class="btn btn-secondary" type="button" data-error-action="back">{% trans "Go back" %}</button></div>
+</section>
+{% endblock %}

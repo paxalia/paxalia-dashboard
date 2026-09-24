@@ -1,6 +1,6 @@
 # paxalia/views/api_keys.py
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
@@ -13,7 +13,7 @@ from paxalia.security_audit import log_action
 from .utils import section_enabled, get_current_site, scoped_object_or_404
 
 
-@staff_member_required
+@admin_security_required
 def api_keys_management(request):
     if not section_enabled('api_keys'):
         raise Http404
@@ -53,7 +53,7 @@ def api_keys_management(request):
     return render(request, 'paxalia/api_keys.html', context)
 
 
-@staff_member_required
+@admin_security_required
 @require_POST
 def api_key_revoke(request, key_id):
     if not section_enabled('api_keys'):
@@ -66,7 +66,7 @@ def api_key_revoke(request, key_id):
     return redirect('paxalia:api_keys')
 
 
-@staff_member_required
+@admin_security_required
 @require_POST
 def api_key_delete(request, key_id):
     if not section_enabled('api_keys'):
