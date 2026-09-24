@@ -101,6 +101,37 @@
         }
 
         // ----------------------------
+        // Administrator account menu
+        // ----------------------------
+        const accountButton = document.querySelector('[data-sidebar-account-toggle]');
+        const accountMenu = document.getElementById('sidebar-account-menu');
+
+        function setAccountMenu(open) {
+            if (!accountButton || !accountMenu) return;
+            accountButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+            accountMenu.hidden = !open;
+            accountButton.closest('.sidebar__account')?.classList.toggle('is-open', open);
+        }
+
+        if (accountButton && accountMenu) {
+            accountButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                setAccountMenu(accountMenu.hidden);
+            });
+
+            document.addEventListener('click', function (event) {
+                const account = accountButton.closest('.sidebar__account');
+                if (account && !account.contains(event.target)) {
+                    setAccountMenu(false);
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') setAccountMenu(false);
+            });
+        }
+
+        // ----------------------------
         // Collapsible sidebar groups
         // ----------------------------
         const groupButtons = document.querySelectorAll('[data-sidebar-group-toggle]');
@@ -139,3 +170,4 @@
         init();
     }
 })();
+

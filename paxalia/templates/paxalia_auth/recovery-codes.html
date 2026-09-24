@@ -1,0 +1,19 @@
+{% extends 'paxalia/auth_base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Recovery codes" %} · {{ brand_name }}{% endblock %}
+{% block content %}
+<section class="paxalia-auth-card paxalia-auth-card--wide" aria-labelledby="recovery-heading">
+    <header class="paxalia-auth-card__header"><div class="paxalia-auth-icon" aria-hidden="true">!</div><p class="paxalia-auth-eyebrow">{% trans "Recovery" %}</p><h1 id="recovery-heading">{% trans "Save your recovery codes" %}</h1><p>{% trans "These codes are shown once. Store them in a secure password manager or offline recovery location. Paxalia never displays them again." %}</p></header>
+    <div class="paxalia-auth-card__body">
+        <div class="paxalia-auth-stack paxalia-auth-recovery-stack">
+        <div class="paxalia-recovery-grid" aria-label="{% trans 'Paxalia backup recovery codes' %}">{% for code in recovery_codes %}<code>{{ code }}</code>{% endfor %}</div>
+        <div class="paxalia-auth-callout paxalia-auth-callout--warning">{% trans "Never paste recovery codes into logs, support messages, or ordinary exports. Treat a downloaded copy as sensitive." %}</div>
+        <div class="paxalia-auth-actions">
+            <button type="button" class="btn btn-secondary paxalia-auth-copy" data-download-recovery data-download-name="paxalia-backup-codes.txt">{% trans "Download backup codes" %}</button>
+            {% if next and next|slice:":1" == "/" %}<a class="btn btn-primary paxalia-auth-submit" href="{{ next }}">{% trans "Continue" %}</a>{% else %}<a class="btn btn-primary paxalia-auth-submit" href="{% url 'paxalia:security_authentication' %}">{% trans "Back to security" %}</a>{% endif %}
+        </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

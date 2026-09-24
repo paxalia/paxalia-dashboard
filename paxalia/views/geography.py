@@ -1,5 +1,5 @@
 # paxalia/views/geography.py
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import render
 from django.db.models import Count
@@ -14,7 +14,7 @@ import pycountry
 # Create your views here.
 
 
-@staff_member_required
+@admin_security_required
 def analytics_geography(request):
     if not section_enabled('geography'):
         raise Http404

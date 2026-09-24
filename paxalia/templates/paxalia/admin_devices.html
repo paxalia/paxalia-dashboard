@@ -1,0 +1,68 @@
+{% extends 'paxalia/base.html' %}
+{% load i18n static %}
+
+{% block title %}{% trans "Admin Devices" %} — Paxalia{% endblock %}
+{% block page_title %}{% trans "Admin Devices" %}{% endblock %}
+{% block page_subtitle %}{% trans "Authorized WebAuthn credentials for this administrator" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/security.css' %}">{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page analytics-page-stack">
+    <div class="security-subnav">
+        <a class="btn btn-secondary" href="{% url 'paxalia:security_overview' %}">{% trans "Security Overview" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:security_admins' %}">{% trans "Administrator Security" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:security_authentication' %}">{% trans "Authentication" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:admin_sessions' %}">{% trans "Admin Sessions" %}</a>
+        <a class="btn btn-primary" href="{% url 'paxalia:auth_device_register' %}">{% trans "Register device" %}</a>
+    </div>
+
+    <section class="table-card">
+        <div class="security-section-head"><div><span class="security-eyebrow">{% trans "Device registry" %}</span><h2 class="card-title">{% trans "Authorized Devices" %}</h2></div><span class="form-hint">{% blocktrans with max=max_devices %}Up to {{ max }} active device(s){% endblocktrans %}</span></div>
+        {% if devices %}
+        <div class="security-device-list">
+            {% for device in devices %}
+            <article class="security-device-card {% if current_device and current_device.id == device.id %}security-device-card--current{% endif %}">
+                <div class="security-device-card__header">
+                    <div>
+                        <span class="security-eyebrow">{% if current_device and current_device.id == device.id %}{% trans "Current device" %}{% else %}{% trans "Authorized device" %}{% endif %}</span>
+                        <h3>{{ device.display_name }}</h3>
+                    </div>
+                    <span class="security-status-badge {% if device.status == 'active' %}security-status-ok{% elif device.status == 'revoked' %}security-status-danger{% else %}security-status-warning{% endif %}">{{ device.get_status_display }}</span>
+                </div>
+                <dl class="security-device-meta">
+                    <div><dt>{% trans "Registered" %}</dt><dd>{{ device.created_at|date:"Y-m-d H:i" }}</dd></div>
+                    <div><dt>{% trans "Last authenticated" %}</dt><dd>{{ device.last_authenticated_at|date:"Y-m-d H:i"|default:"—" }}</dd></div>
+                    {% if device.credential %}
+                    <div><dt>{% trans "Authenticator" %}</dt><dd>{{ device.credential.device_type|default:"—" }}</dd></div>
+                    <div><dt>{% trans "Attachment" %}</dt><dd>{{ device.credential.authenticator_attachment|default:"—" }}</dd></div>
+                    <div><dt>{% trans "Backed up" %}</dt><dd>{% if device.credential.backed_up %}{% trans "Yes" %}{% else %}{% trans "No" %}{% endif %}</dd></div>
+                    {% endif %}
+                </dl>
+                <div class="security-device-card__actions">
+                    <form method="post" action="{% url 'paxalia:admin_device_rename' device.id %}" class="security-device-rename-form">
+                        {% csrf_token %}
+                        <label class="sr-only" for="device-name-{{ device.id }}">{% trans "Device name" %}</label>
+                        <input id="device-name-{{ device.id }}" class="form-input" type="text" name="device_name" value="{{ device.display_name }}" maxlength="120" required>
+                        <button type="submit" class="btn btn-sm btn-secondary">{% trans "Save name" %}</button>
+                    </form>
+                    {% if device.status == 'active' %}
+                    <form method="post" action="{% url 'paxalia:admin_device_revoke' device.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% blocktrans with name=device.display_name %}Revoke {{ name }}? Future authentication with this device will fail.{% endblocktrans %}">{% trans "Revoke device" %}</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="security-empty"><strong>{% trans "No active authorized devices." %}</strong><span>{% trans "Register an authenticator to complete Layer 3 administrator security." %}</span></div>
+        {% endif %}
+    </section>
+
+    <section class="security-device-callout">
+        <div><strong>{% trans "Privacy and credential safety" %}</strong><p>{% trans "Paxalia does not display or store private device keys. Device names are metadata, not authentication credentials." %}</p></div>
+    </section>
+</div>
+{% endblock %}
+

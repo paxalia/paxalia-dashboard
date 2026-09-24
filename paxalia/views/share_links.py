@@ -2,7 +2,7 @@
 import hashlib
 
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.hashers import check_password, make_password
@@ -34,7 +34,7 @@ def _check_password(raw, encoded):
 
 # ─── Staff-side management ─────────────────────────────────────────
 
-@staff_member_required
+@admin_security_required
 def share_links_management(request):
     if not section_enabled('share_links'):
         raise Http404
@@ -78,7 +78,7 @@ def share_links_management(request):
     return render(request, 'paxalia/share_links.html', context)
 
 
-@staff_member_required
+@admin_security_required
 @require_POST
 def share_link_revoke(request, link_id):
     link = scoped_object_or_404(ShareLink, request, link_id)
@@ -89,7 +89,7 @@ def share_link_revoke(request, link_id):
     return redirect('paxalia:share_links')
 
 
-@staff_member_required
+@admin_security_required
 @require_POST
 def share_link_delete(request, link_id):
     link = scoped_object_or_404(ShareLink, request, link_id)
@@ -100,7 +100,7 @@ def share_link_delete(request, link_id):
     return redirect('paxalia:share_links')
 
 
-# ─── Public view — deliberately no @staff_member_required ─────────
+# ─── Public view — deliberately no @admin_security_required ─────────
 
 def shared_dashboard_view(request, token):
     """

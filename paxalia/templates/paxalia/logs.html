@@ -116,6 +116,58 @@
         </div>
     </div>
 
+    <section class="live-log-console"
+             data-live-log-console
+             data-live-feed-url="{% url 'paxalia:live_log_feed' %}"
+             data-live-limit="2000"
+             aria-labelledby="live-log-console-title">
+        <div class="live-log-console__header">
+            <div class="live-log-console__heading">
+                <span class="live-log-console__status-dot" data-live-status-dot aria-hidden="true"></span>
+                <div>
+                    <h2 id="live-log-console-title">{% trans "Live Console" %}</h2>
+                    <p>{% trans "Full emitted process logging, including DEBUG HTTP/server traffic. The latest 2,000 lines are kept in memory for this process." %}</p>
+                </div>
+            </div>
+            <div class="live-log-console__state" data-live-status aria-live="polite">{% trans "Connecting…" %}</div>
+        </div>
+        <div class="live-log-console__toolbar">
+            <label class="live-log-console__control">
+                <span>{% trans "Level" %}</span>
+                <select data-live-level>
+                    <option value="ALL">{% trans "All" %}</option>
+                    <option value="DEBUG">DEBUG</option>
+                    <option value="INFO">INFO</option>
+                    <option value="WARNING">WARNING</option>
+                    <option value="ERROR">ERROR</option>
+                    <option value="CRITICAL">CRITICAL</option>
+                </select>
+            </label>
+            <label class="live-log-console__control live-log-console__control--search">
+                <span>{% trans "Search" %}</span>
+                <input type="search" data-live-search placeholder="{% trans 'Filter live output…' %}">
+            </label>
+            <label class="live-log-console__check">
+                <input type="checkbox" data-live-follow checked>
+                <span>{% trans "Follow output" %}</span>
+            </label>
+            <label class="live-log-console__check">
+                <input type="checkbox" data-live-enabled checked>
+                <span>{% trans "Live" %}</span>
+            </label>
+            <button type="button" class="btn btn-secondary live-log-console__clear" data-live-clear>{% trans "Clear view" %}</button>
+            <span class="live-log-console__count" data-live-count>0 {% trans "lines" %}</span>
+        </div>
+        <div class="live-log-console__viewport" data-live-viewport tabindex="0" aria-label="{% trans 'Live application log output' %}">
+            <div class="live-log-console__empty" data-live-empty>{% trans "Waiting for emitted log records…" %}</div>
+            <div class="live-log-console__lines" data-live-lines></div>
+        </div>
+        <div class="live-log-console__footer">
+            <span>{% trans "In-memory only; not written to PaxaliaLogEvent." %}</span>
+            <span>{% trans "Maximum retained: 2,000 lines." %}</span>
+        </div>
+    </section>
+
     <div class="logging-traffic-grid">
         {% for name, value in traffic.items %}<div class="logging-kpi"><span class="logging-kpi__label">{{ name }}</span><b class="logging-kpi__value">{{ value }}</b></div>{% endfor %}
     </div>

@@ -34,6 +34,15 @@
     color: var(--analytics-gold)
 }
 
+
+.sidebar__brand-icon {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    display: block;
+    border-radius: 8px;
+}
+
 .dashboard-topbar__title {
     min-width: 0;
     flex: 1;
@@ -87,6 +96,14 @@
 }
 
 @media (max-width: 767px) {
+
+    .sidebar__brand-icon {
+        width: 30px;
+        height: 30px;
+        flex-basis: 30px;
+    }
+
+
     .topbar.dashboard-topbar {
         min-height: 64px;
         padding: 10px 14px;
@@ -108,3 +125,4 @@
         display: none
     }
 }
+

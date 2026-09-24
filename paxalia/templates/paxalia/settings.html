@@ -1,7 +1,7 @@
 {% extends 'paxalia/base.html' %}
 {% load i18n %}
 
-{% block title %}{% trans "Settings" %} – Paxalia Analytics{% endblock %}
+{% block title %}{% trans "Settings" %} – Paxalia Dashboard{% endblock %}
 
 {% block page_title %}Settings{% endblock %}
 {% block page_subtitle %}IP anonymization, path filtering, refresh interval{% endblock %}
@@ -110,4 +110,22 @@
             </form>
         </div>
     </div>
+
+
+    <section class="table-card" aria-labelledby="paxalia-security-settings-heading">
+        <div class="security-section-head">
+            <div>
+                <span class="security-eyebrow">{% trans "Paxalia Security" %}</span>
+                <h2 id="paxalia-security-settings-heading" class="card-title">{% trans "Administrator security" %}</h2>
+            </div>
+            <span class="security-status-badge security-status-ok">{% trans "Mandatory protection" %}</span>
+        </div>
+        <p class="form-hint">{% trans "Paxalia Dashboard administrator access uses three mandatory layers: Django authentication, 2FA, and an authorized WebAuthn device. Use the security workspace to review and manage enrollment, recovery, devices, and sessions." %}</p>
+        <div class="security-device-card__actions">
+            <a class="btn btn-primary" href="{% url 'paxalia:security_overview' %}">{% trans "Security Overview" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:security_authentication' %}">{% trans "Authentication & 2FA" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_devices' %}">{% trans "Admin Devices" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_sessions' %}">{% trans "Admin Sessions" %}</a>
+        </div>
+    </section>
 {% endblock %}

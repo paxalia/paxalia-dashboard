@@ -6,28 +6,27 @@ models.py) rather than a parallel role system — so granting/revoking
 access uses the Group and User "permissions" screens Django admin
 already provides, nothing new to learn.
 
-SCOPE (deliberate, not an oversight): applied to a chosen subset of
-the most sensitive sections — Billing, Security Center, Backups,
-Sites, Server monitoring, and Compliance tools — rather than swept
-mechanically across every dashboard view. Every other section (Overview, Pages, Traffic,
-Events, Goals, etc.) stays staff-wide, gated only by
-@staff_member_required as before. This matches how most teams
-actually want access split: broad visibility into general traffic
-paxalia, narrower access to billing/security/infrastructure detail.
+SCOPE: every privileged Paxalia Dashboard view is gated by
+@admin_security_required, which enforces the completed three-layer administrator
+session. The most sensitive sections additionally enforce the configured
+Django model permissions below. This keeps authentication consistent across
+navigation while still allowing narrower access to billing/security/
+infrastructure detail.
 To restrict another view the same way, add its section codename to
 DashboardAccess.Meta.permissions in models.py (migration required),
 then decorate the view with @require_section_permission('that_codename').
 """
 from functools import wraps
 
-from django.contrib.admin.views.decorators import staff_member_required
+from .admin_security import admin_security_required
 from django.core.exceptions import PermissionDenied
 
 
 def require_section_permission(section_codename):
     """
-    Stacks on top of @staff_member_required (still applied here, so a
-    view decorated with only this still requires staff status first).
+    Stacks on top of @admin_security_required (so a
+    view decorated with only this still requires the completed three-layer
+    Paxalia administrator session first).
     Superusers always pass. A staff user additionally needs
     'paxalia.view_<section_codename>', granted via Django's normal
     Group/User permission admin screens against the DashboardAccess
@@ -36,7 +35,7 @@ def require_section_permission(section_codename):
     perm = f'paxalia.view_{section_codename}'
 
     def decorator(view_func):
-        @staff_member_required
+        @admin_security_required
         @wraps(view_func)
         def wrapped(request, *args, **kwargs):
             if not (request.user.is_superuser or request.user.has_perm(perm)):

@@ -1,0 +1,198 @@
+/* Paxalia production error pages — adapted from the Paxalia CRT/glitch language. */
+.paxalia-error-body {
+    min-height: 100vh;
+    background: var(--analytics-bg);
+}
+
+.paxalia-error-shell {
+    width: min(100%, 1100px);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: clamp(var(--padding-md), 4vw, var(--padding-2xl)) var(--padding-md);
+    display: flex;
+    flex-direction: column;
+}
+
+.paxalia-error-brand {
+    display: flex;
+    justify-content: center;
+}
+
+.paxalia-error-brand a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    color: var(--analytics-text);
+    text-decoration: none;
+}
+
+.paxalia-error-brand__mark {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-lg);
+    background: var(--analytics-surface);
+    color: var(--analytics-gold);
+    font-weight: var(--font-weight-bold);
+}
+
+.paxalia-error-brand strong,
+.paxalia-error-brand small {
+    display: block;
+}
+
+.paxalia-error-brand small {
+    margin-top: 2px;
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+}
+
+.paxalia-error-card {
+    position: relative;
+    width: min(100%, 760px);
+    margin: auto;
+    overflow: hidden;
+    padding: clamp(var(--padding-lg), 6vw, var(--padding-2xl));
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-xl);
+    background: var(--analytics-surface);
+    box-shadow: var(--shadow-xl);
+    text-align: center;
+}
+
+.paxalia-error-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent 0, transparent 3px, color-mix(in srgb, var(--analytics-text) 4%, transparent) 4px);
+    opacity: 0.6;
+}
+
+.paxalia-error-code {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    margin-bottom: var(--margin-md);
+    font: var(--font-weight-bold) clamp(5rem, 20vw, 12rem)/0.9 var(--font-family-mono);
+}
+
+.paxalia-error-code__main,
+.paxalia-error-code__ghost {
+    display: block;
+}
+
+.paxalia-error-code__main {
+    position: relative;
+    z-index: 2;
+    color: var(--analytics-text);
+    text-shadow: 0 0 14px var(--analytics-gold-dim), 0 0 40px var(--analytics-gold-dim);
+    animation: paxalia-error-flicker 2.8s infinite alternate;
+}
+
+.paxalia-error-code__ghost {
+    position: absolute;
+    inset: 0;
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.paxalia-error-code__ghost--a {
+    color: #dc3c3c;
+    animation: paxalia-glitch-a 1.9s infinite alternate;
+}
+
+.paxalia-error-code__ghost--b {
+    color: var(--analytics-compare);
+    animation: paxalia-glitch-b 2.2s infinite alternate;
+}
+
+.paxalia-error-eyebrow {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    margin-bottom: var(--margin-sm);
+    color: var(--analytics-gold);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.paxalia-error-card h1,
+.paxalia-error-card p,
+.paxalia-error-actions {
+    position: relative;
+    z-index: 1;
+}
+
+.paxalia-error-card h1 {
+    margin: 0 0 var(--margin-sm);
+    color: var(--analytics-text);
+    font-size: clamp(var(--font-size-xl), 5vw, var(--font-size-3xl));
+}
+
+.paxalia-error-card p {
+    width: min(100%, 620px);
+    margin: 0 auto;
+    color: var(--analytics-text-dim);
+    line-height: var(--line-height-lg);
+}
+
+.paxalia-error-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+    margin-top: var(--margin-lg);
+}
+
+.paxalia-error-actions .btn {
+    min-width: 150px;
+    justify-content: center;
+}
+
+.paxalia-error-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--gap-sm);
+    margin-top: var(--gap-xl);
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+}
+
+.paxalia-error-footer a {
+    color: var(--analytics-gold);
+}
+
+@keyframes paxalia-error-flicker {
+    0%, 92%, 100% { opacity: 1; }
+    93% { opacity: 0.88; }
+    96% { opacity: 0.96; }
+}
+
+@keyframes paxalia-glitch-a {
+    0%, 88%, 100% { transform: translateX(-0.035em); clip-path: inset(0 0 58% 0); }
+    90% { transform: translateX(-0.08em); clip-path: inset(18% 0 42% 0); }
+    94% { transform: translateX(-0.025em); clip-path: inset(66% 0 12% 0); }
+}
+
+@keyframes paxalia-glitch-b {
+    0%, 84%, 100% { transform: translateX(0.035em); clip-path: inset(42% 0 44% 0); }
+    88% { transform: translateX(0.075em); clip-path: inset(8% 0 70% 0); }
+    95% { transform: translateX(0.02em); clip-path: inset(70% 0 8% 0); }
+}
+
+@media (max-width: 576px) {
+    .paxalia-error-shell { padding-inline: var(--padding-sm); }
+    .paxalia-error-card { padding: var(--padding-lg); }
+    .paxalia-error-actions .btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .paxalia-error-code__main,
+    .paxalia-error-code__ghost { animation: none; }
+}

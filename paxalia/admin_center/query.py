@@ -118,15 +118,21 @@ def column_headers(change_list):
     return headers
 
 
-def render_column_value(obj, field_name, model_admin):
+def render_column_value(obj, field_name, model_admin, request=None):
     from django.contrib.admin.utils import display_for_value
+
+    # Check the configured field name before calling Django's lookup helper.
+    # If a custom list-display accessor raises, the fallback path must not be
+    # able to bypass Paxalia's sensitive-field policy.
+    names = sensitive_field_names(obj._meta.model)
+    normalized_name = str(field_name).lower().replace("_", "")
+    normalized_names = {name.replace("_", "") for name in names}
+    if normalized_name in normalized_names:
+        return "••••••••"
 
     try:
         field, attr, value = lookup_field(field_name, obj, model_admin)
-        names = sensitive_field_names(obj._meta.model)
-        normalized_name = str(field_name).lower().replace("_", "")
-        normalized_names = {name.replace("_", "") for name in names}
-        if (field is not None and is_sensitive_field(field, obj._meta.model)) or normalized_name in normalized_names:
+        if field is not None and is_sensitive_field(field, obj._meta.model):
             return "••••••••"
         if field is not None and getattr(field, "choices", None):
             value = dict(field.flatchoices).get(value, value)

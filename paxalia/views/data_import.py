@@ -1,6 +1,6 @@
 # paxalia/views/data_import.py
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import render
 from django.utils.translation import gettext as _
@@ -12,7 +12,7 @@ from ..security_audit import log_action
 from .utils import section_enabled, get_current_site
 
 
-@staff_member_required
+@admin_security_required
 def data_import_page(request):
     if not section_enabled('data_import'):
         raise Http404

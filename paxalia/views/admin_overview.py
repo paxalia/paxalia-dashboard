@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.contrib.auth import get_user_model
 from django.db.models import Count
 from django.db.models.functions import TruncDate
@@ -7,7 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.apps import apps
 
-@staff_member_required
+@admin_security_required
 def admin_overview(request):
     User = get_user_model()
     today = timezone.now().date()

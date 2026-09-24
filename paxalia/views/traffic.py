@@ -1,5 +1,5 @@
 # paxalia/views/traffic.py
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import render
 from django.db.models import Count
@@ -12,7 +12,7 @@ from .utils import get_date_range, detect_active_preset, parse_user_agent, secti
 
 # Create your views here.
 
-@staff_member_required
+@admin_security_required
 def analytics_traffic(request):
     if not section_enabled('traffic'):
         raise Http404

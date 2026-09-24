@@ -2,6 +2,7 @@
 
 # Source code
 include paxalia/*.py
+include paxalia/error_handlers.py
 include paxalia/views/*.py
 recursive-include paxalia/logging *.py
 recursive-include paxalia/admin_center *.py

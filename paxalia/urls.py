@@ -23,6 +23,8 @@ from .views import campaigns as campaigns_views
 from .views import annotations as annotations_views
 from .views import cohorts as cohorts_views
 from .views import mfa as mfa_views
+from .views import auth as auth_views
+from .views import admin_security as admin_security_views
 from .views import api_keys as api_keys_views
 from .views import paxalia_api
 from .views import api_docs as api_docs_views
@@ -63,6 +65,29 @@ paxalia_api_urlpatterns = [
 
 # ─── Dashboard pages ──────────────────────────────────────────────
 dashboard_urlpatterns = [
+    # Paxalia authentication is available inside the package but does not
+    # replace a host project's public authentication routes. The administrator
+    # flow enforces all three Paxalia layers before privileged access.
+    path('auth/login/', auth_views.paxalia_login, name='auth_login'),
+    path('auth/logout/', auth_views.paxalia_logout, name='auth_logout'),
+    path('auth/signup/', auth_views.paxalia_signup, name='auth_signup'),
+    path('auth/password-reset/', auth_views.PaxaliaPasswordResetView.as_view(), name='auth_password_reset'),
+    path('auth/password-reset/done/', auth_views.password_reset_done, name='auth_password_reset_done'),
+    path('auth/password-reset/<uidb64>/<token>/', auth_views.PaxaliaPasswordResetConfirmView.as_view(), name='auth_password_reset_confirm'),
+    path('auth/password-reset/complete/', auth_views.password_reset_complete, name='auth_password_reset_complete'),
+    path('auth/password-change/', auth_views.password_change, name='auth_password_change'),
+    path('auth/password-change/done/', auth_views.password_change_done, name='auth_password_change_done'),
+    path('auth/2fa/setup/', auth_views.paxalia_2fa_setup, name='auth_2fa_setup'),
+    path('auth/2fa/verify/', auth_views.paxalia_2fa_verify, name='auth_2fa_verify'),
+    path('auth/2fa/reset/', auth_views.paxalia_2fa_reset, name='auth_2fa_reset'),
+    path('auth/recovery/regenerate/', auth_views.paxalia_recovery_regenerate, name='auth_recovery_regenerate'),
+    path('auth/device/', auth_views.paxalia_device_login, name='auth_device_login'),
+    path('auth/device/options/', auth_views.paxalia_device_login_options, name='auth_device_login_options'),
+    path('auth/device/verify/', auth_views.paxalia_device_login_verify, name='auth_device_login_verify'),
+    path('auth/device/register/', auth_views.paxalia_device_register, name='auth_device_register'),
+    path('auth/device/register/verify/', auth_views.paxalia_device_register_verify, name='auth_device_register_verify'),
+    path('auth/session-expired/', auth_views.paxalia_session_expired, name='auth_session_expired'),
+    path('auth/access-denied/', auth_views.paxalia_access_denied, name='auth_access_denied'),
     # Dashboard pages
     path('', analytics_dashboard, name='dashboard'),
     path('pages/', analytics_pages, name='pages'),
@@ -76,6 +101,7 @@ dashboard_urlpatterns = [
     path('events/', analytics_events, name='events'),
     path('logs/', logs_views.logs_overview, name='logs'),
     path('logs/feed/', logs_views.log_feed, name='log_feed'),
+    path('logs/live/', logs_views.live_log_feed, name='live_log_feed'),
     path('logs/<uuid:event_id>/', logs_views.log_detail, name='log_detail'),
     path('logs/export/', logs_views.logs_export, name='logs_export'),
     path('application-logs/', logs_views.application_logs, name='application_logs'),
@@ -106,12 +132,21 @@ dashboard_urlpatterns = [
     path('admin-overview/', admin_overview, name='admin_overview'),
 
     path('security/', security_views.security_center, name='security'),
+    path('security/overview/', admin_security_views.security_overview, name='security_overview'),
+    path('security/authentication/', admin_security_views.security_authentication, name='security_authentication'),
+    path('security/admins/', admin_security_views.security_admins, name='security_admins'),
+    path('security/devices/', admin_security_views.admin_devices, name='admin_devices'),
+    path('security/devices/<uuid:device_id>/rename/', admin_security_views.admin_device_rename, name='admin_device_rename'),
+    path('security/devices/<uuid:device_id>/revoke/', admin_security_views.admin_device_revoke, name='admin_device_revoke'),
+    path('security/sessions/', admin_security_views.admin_sessions, name='admin_sessions'),
+    path('security/sessions/<uuid:login_event_id>/revoke/', admin_security_views.admin_session_revoke, name='admin_session_revoke'),
+    path('security/sessions/revoke-others/', admin_security_views.admin_sessions_revoke_others, name='admin_sessions_revoke_others'),
+    path('security/sessions/revoke-all/', admin_security_views.admin_sessions_revoke_all, name='admin_sessions_revoke_all'),
     path('security/logins/users/', login_activity_views.login_activity, {'mode': 'user'}, name='user_login_activity'),
     path('security/logins/admins/', login_activity_views.login_activity, {'mode': 'admin'}, name='admin_login_activity'),
     path('security/logins/failed/', login_activity_views.login_activity, {'mode': 'failed'}, name='failed_login_activity'),
     path('security/dependencies/', dependencies, name='dependencies'),
     path('security/dependencies/status/<path:package_name>/', dependency_status, name='dependency_status'),
-    path('security/sessions/<uuid:login_event_id>/revoke/', security_views.security_revoke_session, name='security_revoke_session'),
     path('security/ip/block/', security_views.security_block_ip, name='security_block_ip'),
     path('security/ip/<int:block_id>/unblock/', security_views.security_unblock_ip, name='security_unblock_ip'),
     path('csp-report/', csp_report_views.csp_report, name='csp_report'),
@@ -171,4 +206,5 @@ urlpatterns = dashboard_urlpatterns + [
     path('api/', include(api_urlpatterns)),
     path('paxalia-api/v1/', include(paxalia_api_urlpatterns)),
 ]
+
 

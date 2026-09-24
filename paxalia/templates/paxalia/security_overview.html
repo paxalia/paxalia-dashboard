@@ -1,0 +1,81 @@
+{% extends 'paxalia/base.html' %}
+{% load i18n static %}
+
+{% block title %}{% trans "Security Overview" %} — Paxalia{% endblock %}
+{% block page_title %}{% trans "Security Overview" %}{% endblock %}
+{% block page_subtitle %}{% trans "Effective security controls, administrator protection, and configuration health" %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'paxalia/styles/components/security.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page analytics-page-stack">
+    <div class="security-hero">
+        <div>
+            <span class="security-eyebrow">{% trans "Paxalia Security" %}</span>
+            <h2>{% trans "Security Overview" %}</h2>
+            <p>{% trans "This page reports what is actually configured or observable. It does not change your project's security settings." %}</p>
+        </div>
+        <div class="security-hero-actions">
+            <a class="btn btn-primary" href="{% url 'paxalia:security' %}">{% trans "Security Center" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:security_authentication' %}">{% trans "Authentication" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_devices' %}">{% trans "Admin Devices" %}</a>
+            <a class="btn btn-secondary" href="{% url 'paxalia:admin_sessions' %}">{% trans "Admin Sessions" %}</a>
+        </div>
+    </div>
+
+    <div class="security-health-summary" aria-label="{% trans 'Security status summary' %}">
+        <div class="security-health-summary__item security-health-summary__item--pass"><span>{% trans "Pass" %}</span><strong>{{ security_health.summary.PASS|default:0 }}</strong></div>
+        <div class="security-health-summary__item security-health-summary__item--warning"><span>{% trans "Warning" %}</span><strong>{{ security_health.summary.WARNING|default:0 }}</strong></div>
+        <div class="security-health-summary__item security-health-summary__item--danger"><span>{% trans "Danger" %}</span><strong>{{ security_health.summary.DANGER|default:0 }}</strong></div>
+        <div class="security-health-summary__item security-health-summary__item--disabled"><span>{% trans "Disabled" %}</span><strong>{{ security_health.summary.DISABLED|default:0 }}</strong></div>
+        <div class="security-health-summary__item security-health-summary__item--neutral"><span>{% trans "Not configured" %}</span><strong>{{ security_health.summary.NOT_CONFIGURED|default:0 }}</strong></div>
+        <div class="security-health-summary__item security-health-summary__item--neutral"><span>{% trans "Not applicable" %}</span><strong>{{ security_health.summary.NOT_APPLICABLE|default:0 }}</strong></div>
+    </div>
+
+    <section class="table-card security-health-list" aria-labelledby="security-controls-heading">
+        <div class="security-section-head">
+            <div>
+                <span class="security-eyebrow">{% trans "Controls" %}</span>
+                <h2 id="security-controls-heading" class="card-title">{% trans "Security Controls" %}</h2>
+            </div>
+            <span class="form-hint">{% blocktrans with total=security_health.total %}{{ total }} checks evaluated{% endblocktrans %}</span>
+        </div>
+
+        {% for check in security_health.checks %}
+        <article class="security-health-card security-health-card--{{ check.status_class }}">
+            <div class="security-health-card__status">
+                <span class="security-health-icon" aria-hidden="true">{{ check.icon }}</span>
+                <div>
+                    <strong>{{ check.label }}</strong>
+                    <span class="security-health-status">{{ check.status }}</span>
+                </div>
+            </div>
+            <dl class="security-health-card__details">
+                <div><dt>{% trans "Current state" %}</dt><dd>{{ check.current }}</dd></div>
+                <div><dt>{% trans "Expected state" %}</dt><dd>{{ check.expected }}</dd></div>
+                <div><dt>{% trans "Why it matters" %}</dt><dd>{{ check.why }}</dd></div>
+                <div><dt>{% trans "Configuration source" %}</dt><dd>{{ check.source }}</dd></div>
+                <div><dt>{% trans "Recommended action" %}</dt><dd>{{ check.action }}</dd></div>
+            </dl>
+            {% if check.href %}<a class="btn btn-sm btn-secondary security-health-card__action" href="{{ check.href }}">{% trans "Open" %}</a>{% endif %}
+        </article>
+        {% endfor %}
+    </section>
+
+    <section class="security-device-callout" aria-label="{% trans 'Current administrator credential' %}">
+        <div>
+            <span class="security-eyebrow">{% trans "Administrator access" %}</span>
+            <strong>{% trans "Three-layer protection is required before Paxalia Admin access." %}</strong>
+            <p>{% trans "Your final session is tied to your Django account, confirmed second factor, and active authorized WebAuthn credential." %}</p>
+        </div>
+        <div class="security-device-callout__meta">
+            <span>{% trans "Active devices" %} <strong>{{ admin_device_count }}</strong></span>
+            <span>{% trans "Recovery codes" %} <strong>{{ recovery_codes_remaining }}</strong></span>
+            <span>{% trans "2FA" %} <strong>{% if totp_enabled %}{% trans "Enabled" %}{% else %}{% trans "Required" %}{% endif %}</strong></span>
+        </div>
+    </section>
+</div>
+{% endblock %}
+

@@ -1,0 +1,594 @@
+/* Paxalia authentication surfaces — dashboard token driven. */
+.paxalia-auth-body {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 18% 10%, var(--analytics-gold-dim), transparent 34rem),
+        radial-gradient(circle at 82% 88%, color-mix(in srgb, var(--analytics-compare) 10%, transparent), transparent 30rem),
+        var(--analytics-bg);
+}
+
+.paxalia-auth-shell {
+    width: min(100%, 1120px);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: clamp(var(--padding-md), 4vw, var(--padding-2xl)) var(--padding-md);
+    display: flex;
+    flex-direction: column;
+}
+
+.paxalia-auth-brand {
+    display: flex;
+    justify-content: center;
+    margin-bottom: clamp(var(--margin-lg), 5vw, var(--margin-2xl));
+}
+
+.paxalia-auth-brand__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    color: var(--analytics-text);
+    text-decoration: none;
+}
+
+.paxalia-auth-brand__mark {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-lg);
+    background: var(--analytics-surface);
+    color: var(--analytics-gold);
+    box-shadow: var(--shadow-sm);
+}
+
+.paxalia-auth-brand__mark svg {
+    width: 22px;
+    height: 22px;
+}
+
+.paxalia-auth-brand strong,
+.paxalia-auth-brand small {
+    display: block;
+}
+
+.paxalia-auth-brand strong {
+    font-size: var(--font-size-lg);
+    letter-spacing: -0.02em;
+}
+
+.paxalia-auth-brand small {
+    margin-top: 2px;
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+}
+
+.paxalia-auth-content {
+    width: 100%;
+    flex: 1;
+    display: grid;
+    place-items: start center;
+}
+
+.paxalia-auth-messages {
+    width: min(100%, 520px);
+    margin-bottom: var(--gap-md);
+}
+
+.paxalia-auth-message,
+.paxalia-auth-callout {
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    padding: var(--padding-sm) var(--padding-md);
+    background: var(--analytics-surface);
+    color: var(--analytics-text);
+}
+
+.paxalia-auth-callout > p {
+    margin: var(--gap-xs) 0 0;
+}
+
+.paxalia-auth-message + .paxalia-auth-message {
+    margin-top: var(--gap-sm);
+}
+
+.paxalia-auth-message--error,
+.paxalia-auth-message--danger,
+.paxalia-auth-callout--danger {
+    border-color: rgba(220, 60, 60, 0.45);
+    background: rgba(220, 60, 60, 0.08);
+}
+
+.paxalia-auth-message--success {
+    border-color: rgba(70, 170, 110, 0.45);
+    background: rgba(70, 170, 110, 0.08);
+}
+
+.paxalia-auth-callout--warning {
+    border-color: rgba(220, 170, 40, 0.45);
+    background: rgba(220, 170, 40, 0.08);
+}
+
+.paxalia-auth-card {
+    width: min(100%, 520px);
+    overflow: hidden;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-xl);
+    background: color-mix(in srgb, var(--analytics-surface) 96%, transparent);
+    box-shadow: var(--shadow-xl);
+    backdrop-filter: blur(10px);
+}
+
+.paxalia-auth-card--wide {
+    width: min(100%, 700px);
+}
+
+.paxalia-auth-card__header {
+    padding: clamp(var(--padding-lg), 5vw, var(--padding-xl));
+    border-bottom: 1px solid var(--analytics-border);
+    text-align: center;
+}
+
+.paxalia-auth-card__header h1 {
+    margin: var(--margin-sm) 0 var(--margin-xs);
+    font-size: clamp(var(--font-size-xl), 4vw, var(--font-size-2xl));
+    line-height: 1.2;
+    color: var(--analytics-text);
+}
+
+.paxalia-auth-card__header p {
+    margin: 0;
+    color: var(--analytics-text-dim);
+    line-height: var(--line-height-md);
+}
+
+.paxalia-auth-eyebrow {
+    margin-top: var(--margin-md) !important;
+    color: var(--analytics-gold) !important;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.paxalia-auth-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--analytics-border);
+    border-radius: 50%;
+    background: var(--analytics-gold-dim);
+    color: var(--analytics-gold);
+}
+
+.paxalia-auth-icon svg {
+    width: 28px;
+    height: 28px;
+}
+
+.paxalia-auth-card__body {
+    padding: clamp(var(--padding-lg), 5vw, var(--padding-xl));
+}
+
+.paxalia-auth-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.paxalia-auth-device-stack > * {
+    margin: 0;
+}
+
+.paxalia-auth-recovery-stack {
+    gap: var(--gap-md);
+}
+
+.paxalia-auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.paxalia-auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-xs);
+}
+
+.paxalia-auth-field label {
+    color: var(--analytics-text);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+}
+
+.paxalia-auth-field .form-input,
+.paxalia-auth-field input,
+.paxalia-auth-field select,
+.paxalia-auth-field textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    background: var(--analytics-bg);
+    color: var(--analytics-text);
+}
+
+.paxalia-auth-field .form-input:focus,
+.paxalia-auth-field input:focus,
+.paxalia-auth-field select:focus,
+.paxalia-auth-field textarea:focus {
+    border-color: var(--analytics-gold);
+}
+
+.paxalia-password-wrap {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+}
+
+.paxalia-password-wrap input {
+    padding-right: 4.4rem;
+}
+
+.paxalia-password-wrap--plain input {
+    padding-right: 0.75rem;
+}
+
+.paxalia-password-toggle {
+    position: absolute;
+    right: 0.45rem;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--analytics-text-dim);
+    cursor: pointer;
+}
+
+.paxalia-password-toggle:hover {
+    color: var(--analytics-gold);
+    background: var(--analytics-gold-dim);
+}
+
+.paxalia-auth-field-error {
+    color: #dc3c3c;
+    font-size: var(--font-size-xs);
+}
+
+.paxalia-auth-help,
+.paxalia-auth-prompt,
+.paxalia-auth-links,
+.paxalia-auth-secondary-link {
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-md);
+}
+
+.paxalia-auth-help ul {
+    margin: var(--gap-xs) 0 0;
+    padding-left: 1.25rem;
+}
+
+.paxalia-auth-help a,
+.paxalia-auth-prompt a,
+.paxalia-auth-links a,
+.paxalia-auth-secondary-link {
+    color: var(--analytics-gold);
+}
+
+.paxalia-auth-submit {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    font-weight: var(--font-weight-bold);
+}
+
+.paxalia-auth-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--gap-sm);
+    flex-wrap: wrap;
+    margin-top: var(--gap-lg);
+}
+
+.paxalia-auth-prompt {
+    margin: var(--gap-lg) 0 0;
+    text-align: center;
+}
+
+.paxalia-auth-errors {
+    padding: var(--padding-sm) var(--padding-md);
+    border: 1px solid rgba(220, 60, 60, 0.45);
+    border-radius: var(--radius-md);
+    background: rgba(220, 60, 60, 0.08);
+    color: var(--analytics-text);
+}
+
+.paxalia-auth-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    color: var(--analytics-text-dim);
+}
+
+.paxalia-auth-divider::before,
+.paxalia-auth-divider::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: var(--analytics-border);
+}
+
+.paxalia-auth-steps {
+    display: grid;
+    gap: var(--gap-sm);
+    margin-bottom: var(--gap-lg);
+}
+
+.paxalia-auth-steps > div {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    padding: var(--padding-sm);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    background: var(--analytics-bg);
+}
+
+.paxalia-auth-steps strong {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--analytics-gold-dim);
+    color: var(--analytics-gold);
+}
+
+.paxalia-auth-brand__mark img {
+    width: 40px;
+    height: 40px;
+    display: block;
+    border-radius: var(--radius-lg);
+}
+
+.paxalia-auth-brand-icon {
+    width: 52px;
+    height: 52px;
+    display: block;
+    border-radius: 14px;
+}
+
+.paxalia-auth-qr-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: clamp(var(--gap-lg), 5vw, var(--gap-2xl));
+    margin-bottom: var(--gap-lg);
+    padding: var(--padding-lg);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-lg);
+    background: var(--analytics-bg);
+}
+
+.paxalia-auth-qr-panel__copy p {
+    margin: 0;
+}
+
+.paxalia-auth-qr-panel__copy .paxalia-auth-eyebrow {
+    margin-top: 0 !important;
+    margin-bottom: var(--gap-xs);
+}
+
+.paxalia-auth-qr-frame {
+    display: grid;
+    place-items: center;
+    width: 280px;
+    height: 280px;
+    padding: 12px;
+    border-radius: var(--radius-lg);
+    background: #fff;
+    box-shadow: var(--shadow-md);
+}
+
+.paxalia-auth-qr-frame img {
+    width: 256px;
+    height: 256px;
+    display: block;
+}
+
+.paxalia-auth-secret {
+    display: grid;
+    gap: var(--gap-xs);
+    margin-bottom: var(--gap-lg);
+    padding: var(--padding-md);
+    border: 1px dashed var(--analytics-border);
+    border-radius: var(--radius-md);
+    background: var(--analytics-bg);
+}
+
+.paxalia-auth-secret span {
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+}
+
+.paxalia-auth-secret--manual {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--gap-md);
+}
+
+.paxalia-auth-secret--manual > div {
+    min-width: 0;
+}
+
+.paxalia-auth-secret--manual code {
+    display: block;
+    margin-top: 4px;
+    letter-spacing: 0.12em;
+    font-size: var(--font-size-sm);
+}
+
+.paxalia-auth-secret--manual small {
+    display: block;
+    margin-top: var(--gap-xs);
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+}
+
+.paxalia-auth-copy {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.paxalia-auth-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gap-sm);
+    width: 100%;
+}
+
+.paxalia-auth-actions .btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+}
+
+.paxalia-auth-secret code {
+    overflow-wrap: anywhere;
+    color: var(--analytics-text);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-xs);
+}
+
+.paxalia-otp-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--gap-sm);
+}
+
+.paxalia-otp-digit {
+    width: 100%;
+    min-height: 56px;
+    padding: 0;
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-md);
+    background: var(--analytics-bg);
+    color: var(--analytics-text);
+    text-align: center;
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+}
+
+.paxalia-otp-single {
+    font-family: var(--font-family-mono);
+    letter-spacing: 0.25em;
+    text-align: center;
+    font-weight: var(--font-weight-bold);
+}
+
+.paxalia-recovery-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gap-sm);
+}
+
+.paxalia-recovery-grid code {
+    display: block;
+    padding: var(--padding-sm);
+    border: 1px solid var(--analytics-border);
+    border-radius: var(--radius-sm);
+    background: var(--analytics-bg);
+    color: var(--analytics-text);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-sm);
+    text-align: center;
+}
+
+.paxalia-auth-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--gap-sm);
+    margin-top: var(--gap-xl);
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+}
+
+.paxalia-auth-footer a {
+    color: var(--analytics-gold);
+}
+
+[dir="rtl"] .paxalia-password-wrap input {
+    padding-right: 0.75rem;
+    padding-left: 4.4rem;
+}
+
+[dir="rtl"] .paxalia-password-toggle {
+    right: auto;
+    left: 0.45rem;
+}
+
+@media (max-width: 576px) {
+    .paxalia-auth-actions {
+        grid-template-columns: 1fr;
+    }
+
+.paxalia-auth-qr-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .paxalia-auth-qr-frame {
+        width: min(100%, 280px);
+        height: auto;
+        aspect-ratio: 1;
+        margin-inline: auto;
+    }
+
+    .paxalia-auth-secret--manual {
+        grid-template-columns: 1fr;
+    }
+
+    .paxalia-auth-copy {
+        width: 100%;
+    }
+
+
+    .paxalia-auth-shell {
+        padding-inline: var(--padding-sm);
+    }
+
+    .paxalia-auth-card__header,
+    .paxalia-auth-card__body {
+        padding: var(--padding-lg);
+    }
+
+    .paxalia-otp-grid {
+        gap: var(--gap-xs);
+    }
+
+    .paxalia-otp-digit {
+        min-height: 50px;
+    }
+
+    .paxalia-recovery-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .paxalia-auth-card,
+    .paxalia-auth-message,
+    .paxalia-auth-callout {
+        transition: none;
+    }
+}

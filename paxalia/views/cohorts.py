@@ -1,5 +1,5 @@
 # paxalia/views/cohorts.py
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import render
 from django.utils.translation import gettext as _
@@ -9,7 +9,7 @@ from paxalia.cohorts import compute_retention, MAX_PERIODS
 from .utils import section_enabled, get_current_site
 
 
-@staff_member_required
+@admin_security_required
 def cohorts_retention(request):
     if not section_enabled('cohorts'):
         raise Http404

@@ -1,0 +1,45 @@
+{% extends 'paxalia/auth_base.html' %}
+{% load static i18n %}
+{% block title %}{% trans "Register authorized device" %} · {{ brand_name }}{% endblock %}
+{% block content %}
+<section class="paxalia-auth-card paxalia-auth-card--wide" aria-labelledby="device-register-heading" data-webauthn-mode="register" data-webauthn-localhost-required="{{ webauthn_configuration_error|yesno:'true,false' }}" data-options-url="{% url 'paxalia:auth_device_register' %}" data-verify-url="{% url 'paxalia:auth_device_register_verify' %}"{% if not webauthn_available %} data-webauthn-server-unavailable="true"{% endif %}>
+    <header class="paxalia-auth-card__header">
+        <div class="paxalia-auth-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M12 9v6m-3-3h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+        <p class="paxalia-auth-eyebrow">{% trans "Layer 3" %}</p>
+        <h1 id="device-register-heading">{% trans "Register an authorized device" %}</h1>
+        <p>{% trans "The private credential stays inside your browser or authenticator. Paxalia stores only the public credential and safe metadata." %}</p>
+    </header>
+    <div class="paxalia-auth-card__body">
+        <div class="paxalia-auth-stack paxalia-auth-device-stack">
+        {% if active_count >= max_devices %}
+            <div class="paxalia-auth-callout paxalia-auth-callout--danger" role="alert"><strong>{% trans "Device limit reached" %}</strong><p>{% blocktrans with max=max_devices %}This administrator already has the maximum of {{ max }} active authorized device(s). Revoke an existing device before registering another one.{% endblocktrans %}</p></div>
+            <a href="{% url 'paxalia:admin_devices' %}" class="btn btn-primary paxalia-auth-submit">{% trans "Manage authorized devices" %}</a>
+        {% elif not webauthn_available %}
+            <div class="paxalia-auth-callout paxalia-auth-callout--danger" role="alert">
+                <strong>{% trans "WebAuthn is unavailable" %}</strong>
+                <p>{% trans "The server-side WebAuthn dependency is not installed. Install the supported 'webauthn' package before registering an authorized device." %}</p>
+            </div>
+            <a href="{% url 'paxalia:security_authentication' %}" class="paxalia-auth-secondary-link">{% trans "Back to security" %}</a>
+        {% elif webauthn_configuration_error %}
+            <div class="paxalia-auth-callout paxalia-auth-callout--danger" role="alert">
+                <strong>{% trans "WebAuthn browser origin is not supported" %}</strong>
+                <p>{{ webauthn_configuration_detail }}</p>
+            </div>
+            {% if webauthn_localhost_url %}<a href="{{ webauthn_localhost_url }}" class="btn btn-primary paxalia-auth-submit">{% trans "Restart on localhost" %}</a>{% endif %}
+            <a href="{% url 'paxalia:auth_login' %}" class="paxalia-auth-secondary-link">{% trans "Start over" %}</a>
+        {% else %}
+            <div class="paxalia-auth-field">
+                <label for="paxaliaDeviceName">{% trans "Device name" %}</label>
+                <input id="paxaliaDeviceName" class="form-input" maxlength="120" value="{% trans 'New authenticator' %}" autocomplete="off">
+            </div>
+            <div class="paxalia-auth-callout">{% blocktrans with count=active_count max=max_devices %}{{ count }} of {{ max }} active device(s) are currently registered.{% endblocktrans %}</div>
+            <div id="paxaliaWebAuthnStatus" class="paxalia-auth-callout" role="status" data-message-unsupported="{% trans 'This administrator account requires a supported WebAuthn authenticator in a secure browser context (HTTPS).' %}" data-message-prepare="{% trans 'Preparing secure authenticator verification…' %}" data-message-prepare-register="{% trans 'Preparing secure device registration…' %}" data-message-ready="{% trans 'Complete the authenticator prompt to verify this device.' %}" data-message-ready-register="{% trans 'Complete the authenticator prompt to register this device.' %}" data-message-incomplete="{% trans 'The authenticator challenge was incomplete.' %}" data-message-no-response="{% trans 'No authenticator response was returned.' %}" data-message-complete="{% trans 'Verification complete. Redirecting…' %}" data-message-error="{% trans 'The authenticator operation could not be completed.' %}" data-message-not-allowed="{% trans 'The authenticator operation was cancelled, timed out, or was not allowed by the selected authenticator.' %}" data-message-invalid-state="{% trans 'This authenticator is already registered for this administrator. Choose another authenticator.' %}" data-message-constraint="{% trans 'The selected authenticator cannot satisfy Paxalia’s required passkey and user-verification security policy.' %}" data-message-localhost-required="{% trans 'For local development, open Paxalia Dashboard using localhost instead of 127.0.0.1 or another IP address.' %}">{% trans "Registering a device requires a supported WebAuthn authenticator in this secure browser context." %}</div>
+            <button type="button" class="btn btn-primary paxalia-auth-submit" id="paxaliaWebAuthnButton">{% trans "Register this device" %}</button>
+            <a href="{% url 'paxalia:admin_devices' %}" class="paxalia-auth-secondary-link">{% trans "Back to admin devices" %}</a>
+        {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block extra_js %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/webauthn.js' %}"></script>{% endblock %}
+

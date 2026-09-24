@@ -1,0 +1,64 @@
+{% load static i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}" data-analytics-theme="dark"
+      dir="{% if LANGUAGE_CODE|default:'en'|slice:':2' == 'ar' or LANGUAGE_CODE|default:'en'|slice:':2' == 'fa' %}rtl{% else %}ltr{% endif %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ brand_name|default:'Paxalia' }}{% endblock %}</title>
+    <meta name="description" content="{% block description %}{{ dashboard_name|default:'Paxalia Dashboard' }}{% endblock %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/themes.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/base.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/buttons.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/settings-form.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/icon.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/typography.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/auth.css' %}">
+    {% block extra_css %}{% endblock %}
+    <script nonce="{{ request.csp_nonce }}">
+        (function () {
+            try {
+                var theme = localStorage.getItem('paxalia-theme');
+                if (theme) document.documentElement.setAttribute('data-analytics-theme', theme);
+            } catch (error) {}
+        }());
+    </script>
+</head>
+<body class="paxalia-auth-body" data-auth-generic-error="{% trans 'The request could not be completed.' %}" data-auth-password-show="{% trans 'Show' %}" data-auth-password-hide="{% trans 'Hide' %}" data-auth-password-show-label="{% trans 'Show password' %}" data-auth-password-hide-label="{% trans 'Hide password' %}">
+<main class="paxalia-auth-shell" id="main-content">
+    <header class="paxalia-auth-brand" aria-label="Paxalia">
+        <a href="{{ auth_home_url|default:'/' }}" class="paxalia-auth-brand__link">
+            <span class="paxalia-auth-brand__mark" aria-hidden="true">
+                <img src="{% static 'paxalia/icons/brand/icon-brand.svg' %}" alt="" width="40" height="40">
+            </span>
+            <span>
+                <strong>{{ brand_name|default:'Paxalia' }}</strong>
+                <small>{{ dashboard_name|default:'Paxalia Dashboard' }}</small>
+            </span>
+        </a>
+    </header>
+
+    <div class="paxalia-auth-content">
+        {% if messages %}
+            <div class="paxalia-auth-messages" aria-live="polite">
+                {% for message in messages %}
+                    <div class="paxalia-auth-message paxalia-auth-message--{{ message.tags|default:'info' }}" role="status">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer class="paxalia-auth-footer">
+        <span>© {% now "Y" %} {{ brand_name|default:'Paxalia' }}</span>
+        <span aria-hidden="true">·</span>
+        <a href="{{ auth_home_url|default:'/' }}">{% trans "Return to site" %}</a>{% if auth_support_url %}
+        <span aria-hidden="true">·</span><a href="{{ auth_support_url }}">{% trans "Support" %}</a>{% endif %}
+    </footer>
+</main>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/auth.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

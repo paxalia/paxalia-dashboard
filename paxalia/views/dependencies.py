@@ -8,7 +8,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from django.conf import settings
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.core.cache import cache
 from django.http import Http404, JsonResponse
 from django.shortcuts import render
@@ -214,7 +214,7 @@ def _latest(name: str):
         return None
 
 
-@staff_member_required
+@admin_security_required
 def dependencies(request):
     sidebar = (getattr(settings, "PAXALIA_DASHBOARD", {}) or {}).get("SIDEBAR_SECTIONS", [])
     if "security" not in sidebar:
@@ -236,7 +236,7 @@ def dependencies(request):
     )
 
 
-@staff_member_required
+@admin_security_required
 @require_GET
 def dependency_status(request, package_name: str):
     key = _normalize_name(package_name)

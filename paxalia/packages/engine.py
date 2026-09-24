@@ -222,22 +222,26 @@ def identity_fields(model):
             if str(x) in {f.name for f in model._meta.concrete_fields}
             and not _is_sensitive(model, str(x))
         ]
-    # A nullable unique column is not a reliable identity: multiple rows may
-    # legitimately contain NULL, while `_identity()` must be able to match a
-    # concrete record deterministically. Only auto-select non-null unique
-    # fields; an explicitly configured identity remains strict and is validated
-    # at export time.
-    unique_fields = [
+    # Prefer a stable *natural* unique identity over the technical primary key.
+    # Django primary keys are unique by definition, but including them together
+    # with a natural unique field makes packages unnecessarily environment-bound
+    # and defeats the purpose of logical identity (for example Site.domain).
+    #
+    # A nullable unique field is not a reliable identity because multiple rows
+    # may legitimately contain NULL. Only non-null, non-primary-key unique fields
+    # are auto-selected here; explicitly configured identities remain strict.
+    natural_unique_fields = [
         f.name
         for f in model._meta.concrete_fields
         if (
-            getattr(f, "unique", False)
+            not getattr(f, "primary_key", False)
+            and getattr(f, "unique", False)
             and not getattr(f, "null", False)
             and not _is_sensitive(model, f.name)
         )
     ]
-    if unique_fields:
-        return unique_fields[:3]
+    if natural_unique_fields:
+        return natural_unique_fields[:3]
     pk_name = model._meta.pk.name
     if _is_sensitive(model, pk_name):
         return []
@@ -463,7 +467,11 @@ def _enforce_export_permission(model, request, *, encrypted: bool = False):
 
 
 def export_models(models, request, *, querysets=None, selected_ids_by_model=None, translations_only=False, password=None):
-    models = list(models or [])
+    # Public package APIs accept either Django model classes or Paxalia
+    # ModelDefinition objects returned by the registry. Normalize at the
+    # boundary so callers cannot accidentally pass an adapter into the
+    # permission/metadata layer.
+    models = [getattr(item, "model", item) for item in list(models or [])]
     if not models:
         raise PackageError(_("Select at least one model to export."))
     querysets = querysets or {}
@@ -616,12 +624,35 @@ def _resolve_identity(model, identity, queryset=None):
         ) from exc
 
 
+def _canonical_identity_key(model_label, identity):
+    """Normalize package identities using the target Django field types."""
+    if not isinstance(identity, dict):
+        return json.dumps({}, sort_keys=True)
+    normalized = {}
+    try:
+        model = _model_from_label(model_label)
+        concrete_fields = {field.name: field for field in model._meta.concrete_fields}
+        for name, value in identity.items():
+            field = concrete_fields.get(str(name))
+            if field is None:
+                normalized[str(name)] = str(value)
+                continue
+            try:
+                normalized[str(name)] = _jsonable(field.to_python(value))
+            except Exception:
+                normalized[str(name)] = str(value)
+    except Exception:
+        normalized = {str(name): _jsonable(value) for name, value in identity.items()}
+    return json.dumps(normalized, sort_keys=True, separators=(",", ":"), default=str)
+
+
 def _reference_key(ref):
     if not isinstance(ref, dict):
         return None
+    model_label = str(ref.get("model") or "").lower()
     return (
-        str(ref.get("model") or "").lower(),
-        json.dumps(ref.get("identity") or {}, sort_keys=True, default=str),
+        model_label,
+        _canonical_identity_key(model_label, ref.get("identity") or {}),
     )
 
 
@@ -1224,15 +1255,15 @@ def preview_package(raw: bytes, *, password: str | None = None, conflict: str = 
                     PackageError(_("Translation-only packages require an existing matching object.")),
                 )
             elif existing is None:
-                if model_admin is None or not model_admin.has_add_permission(request):
+                if request is not None and (model_admin is None or not model_admin.has_add_permission(request)):
                     raise PermissionDenied
                 result.created += 1
             elif conflict == "skip":
-                if model_admin is not None and not model_admin.has_view_permission(request, existing):
+                if request is not None and (model_admin is None or not model_admin.has_view_permission(request, existing)):
                     raise PermissionDenied
                 result.skipped += 1
             else:
-                if model_admin is None or not model_admin.has_change_permission(request, existing):
+                if request is not None and (model_admin is None or not model_admin.has_change_permission(request, existing)):
                     raise PermissionDenied
                 result.updated += 1
         except Exception as exc:
@@ -1247,10 +1278,55 @@ def _apply_operation_counts(result, operation, translation_count=0):
     result.translation_count += translation_count
 
 
+def _package_identity_key(identity):
+    """Return a stable key for identities exactly as represented in a package.
+
+    Package-local dependency analysis must compare package data to package data.
+    It should not re-run Django field conversion because UUID/date/decimal
+    coercion can legitimately change the Python representation while preserving
+    the same logical JSON identity.
+    """
+    if not isinstance(identity, dict):
+        identity = {}
+    normalized = {}
+    for name, value in identity.items():
+        try:
+            normalized[str(name)] = _jsonable(value)
+        except Exception:
+            normalized[str(name)] = str(value)
+    return json.dumps(
+        normalized,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+
+
+def _package_reference_key(ref):
+    if not isinstance(ref, dict):
+        return None
+    return (
+        str(ref.get("model") or "").strip().lower(),
+        _package_identity_key(ref.get("identity") or {}),
+    )
+
+
+def _package_record_key(record):
+    if not isinstance(record, dict):
+        return None
+    return _package_reference_key(
+        {
+            "model": record.get("model"),
+            "identity": record.get("identity") or {},
+        }
+    )
+
+
 def _dependency_indices(records):
+    """Build package-local dependency edges from package identity values."""
     keys = {}
     for index, record in enumerate(records):
-        key = _record_key(record)
+        key = _package_record_key(record)
         keys.setdefault(key, []).append(index)
     dependencies = {index: set() for index in range(len(records))}
     for index, record in enumerate(records):
@@ -1261,7 +1337,7 @@ def _dependency_indices(records):
             for ref in values
         )
         for ref in refs:
-            key = _reference_key(ref)
+            key = _package_reference_key(ref)
             if key in keys:
                 targets = keys[key]
                 if len(targets) != 1:
@@ -1269,6 +1345,54 @@ def _dependency_indices(records):
                 if targets[0] != index:
                     dependencies[index].add(targets[0])
     return dependencies
+
+
+def _resolved_reference_object_key(ref, request):
+    """Resolve a reference through the same visible ModelAdmin queryset used by import."""
+    if not isinstance(ref, dict):
+        return None
+    try:
+        model = _model_from_label(ref.get("model", ""))
+        queryset = None
+        if request is not None:
+            from django.contrib import admin
+            model_admin = admin.site._registry.get(model)
+            if model_admin is None or not model_admin.has_view_permission(request):
+                return None
+            queryset = model_admin.get_queryset(request)
+        obj = _resolve_identity(model, ref.get("identity") or {}, queryset=queryset)
+        if obj is None:
+            return None
+        return (_model_label(model), str(obj.pk))
+    except Exception:
+        # Dependency discovery is a safety enhancement. A reference that
+        # cannot be resolved here will still be validated by the normal import
+        # path, which remains authoritative for malformed references.
+        return None
+
+
+def _failed_database_dependency_indices(records, models, remaining, failed_objects, request):
+    if not failed_objects:
+        return set()
+    blocked = set()
+    cache = {}
+    for index in remaining:
+        record = records[index]
+        refs = list((record.get("relationships") or {}).values())
+        refs.extend(
+            ref
+            for values in (record.get("many_to_many") or {}).values()
+            for ref in values
+        )
+        for ref in refs:
+            cache_key = _reference_key(ref)
+            if cache_key not in cache:
+                cache[cache_key] = _resolved_reference_object_key(ref, request)
+            resolved = cache[cache_key]
+            if resolved in failed_objects:
+                blocked.add(index)
+                break
+    return blocked
 
 
 def import_package(raw: bytes, request, *, password: str | None = None, conflict: str = "update", atomic: bool = True, dry_run: bool = False):
@@ -1321,20 +1445,42 @@ def import_package(raw: bytes, request, *, password: str | None = None, conflict
         return result.as_dict()
 
     dependencies = _dependency_indices(records)
+
+    def _record_depends_on_failed_record(record, failed_indices):
+        refs = list((record.get("relationships") or {}).values())
+        refs.extend(
+            ref
+            for values in (record.get("many_to_many") or {}).values()
+            for ref in values
+        )
+        ref_keys = {_package_reference_key(ref) for ref in refs}
+        for failed_index in failed_indices:
+            if _package_record_key(records[failed_index]) in ref_keys:
+                return True
+        return False
+
     remaining = set(range(len(records)))
     completed = set()
     failed = set()
+    failed_objects = set()
     while remaining:
-        # A record that depends on a failed package record must not be allowed
-        # to resolve that reference against a pre-existing database object.
-        # Doing so could silently create a state that is only partly derived
-        # from the package. Surface the dependency failure instead.
-        blocked = sorted(
-            index for index in remaining if dependencies[index] & failed
+        # Block package-local dependencies before falling back to any existing
+        # database object. The identity comparison is semantic (model + identity
+        # values) so equivalent JSON representations cannot evade the dependency
+        # guard.
+        blocked = {
+            index for index in remaining
+            if dependencies[index] & failed
+            or _record_depends_on_failed_record(records[index], failed)
+        }
+        blocked.update(
+            _failed_database_dependency_indices(
+                records, models, remaining, failed_objects, request
+            )
         )
-        for index in blocked:
+        for index in sorted(blocked):
             dependency_error = PackageError(
-                _("This record was not imported because one of its package dependencies failed.")
+                _("This record was not imported because a package dependency failed.")
             )
             _append_import_error(result, index, records[index].get("model"), dependency_error)
             failed.add(index)
@@ -1378,12 +1524,28 @@ def import_package(raw: bytes, request, *, password: str | None = None, conflict
                     remaining.remove(index)
             except Exception as exc:
                 for index in batch:
+                    try:
+                        label = records[index].get("model")
+                        model = models[label]
+                        obj = _resolve_identity(model, records[index].get("identity") or {}, queryset=None)
+                        if obj is not None:
+                            failed_objects.add((_model_label(model), str(obj.pk)))
+                    except Exception:
+                        pass
                     _append_import_error(result, index, records[index].get("model"), exc)
                     failed.add(index)
                     remaining.remove(index)
             continue
 
         for index in ready:
+            if _record_depends_on_failed_record(records[index], failed):
+                dependency_error = PackageError(
+                    _("This record was not imported because a package dependency failed.")
+                )
+                _append_import_error(result, index, records[index].get("model"), dependency_error)
+                failed.add(index)
+                remaining.remove(index)
+                continue
             try:
                 with transaction.atomic():
                     local_cache = dict(object_cache)
@@ -1403,9 +1565,25 @@ def import_package(raw: bytes, request, *, password: str | None = None, conflict
                 _apply_operation_counts(result, operation, translation_count)
                 completed.add(index)
             except PermissionDenied as exc:
+                try:
+                    label = records[index].get("model")
+                    model = models[label]
+                    obj = _resolve_identity(model, records[index].get("identity") or {}, queryset=None)
+                    if obj is not None:
+                        failed_objects.add((_model_label(model), str(obj.pk)))
+                except Exception:
+                    pass
                 _append_import_error(result, index, records[index].get("model"), exc)
                 failed.add(index)
             except Exception as exc:
+                try:
+                    label = records[index].get("model")
+                    model = models[label]
+                    obj = _resolve_identity(model, records[index].get("identity") or {}, queryset=None)
+                    if obj is not None:
+                        failed_objects.add((_model_label(model), str(obj.pk)))
+                except Exception:
+                    pass
                 _append_import_error(result, index, records[index].get("model"), exc)
                 failed.add(index)
             finally:

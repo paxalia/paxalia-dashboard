@@ -1002,3 +1002,223 @@
         width: 100%;
     }
 }
+
+
+/* Live console ---------------------------------------------------------- */
+.live-log-console {
+    overflow: hidden;
+    border: 1px solid var(--analytics-border);
+    border-radius: 12px;
+    background: var(--analytics-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.live-log-console__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 15px 17px;
+    border-bottom: 1px solid var(--analytics-border);
+}
+
+.live-log-console__heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    min-width: 0;
+}
+
+.live-log-console__heading h2 {
+    margin: 0;
+    color: var(--analytics-text);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-semibold);
+}
+
+.live-log-console__heading p {
+    margin: 4px 0 0;
+    max-width: 900px;
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+    line-height: 1.5;
+}
+
+.live-log-console__status-dot {
+    width: 8px;
+    height: 8px;
+    margin-top: 7px;
+    flex: 0 0 8px;
+    border-radius: 50%;
+    background: var(--analytics-text-dim);
+    box-shadow: 0 0 0 4px rgba(148, 163, 184, .08);
+}
+
+.live-log-console__status-dot[data-state="live"] {
+    background: var(--analytics-gold);
+    box-shadow: 0 0 0 4px rgba(212, 175, 55, .10);
+}
+
+.live-log-console__status-dot[data-state="connecting"] {
+    animation: live-log-console-pulse 1.1s ease-in-out infinite;
+}
+
+.live-log-console__status-dot[data-state="error"] {
+    background: var(--analytics-danger, #e56b6f);
+}
+
+.live-log-console__state {
+    flex: 0 0 auto;
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+}
+
+.live-log-console__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px;
+    padding: 11px 13px;
+    border-bottom: 1px solid var(--analytics-border);
+    background: var(--analytics-bg);
+}
+
+.live-log-console__control,
+.live-log-console__check {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+}
+
+.live-log-console__control {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.live-log-console__control > span {
+    font-size: 10px;
+    font-weight: var(--font-weight-medium);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.live-log-console__control select,
+.live-log-console__control input {
+    box-sizing: border-box;
+    min-height: 34px;
+    border: 1px solid var(--analytics-border);
+    border-radius: 7px;
+    background: var(--analytics-surface);
+    color: var(--analytics-text);
+    font: inherit;
+    font-size: var(--font-size-xs);
+}
+
+.live-log-console__control select {
+    min-width: 110px;
+    padding: 6px 28px 6px 8px;
+}
+
+.live-log-console__control input {
+    width: min(360px, 44vw);
+    padding: 6px 9px;
+}
+
+.live-log-console__check {
+    min-height: 34px;
+    align-self: end;
+}
+
+.live-log-console__check input {
+    accent-color: var(--analytics-gold);
+}
+
+.live-log-console__clear {
+    min-height: 34px;
+}
+
+.live-log-console__count {
+    margin-left: auto;
+    align-self: center;
+    color: var(--analytics-text-dim);
+    font-size: var(--font-size-xs);
+}
+
+.live-log-console__viewport {
+    min-height: 360px;
+    max-height: min(760px, 68vh);
+    overflow: auto;
+    padding: 9px 0;
+    outline: none;
+    background: #090b0f;
+    color: #d8dee9;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.live-log-console__viewport:focus-visible {
+    box-shadow: inset 0 0 0 1px var(--analytics-gold);
+}
+
+.live-log-console__lines {
+    min-width: max-content;
+}
+
+.live-log-console__empty {
+    padding: 18px 14px;
+    color: #737d8d;
+}
+
+.live-log-line {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr);
+    gap: 10px;
+    padding: 1px 14px;
+    white-space: pre-wrap;
+}
+
+.live-log-line:hover {
+    background: rgba(255, 255, 255, .035);
+}
+
+.live-log-line__time {
+    color: #596273;
+    user-select: none;
+}
+
+.live-log-line__text {
+    color: #d8dee9;
+}
+
+.live-log-line--debug .live-log-line__text { color: #8f98a8; }
+.live-log-line--info .live-log-line__text { color: #d8dee9; }
+.live-log-line--warning .live-log-line__text { color: #e2c78b; }
+.live-log-line--error .live-log-line__text { color: #e39a9e; }
+.live-log-line--critical .live-log-line__text { color: #f0c1c4; font-weight: var(--font-weight-semibold); }
+
+.live-log-console__footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 13px;
+    border-top: 1px solid var(--analytics-border);
+    color: var(--analytics-text-dim);
+    font-size: 10px;
+}
+
+@keyframes live-log-console-pulse {
+    0%, 100% { opacity: .45; }
+    50% { opacity: 1; }
+}
+
+@media (max-width: 760px) {
+    .live-log-console__header { flex-direction: column; }
+    .live-log-console__count { margin-left: 0; width: 100%; }
+    .live-log-console__control input { width: min(100%, 320px); }
+    .live-log-line { grid-template-columns: 72px minmax(0, 1fr); gap: 7px; padding-inline: 9px; }
+}

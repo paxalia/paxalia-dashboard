@@ -1,0 +1,24 @@
+{% load static i18n paxalia_tags %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}" dir="{% if LANGUAGE_CODE|slice:':2' == 'ar' or LANGUAGE_CODE|slice:':2' == 'fa' %}rtl{% else %}ltr{% endif %}" data-analytics-theme="default">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ status_code|default:'Error' }}{% endblock %}</title>
+    <meta name="description" content="{% block description %}{% trans 'The requested page could not be displayed.' %}{% endblock %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/themes.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/base.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/buttons.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/error.css' %}">
+    <script nonce="{{ request.csp_nonce }}">(function(){try{var t=localStorage.getItem('paxalia-theme');if(t)document.documentElement.setAttribute('data-analytics-theme',t);}catch(e){}}());</script>
+</head>
+<body class="paxalia-error-body" data-error-home-url="{% paxalia_setting 'ERROR_HOME_URL' '/' %}" data-error-support-url="{% paxalia_setting 'ERROR_SUPPORT_URL' '' %}" data-error-brand="{% paxalia_setting 'ERROR_BRAND_NAME' 'Paxalia' %}">
+<main class="paxalia-error-shell" id="main-content">
+    <header class="paxalia-error-brand"><a href="{% paxalia_setting 'ERROR_HOME_URL' '/' %}" aria-label="{% paxalia_setting 'ERROR_BRAND_NAME' 'Paxalia' %}"><span class="paxalia-error-brand__mark" aria-hidden="true">P</span><span><strong>{% paxalia_setting 'ERROR_BRAND_NAME' 'Paxalia' %}</strong><small>{% trans "Paxalia Dashboard" %}</small></span></a></header>
+    {% block content %}{% endblock %}
+    <footer class="paxalia-error-footer"><span>© {% now "Y" %} {% paxalia_setting 'ERROR_BRAND_NAME' 'Paxalia' %}</span><span aria-hidden="true">·</span><a href="{% paxalia_setting 'ERROR_HOME_URL' '/' %}">{% trans "Return to site" %}</a>{% paxalia_setting 'ERROR_SUPPORT_URL' '' as support_url %}{% if support_url %}<span aria-hidden="true">·</span><a href="{{ support_url }}">{% trans "Support" %}</a>{% endif %}</footer>
+</main>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/error.js' %}"></script>
+</body>
+</html>

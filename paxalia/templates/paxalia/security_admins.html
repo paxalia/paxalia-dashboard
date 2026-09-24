@@ -1,0 +1,95 @@
+{% extends 'paxalia/base.html' %}
+{% load i18n static %}
+
+{% block title %}{% trans "Administrator Security" %} — Paxalia{% endblock %}
+{% block page_title %}{% trans "Administrator Security" %}{% endblock %}
+{% block page_subtitle %}{% trans "Security-layer enrollment and administrator access status across every staff account" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/security.css' %}">{% endblock %}
+
+{% block dashboard_content %}
+<div class="security-page analytics-page-stack">
+    <div class="security-subnav">
+        <a class="btn btn-secondary" href="{% url 'paxalia:security' %}">{% trans "Security Center" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:security_overview' %}">{% trans "Security Overview" %}</a>
+        <a class="btn btn-primary" href="{% url 'paxalia:security_admins' %}">{% trans "Administrator Security" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:security_authentication' %}">{% trans "Authentication" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:admin_devices' %}">{% trans "Devices" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:admin_sessions' %}">{% trans "Sessions" %}</a>
+        <a class="btn btn-secondary" href="{% url 'paxalia:admin_login_activity' %}">{% trans "Admin Logins" %}</a>
+    </div>
+
+    <section class="security-auth-callout">
+        <div>
+            <span class="security-eyebrow">{% trans "Administrator access" %}</span>
+            <h2 class="card-title">{% trans "Three security layers at a glance" %}</h2>
+            <p>{% trans "Layer 1 represents the host account, Layer 2 is confirmed TOTP enrollment, and Layer 3 is the presence of an active authorized WebAuthn credential. The table does not expose authentication secrets." %}</p>
+        </div>
+        <span class="security-status-badge security-status-ok">{{ administrator_count }} {% trans "administrator(s)" %}</span>
+    </section>
+
+    <section class="table-card">
+        <div class="security-section-head">
+            <div>
+                <span class="security-eyebrow">{% trans "All staff administrators" %}</span>
+                <h2 class="card-title">{% trans "Administrator Security Status" %}</h2>
+            </div>
+            <a class="btn btn-secondary btn-sm" href="{% url 'paxalia:admin_login_activity' %}">{% trans "View login history" %}</a>
+        </div>
+
+        {% if admin_rows %}
+        <div class="table-responsive">
+            <table class="analytics-table">
+                <thead>
+                <tr>
+                    <th>{% trans "Administrator" %}</th>
+                    <th>{% trans "Layer 1" %}</th>
+                    <th>{% trans "Layer 2" %}</th>
+                    <th>{% trans "Layer 3" %}</th>
+                    <th>{% trans "Last admin login" %}</th>
+                    <th>{% trans "Active sessions" %}</th>
+                    <th>{% trans "Failed (30d)" %}</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for row in admin_rows %}
+                <tr{% if row.is_current %} class="security-admin-row--current"{% endif %}>
+                    <td>
+                        <strong>{{ row.user.get_username }}</strong>
+                        {% if row.is_current %}<span class="status-dim">{% trans "Current" %}</span>{% endif %}
+                    </td>
+                    <td>
+                        <span class="security-status-badge {% if row.account_active %}security-status-ok{% else %}security-status-danger{% endif %}">
+                            {% if row.account_active %}{% trans "Active" %}{% else %}{% trans "Disabled" %}{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="security-status-badge {% if row.totp_enabled %}security-status-ok{% else %}security-status-danger{% endif %}">
+                            {% if row.totp_enabled %}{% trans "Enabled" %}{% else %}{% trans "Required" %}{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="security-status-badge {% if row.active_device_count %}security-status-ok{% else %}security-status-danger{% endif %}">
+                            {{ row.active_device_count }} {% trans "device(s)" %}
+                        </span>
+                    </td>
+                    <td>{{ row.last_admin_login|date:"Y-m-d H:i"|default:"—" }}</td>
+                    <td>{{ row.active_session_count }}</td>
+                    <td>{% if row.failed_admin_logins_30d %}<span class="status-flag-new">{{ row.failed_admin_logins_30d }}</span>{% else %}0{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="security-empty"><strong>{% trans "No staff administrators found." %}</strong><span>{% trans "Administrator status will appear here when staff accounts exist." %}</span></div>
+        {% endif %}
+    </section>
+
+    <section class="security-device-callout">
+        <div>
+            <strong>{% trans "Layer policy" %}</strong>
+            <p>{% trans "The status shown here is observational. The three-layer requirement itself remains enforced by the Paxalia security gate; ordinary dashboard settings cannot disable Layer 2 or Layer 3." %}</p>
+        </div>
+    </section>
+</div>
+{% endblock %}

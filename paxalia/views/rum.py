@@ -1,5 +1,5 @@
 # paxalia/views/rum.py
-from django.contrib.admin.views.decorators import staff_member_required
+from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import render
 from django.utils.translation import gettext as _
@@ -9,7 +9,7 @@ from paxalia.rum import compute_web_vitals_summary, compute_top_js_errors
 from .utils import get_date_range, detect_active_preset, section_enabled, get_current_site
 
 
-@staff_member_required
+@admin_security_required
 def rum_overview(request):
     if not section_enabled('rum'):
         raise Http404

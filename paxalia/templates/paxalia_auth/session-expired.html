@@ -1,0 +1,5 @@
+{% extends 'paxalia/auth_base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Administrator session expired" %} · {{ brand_name }}{% endblock %}
+{% block content %}<section class="paxalia-auth-card"><header class="paxalia-auth-card__header"><div class="paxalia-auth-icon" aria-hidden="true">↻</div><h1>{% trans "Administrator session expired" %}</h1><p>{% trans "Your privileged Paxalia Dashboard session is no longer trusted. Sign in again to complete all security layers." %}</p></header><div class="paxalia-auth-card__body"><a class="btn btn-primary paxalia-auth-submit" href="{% url 'paxalia:auth_login' %}?admin=1">{% trans "Sign in again" %}</a></div></section>{% endblock %}
+

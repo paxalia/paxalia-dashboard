@@ -1,0 +1,32 @@
+{% extends 'paxalia/auth_base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Create your account" %} · {{ brand_name }}{% endblock %}
+{% block content %}
+<section class="paxalia-auth-card" aria-labelledby="signup-heading">
+    <header class="paxalia-auth-card__header">
+        <div class="paxalia-auth-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 20c.7-3.4 2.8-5.2 6.5-5.2s5.8 1.8 6.5 5.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+        <h1 id="signup-heading">{% trans "Create your account" %}</h1>
+        <p>{% trans "Create a Django account for the host application." %}</p>
+    </header>
+    <div class="paxalia-auth-card__body">
+        <form method="post" class="paxalia-auth-form" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="paxalia-auth-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            {% for field in form %}
+                <div class="paxalia-auth-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    <div class="paxalia-password-wrap{% if 'password' not in field.name %} paxalia-password-wrap--plain{% endif %}">
+                        {{ field }}
+                        {% if 'password' in field.name %}<button type="button" class="paxalia-password-toggle" data-password-toggle="{{ field.id_for_label }}" data-show-label="{% trans 'Show' %}" data-hide-label="{% trans 'Hide' %}" aria-label="{% trans 'Show password' %}">{% trans "Show" %}</button>{% endif %}
+                    </div>
+                    {% if field.help_text %}<div class="paxalia-auth-help">{{ field.help_text|safe }}</div>{% endif %}
+                    {% for error in field.errors %}<div class="paxalia-auth-field-error">{{ error }}</div>{% endfor %}
+                </div>
+            {% endfor %}
+            <button class="btn btn-primary paxalia-auth-submit" type="submit">{% trans "Create account" %}</button>
+        </form>
+        <p class="paxalia-auth-prompt">{% trans "Already have an account?" %} <a href="{% url 'paxalia:auth_login' %}">{% trans "Log in" %}</a></p>
+    </div>
+</section>
+{% endblock %}
+

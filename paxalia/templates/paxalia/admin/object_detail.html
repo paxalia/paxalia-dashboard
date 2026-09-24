@@ -51,7 +51,8 @@
                     {% else %}
                         <span class="pa-admin-count">{{ relation.count }}</span>
                         {% for item in relation.items %}<div class="pa-admin-related-item">{% if item.url %}<a class="analytics-table-link" href="{{ item.url }}">{{ item.value }}</a>{% else %}{{ item.value }}{% endif %}</div>{% endfor %}
-                        {% if relation.more %}<small class="pa-admin-note">{% blocktrans with count=relation.more %}{{ count }} more records{% endblocktrans %}</small>{% endif %}
+                        {% if relation.more and not relation.has_restricted %}<small class="pa-admin-note">{% blocktrans with count=relation.more %}{{ count }} more records{% endblocktrans %}</small>{% endif %}
+                        {% if relation.has_restricted %}<small class="pa-admin-note">{% trans "Some related records are restricted." %}</small>{% endif %}
                     {% endif %}
                 </div>
             </article>

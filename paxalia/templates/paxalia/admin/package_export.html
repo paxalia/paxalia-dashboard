@@ -9,7 +9,12 @@
     <header class="pa-admin-page-head"><div class="pa-admin-page-head__copy"><div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><a href="{{ overview_url }}">{{ definition.verbose_name_plural }}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Export" %}</span></div><span class="pa-admin-page-head__eyebrow">{{ definition.label }}</span><h2>{% trans "Export data" %}</h2><p>{% trans "Exports use the registered ModelAdmin queryset and Paxalia's redaction rules." %}</p></div><div class="pa-admin-page-head__actions"><a class="btn btn-secondary" href="{{ list_url }}">{% trans "Back to records" %}</a></div></header>
     <div class="pa-admin-form-error" data-single-export-error tabindex="-1" hidden data-password-required="{% trans 'A package password is required for encryption.' %}" data-generic-error="{% trans 'Package export failed.' %}" data-network-error="{% trans 'The package could not be generated because the server could not be reached.' %}" data-no-download="{% trans 'The server did not return a package file.' %}"></div>
     <div class="pa-admin-form-success" data-single-export-success hidden data-success-label="{% trans 'Package created. The download has started.' %}" role="status" aria-live="polite"></div>
-    <form method="post" class="pa-admin-card pa-admin-inline-form pa-admin-export-actions" data-paxalia-single-export data-paxalia-download-export>
+    <form method="post" class="pa-admin-card pa-admin-inline-form pa-admin-export-actions"
+          data-paxalia-single-export
+          data-paxalia-download-export
+          data-single-export-protected="{% if definition.capabilities.protected %}true{% else %}false{% endif %}"
+          data-single-export-require-encryption="{% if require_encryption_for_protected %}true{% else %}false{% endif %}"
+          data-protected-required="{% if definition.capabilities.protected and require_encryption_for_protected %}true{% else %}false{% endif %}">
         {% csrf_token %}
         <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Scope" %}</span><h2>{% trans "Choose what to export" %}</h2><p>{% trans "The current selection is limited to records visible to this ModelAdmin." %}</p></div></div>
         <div class="pa-admin-card-body">

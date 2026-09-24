@@ -1,0 +1,5 @@
+{% extends 'paxalia/auth_base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Access denied" %} · {{ brand_name }}{% endblock %}
+{% block content %}<section class="paxalia-auth-card"><header class="paxalia-auth-card__header"><div class="paxalia-auth-icon paxalia-auth-icon--danger" aria-hidden="true">!</div><h1>{% trans "Access denied" %}</h1><p>{% trans "This area requires the appropriate Paxalia Dashboard administrator authorization." %}</p></header><div class="paxalia-auth-card__body"><a class="btn btn-primary paxalia-auth-submit" href="/">{% trans "Return to site" %}</a></div></section>{% endblock %}
+
