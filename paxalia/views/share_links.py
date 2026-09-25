@@ -13,6 +13,8 @@ from django.views.decorators.http import require_POST
 from paxalia.models import ShareLink
 from paxalia.reporting import compute_overview_snapshot
 from paxalia.security_audit import log_action
+from paxalia.security_rate_limit import allowed as rate_allowed, clear as rate_clear
+from paxalia.middleware import AnalyticsMiddleware
 
 from .utils import section_enabled, get_current_site, scoped_object_or_404
 
@@ -30,6 +32,11 @@ def _check_password(raw, encoded):
     # migration.  Upgrade the stored hash after a successful legacy match.
     legacy = hashlib.sha256(raw.encode()).hexdigest()
     return legacy == encoded, legacy == encoded
+
+
+SHARE_PASSWORD_RATE_LIMIT_ATTEMPTS = 10
+SHARE_PASSWORD_RATE_LIMIT_WINDOW_SECONDS = 300
+SHARE_VIEW_WRITE_THROTTLE_SECONDS = 60
 
 
 # ─── Staff-side management ─────────────────────────────────────────
@@ -116,9 +123,24 @@ def shared_dashboard_view(request, token):
     session_key = f'share_link_authed_{link.id}'
     if link.has_password and not request.session.get(session_key):
         if request.method == 'POST':
+            ip = AnalyticsMiddleware._get_ip(request) or 'unknown'
+            allowed, _remaining = rate_allowed(
+                'share-link-password',
+                SHARE_PASSWORD_RATE_LIMIT_ATTEMPTS,
+                SHARE_PASSWORD_RATE_LIMIT_WINDOW_SECONDS,
+                str(link.id),
+                ip,
+            )
+            if not allowed:
+                return render(request, 'paxalia/shared_dashboard.html', {
+                    'link': link, 'needs_password': True, 'error': True,
+                    'rate_limited': True,
+                }, status=429)
+
             password = request.POST.get('password', '')
             valid, legacy_match = _check_password(password, link.password_hash)
             if valid:
+                rate_clear('share-link-password', str(link.id), ip)
                 request.session[session_key] = True
                 if legacy_match:
                     ShareLink.objects.filter(pk=link.pk).update(
@@ -133,9 +155,12 @@ def shared_dashboard_view(request, token):
                 'link': link, 'needs_password': True, 'error': False,
             })
 
-    ShareLink.objects.filter(pk=link.pk).update(last_viewed_at=timezone.now())
+    now = timezone.now()
+    last_viewed_at = link.last_viewed_at
+    if last_viewed_at is None or (now - last_viewed_at).total_seconds() >= SHARE_VIEW_WRITE_THROTTLE_SECONDS:
+        ShareLink.objects.filter(pk=link.pk).update(last_viewed_at=now)
 
-    end_dt = timezone.now()
+    end_dt = now
     start_dt = end_dt - timezone.timedelta(days=30)
     snapshot = compute_overview_snapshot(start_dt, end_dt, link.site)
 

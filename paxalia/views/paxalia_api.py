@@ -16,6 +16,7 @@ from django.core.cache import cache
 from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -32,6 +33,7 @@ DEFAULT_LIMIT = 100
 # otherwise have no ceiling on ingestion volume.
 RATE_LIMIT_WINDOW_SECONDS = 60
 RATE_LIMIT_MAX_REQUESTS = 300
+MAX_INGEST_BODY_BYTES = 256 * 1024
 
 
 def _rate_limited(api_key):
@@ -101,6 +103,7 @@ def _paginate(request):
 
 # ─── Ingestion ──────────────────────────────────────────────────────
 
+@never_cache
 @csrf_exempt
 @require_http_methods(["POST"])
 def paxalia_api_ingest(request):
@@ -111,7 +114,17 @@ def paxalia_api_ingest(request):
         return error_response
 
     try:
-        body = json.loads(request.body.decode('utf-8'))
+        declared_length = int(request.META.get('CONTENT_LENGTH', '0') or 0)
+    except (TypeError, ValueError):
+        declared_length = 0
+    if declared_length > MAX_INGEST_BODY_BYTES:
+        return JsonResponse({'error': 'Payload is too large'}, status=413)
+
+    try:
+        raw_body = request.body
+        if len(raw_body) > MAX_INGEST_BODY_BYTES:
+            return JsonResponse({'error': 'Payload is too large'}, status=413)
+        body = json.loads(raw_body.decode('utf-8'))
         if not isinstance(body, dict):
             raise ValueError('Payload must be a JSON object')
     except (json.JSONDecodeError, ValueError, UnicodeDecodeError):
@@ -139,6 +152,7 @@ def paxalia_api_ingest(request):
 
 # ─── Read API ───────────────────────────────────────────────────────
 
+@never_cache
 @require_http_methods(["GET"])
 def paxalia_api_stats_summary(request):
     """GET /paxalia-api/v1/stats/summary/"""
@@ -162,6 +176,7 @@ def paxalia_api_stats_summary(request):
     })
 
 
+@never_cache
 @require_http_methods(["GET"])
 def paxalia_api_pageviews(request):
     """GET /paxalia-api/v1/pageviews/ — paginated, ?limit=&offset=&start_date=&end_date="""
@@ -201,6 +216,7 @@ def paxalia_api_pageviews(request):
     })
 
 
+@never_cache
 @require_http_methods(["GET"])
 def paxalia_api_events(request):
     """GET /paxalia-api/v1/events/ — paginated, ?limit=&offset=&start_date=&end_date=&category="""
@@ -238,4 +254,5 @@ def paxalia_api_events(request):
             for e in page
         ],
     })
+
 

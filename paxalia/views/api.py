@@ -38,10 +38,12 @@ def analytics_api(request):
         if current_site is not None:
             yesterday_api = DailySiteStats.objects.get(site=current_site, date=yesterday).api_calls
         else:
-            agg = DailySiteStats.objects.filter(date=yesterday).aggregate(api_calls=Sum('api_calls'))
-            if agg['api_calls'] is None:
-                raise DailySiteStats.DoesNotExist
-            yesterday_api = agg['api_calls']
+            # All-sites API counts are exact when derived from PageView;
+            # summing per-site aggregates is only needed for raw totals and
+            # can become inconsistent with legacy/unassigned rows.
+            yesterday_api = PageView.objects.filter(
+                created_at__date=yesterday, is_api=True, is_bot=False
+            ).count()
     except DailySiteStats.DoesNotExist:
         yesterday_api = site_scoped(PageView.objects.filter(created_at__date=yesterday, is_api=True, is_bot=False), current_site).count()
 

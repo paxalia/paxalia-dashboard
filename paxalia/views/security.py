@@ -28,11 +28,10 @@ User = get_user_model()
 # "you're on an unsupported version" at a glance. Update as new LTS/
 # feature releases ship. See https://www.djangoproject.com/download/#supported-versions
 _DJANGO_SUPPORTED_MINORS = {
-    (4, 2): "April 2026 (LTS)",
-    (5, 1): "December 2025",
     (5, 2): "April 2028 (LTS)",
+    (6, 0): "April 2027",
+    (6, 1): "December 2027",
 }
-
 
 def _dependency_health():
     current = django.VERSION[:2]

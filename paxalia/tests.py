@@ -663,7 +663,7 @@ class ChatOpsViewTests(TestCase):
 
 
 class V3HardeningRegressionTests(TestCase):
-    """Regression coverage for the v3.0.0 stabilization fixes."""
+    """Regression coverage for the v4.0.0 stabilization and regression fixes."""
 
     def setUp(self):
         self.staff = get_user_model().objects.create_user(

@@ -13,6 +13,7 @@ import queue
 import sys
 import threading
 import time
+import traceback
 from django.apps import apps as django_apps
 from django.db import connections
 
@@ -61,9 +62,9 @@ def _should_capture(record):
 class PaxaliaLiveLogBuffer:
     """Process-local bounded stream of sanitized runtime log lines.
 
-    This buffer is intentionally separate from PaxaliaLogEvent. It is for
-    console-style diagnostics, not canonical persistence. A process restart
-    starts a fresh buffer.
+    The live buffer is a fast debug supplement. Canonical persisted events are
+    merged by the live-feed view so production deployments with multiple
+    workers still see logs from other workers when persistence is enabled.
     """
 
     MAX_ENTRIES = 2000
@@ -86,20 +87,38 @@ class PaxaliaLiveLogBuffer:
         message = redact_text(strip_ansi(message))[:4000]
         if not message:
             return
+
         level = str(logging.getLevelName(getattr(record, "levelno", logging.INFO))).upper()
         if level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
             level = "INFO"
         logger_name = str(getattr(record, "name", "") or "")[:255]
         timestamp = float(getattr(record, "created", time.time()))
+
+        stack_trace = ""
+        if getattr(record, "exc_info", None):
+            try:
+                stack_trace = "".join(traceback.format_exception(*record.exc_info))
+            except Exception:
+                stack_trace = ""
+        elif getattr(record, "stack_info", None):
+            stack_trace = str(record.stack_info or "")
+        stack_trace = redact_text(strip_ansi(stack_trace))[:12000]
+
         with cls._lock:
-            cls._sequence += 1
+            # Timestamp-based cursors let the shared DB-backed feed and this
+            # process-local buffer use the same ordering space.
+            candidate = int(timestamp * 1_000_000)
+            cls._sequence = max(cls._sequence + 1, candidate)
+            sequence = cls._sequence
+            suffix = f"\n{stack_trace}" if stack_trace else ""
             cls._entries.append({
-                "sequence": cls._sequence,
+                "sequence": sequence,
                 "timestamp": timestamp,
                 "level": level,
                 "logger": logger_name,
                 "message": message,
-                "text": f"{level} {message}",
+                "stack_trace": stack_trace,
+                "text": f"{level} {message}{suffix}",
             })
 
     @classmethod

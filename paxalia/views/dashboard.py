@@ -46,23 +46,25 @@ def analytics_dashboard(request):
             yesterday_sessions = yest_stats.total_sessions
             yesterday_bounces = yest_stats.bounces
         else:
-            # "All Sites": sum every site's row for that date instead of
-            # fetching a single row, since DailySiteStats is now one row
-            # per (site, date) rather than one row per date. NOTE:
-            # summing unique_ips across sites is an approximation (a
-            # visitor hitting two sites counts twice) — acceptable for
-            # this pre-aggregated fast path; the live "today" queries
-            # elsewhere in this view compute true distinct counts.
-            agg = DailySiteStats.objects.filter(date=yesterday).aggregate(
-                total_views=Sum('total_views'), unique_ips=Sum('unique_ips'),
-                total_sessions=Sum('total_sessions'), bounces=Sum('bounces'),
+            # "All Sites" must use raw PageViews for distinct visitors and
+            # sessions. Summing per-site unique counters double-counts people
+            # who visit more than one registered site.
+            yest_pageviews = PageView.objects.filter(
+                created_at__date=yesterday, is_bot=False, is_api=False
             )
-            if agg['total_views'] is None:
-                raise DailySiteStats.DoesNotExist
-            yesterday_views = agg['total_views']
-            yesterday_unique = agg['unique_ips']
-            yesterday_sessions = agg['total_sessions']
-            yesterday_bounces = agg['bounces']
+            yesterday_views = yest_pageviews.count()
+            yesterday_unique = yest_pageviews.values('ip_hash').distinct().count()
+            yesterday_sessions = (
+                yest_pageviews.exclude(session_id='')
+                .values('session_id').distinct().count()
+            )
+            yesterday_bounces = (
+                yest_pageviews.exclude(session_id='')
+                .values('session_id')
+                .annotate(cnt=Count('id'))
+                .filter(cnt=1)
+                .count()
+            )
         yesterday_bounce_rate = round((yesterday_bounces / yesterday_sessions) * 100, 1) if yesterday_sessions else 0
         yesterday_pages_per_session = round(yesterday_views / yesterday_sessions, 1) if yesterday_sessions else 0
     except DailySiteStats.DoesNotExist:

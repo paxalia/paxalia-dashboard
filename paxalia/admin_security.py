@@ -523,6 +523,14 @@ def admin_security_preflight(callback):
     return decorator
 
 
+def _paxalia_no_store(response):
+    if response is not None and hasattr(response, "__setitem__"):
+        response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response["Pragma"] = "no-cache"
+        response["Expires"] = "0"
+    return response
+
+
 def admin_security_required(view_func):
     """Require the completed three-layer Paxalia Dashboard admin session."""
     @wraps(view_func)
@@ -534,33 +542,33 @@ def admin_security_required(view_func):
             if callable(preflight):
                 result = preflight(request, *args, **kwargs)
                 if result is not None:
-                    return result
+                    return _paxalia_no_store(result)
 
         # Isolated mode authenticates only the Paxalia dashboard; the host
         # request.user must never be treated as Layer 1 for this gate.
         if not host_authentication_enabled():
             if admin_session_is_valid(request):
-                return view_func(request, *args, **kwargs)
-            return begin_admin_verification(request, request.get_full_path())
+                return _paxalia_no_store(view_func(request, *args, **kwargs))
+            return _paxalia_no_store(begin_admin_verification(request, request.get_full_path()))
 
         if not request.user.is_authenticated:
             result = begin_admin_verification(request, request.get_full_path())
             if request.headers.get("Accept", "").lower().find("application/json") >= 0:
                 if getattr(result, "status_code", None) == 302:
                     auth_url = result["Location"]
-                    return JsonResponse({
+                    return _paxalia_no_store(JsonResponse({
                         "detail": "Authentication is required.",
                         "auth_url": auth_url,
-                    }, status=401)
-            return result
+                    }, status=401))
+            return _paxalia_no_store(result)
 
         if not admin_user(request.user):
             raise PermissionDenied("You do not have access to Paxalia Dashboard administration.")
 
         if admin_session_is_valid(request):
-            return view_func(request, *args, **kwargs)
+            return _paxalia_no_store(view_func(request, *args, **kwargs))
 
-        return begin_admin_verification(request, request.get_full_path())
+        return _paxalia_no_store(begin_admin_verification(request, request.get_full_path()))
     wrapped.paxalia_gate = True
     return wrapped
 
@@ -577,3 +585,4 @@ def device_label(device: PaxaliaDeviceCredential | None) -> str:
     if not device:
         return ""
     return device.device.display_name
+

@@ -1,5 +1,5 @@
 from django import template
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 import json
 
 from ..settings import get_config
@@ -13,13 +13,12 @@ def get_analytics_config():
 
 @register.simple_tag
 def analytics_consent_config():
-    """
-    Renders a small inline <script> exposing consent-mode config to
-    paxalia-events.js as window.PAXALIA_CONSENT_CONFIG. Include this
-    tag immediately before the paxalia-events.js <script src="...">
-    tag on your tracked pages — see the README's "Consent Mode"
-    section. If omitted, paxalia-events.js defaults to consent mode
-    disabled (tracking behaves exactly as it did before Phase 14).
+    """Render consent configuration as a CSP-safe metadata element.
+
+    The browser analytics script reads the JSON from this element before it
+    starts tracking. Keeping configuration in markup rather than an inline
+    script avoids requiring ``unsafe-inline`` or a per-request nonce on host
+    pages that use a strict Content-Security-Policy.
     """
     config = get_config()
     payload = {
@@ -32,8 +31,7 @@ def analytics_consent_config():
         'captureResourceErrors': bool(config.get('LOG_BROWSER_CAPTURE_RESOURCE_ERRORS', True)),
         'maxBrowserEvents': int(config.get('LOG_BROWSER_MAX_EVENTS_PER_PAGE', 50)),
     }
-    # Escape '</' so a maliciously-configured cookie name/value (server
-    # config, not user input, but cheap insurance) can't break out of
-    # the <script> tag early.
-    safe_json = json.dumps(payload).replace('</', '<\\/')
-    return mark_safe(f'<script>window.PAXALIA_CONSENT_CONFIG = {safe_json};</script>')
+    safe_json = json.dumps(payload, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
+    # The attribute value is escaped by the template system. The JavaScript
+    # consumer parses it as JSON; no executable inline script is emitted.
+    return format_html('<meta name="paxalia-consent-config" content="{}">', safe_json)

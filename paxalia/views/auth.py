@@ -6,7 +6,7 @@ import io
 import secrets
 import string
 from importlib import import_module
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, quote, urlencode, urlsplit
 
 from django.contrib import messages
 from django.contrib.auth import (
@@ -27,7 +27,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.contrib.auth.hashers import check_password, make_password
 from django.utils.translation import gettext as _
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from ..admin_security import (
     ADMIN_AUTH_AT_KEY,
@@ -161,13 +161,25 @@ def _identifier_for_rate_limit(value: str) -> str:
     return str(value or "").strip().lower()[:255]
 
 
+MAX_WEBAUTHN_JSON_BODY_BYTES = 256 * 1024
+
+
 def _request_data(request):
     """Return request data for JSON WebAuthn calls and legacy form posts."""
     content_type = (request.content_type or "").split(";", 1)[0].strip().lower()
     if content_type == "application/json":
         import json
         try:
-            value = json.loads(request.body.decode("utf-8") or "{}")
+            content_length = int(request.META.get("CONTENT_LENGTH", "0") or 0)
+        except (TypeError, ValueError):
+            content_length = 0
+        if content_length > MAX_WEBAUTHN_JSON_BODY_BYTES:
+            return {}
+        try:
+            raw_body = request.body
+            if len(raw_body) > MAX_WEBAUTHN_JSON_BODY_BYTES:
+                return {}
+            value = json.loads(raw_body.decode("utf-8") or "{}")
         except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
             return {}
         return value if isinstance(value, dict) else {}
@@ -257,29 +269,146 @@ def _totp_device(user):
     return None
 
 
+def _normalize_totp_base32_secret(value) -> str:
+    """Return a canonical RFC 4648 Base32 TOTP secret without padding."""
+    normalized = "".join(str(value or "").upper().split()).rstrip("=")
+    if not normalized or not all(char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567" for char in normalized):
+        return ""
+    return normalized
+
+
+def _totp_binary_key(device):
+    """Return the exact binary secret used by django-otp when available."""
+    try:
+        binary_key = getattr(device, "bin_key")
+        if callable(binary_key):
+            binary_key = binary_key()
+        if binary_key:
+            return bytes(binary_key)
+    except Exception:
+        pass
+    return b""
+
+
+def _totp_base32_secret(device, otpauth_url: str = "") -> str:
+    """Resolve the exact authenticator-facing Base32 secret.
+
+    django-otp stores ``TOTPDevice.key`` as hex and exposes ``bin_key`` as the
+    binary secret used during verification. The manual key shown by Paxalia is
+    derived from that binary secret first, so the key copied by the user is
+    mathematically identical to the secret checked by ``verify_token()``. URL
+    parsing and hex decoding remain compatibility fallbacks for adapter/test
+    objects that do not expose ``bin_key``.
+    """
+    binary_key = _totp_binary_key(device)
+    if binary_key:
+        return base64.b32encode(binary_key).decode("ascii").rstrip("=")
+
+    try:
+        query = parse_qs(urlsplit(otpauth_url).query)
+        from_uri = _normalize_totp_base32_secret(query.get("secret", [""])[0])
+        if from_uri:
+            return from_uri
+    except Exception:
+        pass
+
+    raw_key = getattr(device, "key", "")
+    if isinstance(raw_key, memoryview):
+        raw_key = raw_key.tobytes()
+    try:
+        if isinstance(raw_key, bytes):
+            raw_text = raw_key.decode("ascii").strip()
+        else:
+            raw_text = str(raw_key or "").strip()
+        raw_hex = "".join(raw_text.split())
+        if raw_hex and len(raw_hex) % 2 == 0:
+            decoded = bytes.fromhex(raw_hex)
+            return base64.b32encode(decoded).decode("ascii").rstrip("=")
+    except (UnicodeDecodeError, ValueError, TypeError):
+        pass
+
+    if isinstance(raw_key, bytes):
+        return base64.b32encode(raw_key).decode("ascii").rstrip("=")
+    return ""
+
+
+def _totp_device_parameters(device):
+    """Return the effective TOTP parameters used by the device."""
+    try:
+        digits = int(getattr(device, "digits", 6) or 6)
+    except (TypeError, ValueError):
+        digits = 6
+    if digits not in (6, 8):
+        digits = 6
+
+    try:
+        period = int(getattr(device, "step", 30) or 30)
+    except (TypeError, ValueError):
+        period = 30
+    if period <= 0:
+        period = 30
+
+    return {
+        "algorithm": "SHA1",
+        "digits": digits,
+        "period": period,
+    }
+
+
+def _totp_provisioning_uri(device, secret: str) -> str:
+    """Build a Google Authenticator-compatible URI from the same device secret."""
+    normalized = _normalize_totp_base32_secret(secret)
+    if not normalized:
+        return ""
+
+    user = getattr(device, "user", None)
+    username = ""
+    try:
+        getter = getattr(user, "get_username", None)
+        if callable(getter):
+            username = str(getter() or "")
+        else:
+            username = str(getattr(user, "username", "") or "")
+    except Exception:
+        username = ""
+    username = username.replace(":", "")
+    if not username:
+        return ""
+
+    issuer = "Paxalia"
+    label = f"{issuer}:{username}"
+    device_params = _totp_device_parameters(device)
+    params = {
+        "secret": normalized,
+        "algorithm": device_params["algorithm"],
+        "digits": device_params["digits"],
+        "period": device_params["period"],
+        "issuer": issuer,
+    }
+    return f"otpauth://totp/{quote(label, safe=':')}?{urlencode(params)}"
+
+
 def _format_totp_secret(secret) -> str:
-    """Format a TOTP secret into readable four-character groups."""
-    if isinstance(secret, bytes):
-        try:
-            secret = secret.decode("ascii")
-        except UnicodeDecodeError:
-            secret = base64.b32encode(secret).decode("ascii")
-    normalized = "".join(str(secret or "").upper().split())
+    """Format a canonical Base32 TOTP secret into readable four-character groups."""
+    normalized = _normalize_totp_base32_secret(secret)
     return " ".join(normalized[index:index + 4] for index in range(0, len(normalized), 4))
 
 
 def _totp_setup_visuals(device):
-    """Return the provisioning URI, manual key, and QR data URI."""
-    otpauth_url = str(getattr(device, "config_url", "") or "")
-    raw_secret = getattr(device, "key", "")
-    if isinstance(raw_secret, bytes):
-        try:
-            raw_secret = raw_secret.decode("ascii")
-        except UnicodeDecodeError:
-            raw_secret = base64.b32encode(raw_secret).decode("ascii")
-    totp_secret = "".join(str(raw_secret or "").upper().split())
-    qr_code_data_uri = None
+    """Return a matching provisioning URI, manual key, and QR data URI."""
+    canonical_secret = _totp_base32_secret(device)
+    otpauth_url = _totp_provisioning_uri(device, canonical_secret)
 
+    # Keep django-otp's own URL as a final compatibility fallback for test
+    # adapters or third-party device subclasses without a user identity.
+    if not otpauth_url:
+        otpauth_url = str(getattr(device, "config_url", "") or "")
+
+    if not canonical_secret:
+        canonical_secret = _totp_base32_secret(device, otpauth_url)
+
+    params = _totp_device_parameters(device)
+    qr_code_data_uri = None
     if otpauth_url:
         try:
             import qrcode
@@ -297,17 +426,19 @@ def _totp_setup_visuals(device):
             image.save(buffer, format="PNG")
             qr_code_data_uri = "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
         except Exception:
-            # The setup page can still use the manual secret if an optional
-            # image backend is unavailable; do not expose the raw URI instead.
+            # The setup page can still use the exact manual secret if the image
+            # backend is unavailable; do not expose the raw provisioning URI.
             qr_code_data_uri = None
 
     return {
         "otpauth_url": otpauth_url,
-        "totp_secret": totp_secret,
-        "formatted_totp_secret": _format_totp_secret(totp_secret),
+        "totp_secret": canonical_secret,
+        "formatted_totp_secret": _format_totp_secret(canonical_secret),
+        "totp_algorithm": params["algorithm"],
+        "totp_digits": params["digits"],
+        "totp_period": params["period"],
         "qr_code_data_uri": qr_code_data_uri,
     }
-
 
 def _totp_setup_context(device, **extra):
     context = dict(extra)
@@ -581,9 +712,25 @@ def paxalia_signup(request):
 
 
 class PaxaliaPasswordResetView(PasswordResetView):
+    RESET_RATE_LIMIT_ATTEMPTS = 5
+    RESET_RATE_LIMIT_WINDOW_SECONDS = 900
+
     def dispatch(self, request, *args, **kwargs):
         if not bool(get_config().get("AUTH_PASSWORD_RESET_ENABLED", True)):
             raise Http404
+        if request.method == "POST":
+            identifier = _identifier_for_rate_limit(request.POST.get("email", ""))
+            ok, _remaining = rate_allowed(
+                "password-reset",
+                self.RESET_RATE_LIMIT_ATTEMPTS,
+                self.RESET_RATE_LIMIT_WINDOW_SECONDS,
+                _client_ip(request),
+                identifier,
+            )
+            if not ok:
+                # Keep the same generic reset response shape so the endpoint
+                # does not become an account-enumeration oracle.
+                return redirect(self.success_url)
         return super().dispatch(request, *args, **kwargs)
 
     template_name = "paxalia_auth/forgot-password.html"
@@ -657,6 +804,7 @@ def password_change_done(request):
     return _render_auth(request, "paxalia_auth/password_change_done.html")
 
 
+@require_http_methods(["GET", "POST"])
 def paxalia_2fa_setup(request):
     user = _pending_user(request)
     if user is None and request.user.is_authenticated and admin_session_is_valid(request):
@@ -699,6 +847,7 @@ def paxalia_2fa_setup(request):
     return _render_auth(request, "paxalia_auth/two-factor-setup.html", _totp_setup_context(device))
 
 
+@require_http_methods(["GET", "POST"])
 def paxalia_2fa_verify(request):
     user = _pending_user(request)
     if user is None:
@@ -799,6 +948,7 @@ def paxalia_recovery_regenerate(request):
     return _render_auth(request, "paxalia_auth/recovery-codes.html", {"recovery_codes": codes, "manage_mode": True})
 
 
+@require_GET
 def paxalia_device_login(request):
     user = _pending_user(request)
     if user is None:
@@ -817,6 +967,7 @@ def paxalia_device_login(request):
     return _render_auth(request, "paxalia_auth/device-verify.html")
 
 
+@require_GET
 def paxalia_device_login_options(request):
     user = _pending_user(request)
     if user is None or request.session.get(ADMIN_STAGE_KEY) not in {STAGE_2FA, STAGE_DEVICE}:
@@ -952,6 +1103,7 @@ def paxalia_device_login_verify(request):
         return JsonResponse({"detail": _("This authenticator could not be verified.")}, status=401)
 
 
+@require_http_methods(["GET", "POST"])
 def paxalia_device_register(request):
     user = _pending_user(request)
     final = bool(admin_session_is_valid(request))
@@ -1068,3 +1220,4 @@ def paxalia_session_expired(request):
 
 def paxalia_access_denied(request):
     return _render_auth(request, "paxalia_auth/access-denied.html", status=403)
+

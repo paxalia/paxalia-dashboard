@@ -8,6 +8,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from django.conf import settings
+from paxalia import __version__ as PAXALIA_VERSION
 from ..admin_security import admin_security_required
 from django.core.cache import cache
 from django.http import Http404, JsonResponse
@@ -191,7 +192,7 @@ def _latest(name: str):
         req = Request(
             url,
             headers={
-                "User-Agent": "paxalia-dashboard/3.0.0 dependency-health",
+                "User-Agent": f"paxalia-dashboard/{PAXALIA_VERSION} dependency-health",
                 "Accept": "application/json",
             },
         )

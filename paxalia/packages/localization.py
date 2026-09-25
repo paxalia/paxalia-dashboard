@@ -1,4 +1,11 @@
-"""Generic, dependency-light localization introspection for Paxalia Admin."""
+"""Generic, dependency-light localization introspection for Paxalia Admin.
+
+The localization layer deliberately treats django-parler as an adapter rather
+than depending on private field shapes.  In django-parler 2.x,
+``_parler_meta.get_all_fields()`` returns translated field *names* while the
+actual Django ``Field`` objects live on the translated model.  Normalizing that
+boundary here keeps export, import and the admin editor on the same contract.
+"""
 
 from __future__ import annotations
 
@@ -16,32 +23,116 @@ _SENSITIVE_NAMES = {
 }
 
 
+def _normalize_code(code):
+    return str(code or "").strip().lower()
+
+
 def language_choices():
+    """Return the effective supported languages in stable display order.
+
+    Django's ``LANGUAGES`` remains the primary source because it controls the
+    dashboard UI.  django-parler's configured language tuples are merged in so
+    a valid translation language is not accidentally hidden merely because a
+    host project keeps the two settings lists slightly different.
+    """
+    choices = []
+    seen = set()
+
     configured = getattr(settings, "LANGUAGES", ()) or ()
-    return [(str(code), str(name)) for code, name in configured]
+    for code, name in configured:
+        normalized = _normalize_code(code)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        choices.append((str(code), str(name)))
+
+    parler_languages = getattr(settings, "PARLER_LANGUAGES", None) or {}
+    parler_entries = parler_languages.get(None, ()) if isinstance(parler_languages, dict) else ()
+    for entry in parler_entries or ():
+        if not isinstance(entry, dict):
+            continue
+        code = str(entry.get("code") or "").strip()
+        normalized = _normalize_code(code)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        choices.append((code, code))
+
+    return choices
+
+
+def _meta_field_name(item):
+    if isinstance(item, str):
+        return item
+    name = getattr(item, "name", None)
+    return str(name) if name else ""
+
+
+def _translation_field_objects(model):
+    """Resolve django-parler translated field names to actual Django Fields."""
+    meta = getattr(model, "_parler_meta", None)
+    if meta is None:
+        return []
+
+    try:
+        raw_fields = list(meta.get_all_fields())
+    except Exception:
+        return []
+
+    resolved = []
+    seen = set()
+    for item in raw_fields:
+        name = _meta_field_name(item)
+        normalized = _normalize_code(name).replace("_", "")
+        if not name or normalized in seen:
+            continue
+        seen.add(normalized)
+
+        field = item if hasattr(item, "formfield") and hasattr(item, "name") else None
+        if field is None:
+            try:
+                translation_target = meta.get_model_by_field(name)
+                # django-parler compatibility layers may return the concrete
+                # Field itself instead of its translation model. Accept both
+                # shapes; requiring ``._meta.get_field()`` for the Field case
+                # incorrectly drops an otherwise valid translation surface.
+                if hasattr(translation_target, "formfield") and hasattr(translation_target, "name"):
+                    field = translation_target
+                else:
+                    field = translation_target._meta.get_field(name)
+            except Exception:
+                try:
+                    # Compatibility fallback for older/custom parler adapters.
+                    translation_model = getattr(meta, "model", None)
+                    if translation_model is not None:
+                        field = translation_model._meta.get_field(name)
+                except Exception:
+                    field = None
+        if field is not None and getattr(field, "name", None):
+            resolved.append(field)
+
+    return resolved
 
 
 def is_translatable_model(model) -> bool:
-    return bool(translated_field_objects(model))
+    return bool(_translation_field_objects(model))
 
 
 def translated_field_objects(model, excluded_names=()):
-    if not hasattr(model, "_parler_meta"):
-        return []
-    try:
-        fields = model._parler_meta.get_all_fields()
-    except Exception:
-        return []
-    sensitive = {name.lower().replace("_", "") for name in _SENSITIVE_NAMES}
-    excluded = {str(name).lower().replace("_", "") for name in (excluded_names or ())}
+    fields = _translation_field_objects(model)
+    sensitive = {
+        _normalize_code(name).replace("_", "")
+        for name in _SENSITIVE_NAMES
+    }
+    excluded = {
+        _normalize_code(name).replace("_", "")
+        for name in (excluded_names or ())
+    }
     return [
         field
         for field in fields
-        if (
-            getattr(field, "name", "")
-            and str(getattr(field, "name", "")).lower().replace("_", "") not in sensitive
-            and str(getattr(field, "name", "")).lower().replace("_", "") not in excluded
-        )
+        if _normalize_code(getattr(field, "name", "")).replace("_", "") not in sensitive
+        and _normalize_code(getattr(field, "name", "")).replace("_", "") not in excluded
     ]
 
 
@@ -49,9 +140,17 @@ def translated_fields(model, excluded_names=()):
     return [field.name for field in translated_field_objects(model, excluded_names=excluded_names)]
 
 
-def _translation_values(obj, language):
+def _has_translation_value(value):
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    return True
+
+
+def _translation_values(obj, language, excluded_names=()):
     values = {}
-    fields = translated_field_objects(obj.__class__)
+    fields = translated_field_objects(obj.__class__, excluded_names=excluded_names)
     getter = getattr(obj, "safe_translation_getter", None)
     for field in fields:
         try:
@@ -86,10 +185,10 @@ def translation_editor_fields(model, excluded_names=()):
     return fields
 
 
-def translation_values(obj, language):
+def translation_values(obj, language, excluded_names=()):
     current = getattr(obj, "get_current_language", lambda: None)()
     try:
-        return _translation_values(obj, language)
+        return _translation_values(obj, language, excluded_names=excluded_names)
     finally:
         if current and hasattr(obj, "set_current_language"):
             try:
@@ -101,15 +200,16 @@ def translation_values(obj, language):
 def save_translation(obj, language, values):
     if not hasattr(obj, "set_current_language"):
         raise ValueError("This model does not expose a supported translation API.")
-    enabled_languages = {str(code) for code, _ in language_choices()}
-    if str(language) not in enabled_languages:
+    enabled_languages = {_normalize_code(code) for code, _ in language_choices()}
+    normalized_language = _normalize_code(language)
+    if normalized_language not in enabled_languages:
         raise ValueError("The selected language is not enabled in the current site configuration.")
 
     allowed = {field.name: field for field in translated_field_objects(obj.__class__)}
     current = getattr(obj, "get_current_language", lambda: None)()
     try:
         obj.set_current_language(language)
-        for name, raw_value in values.items():
+        for name, raw_value in (values or {}).items():
             field = allowed.get(name)
             if field is None:
                 continue
@@ -132,37 +232,55 @@ def save_translation(obj, language, values):
                 pass
 
 
-def translation_state(obj, languages=None):
+def translation_state(obj, languages=None, excluded_names=()):
+    supported = {_normalize_code(code) for code, _ in language_choices()}
     languages = languages or [code for code, _ in language_choices()]
-    languages = [str(code) for code in languages if any(str(code) == configured for configured, _ in language_choices())]
+    languages = [
+        str(code)
+        for code in languages
+        if _normalize_code(code) in supported
+    ]
+    fields = translated_field_objects(obj.__class__, excluded_names=excluded_names)
     result = []
     for code in languages:
         complete = False
         try:
             has_translation = getattr(obj, "has_translation", None)
-            if callable(has_translation):
-                complete = bool(has_translation(code))
+            complete = bool(has_translation(code)) if callable(has_translation) else False
             if complete:
-                values = _translation_values(obj, code)
-                if not values or not any(value not in (None, "") for value in values.values()):
-                    complete = False
+                values = _translation_values(obj, code, excluded_names=excluded_names)
+                complete = bool(fields) and all(
+                    _has_translation_value(values.get(field.name))
+                    for field in fields
+                )
         except Exception:
             complete = False
         result.append({"code": code, "complete": complete})
     return result
 
 
-def completeness_for_queryset(queryset, limit=100):
+def completeness_for_queryset(queryset, limit=100, offset=0, excluded_names=()):
     languages = [code for code, _ in language_choices()]
     language_names = dict(language_choices())
     rows = []
     total = queryset.count()
     checked = 0
     complete = 0
-    fields = translation_editor_fields(queryset.model)
-    for obj in queryset[:limit]:
-        state = translation_state(obj, languages)
-        translation_map = {code: translation_values(obj, code) for code in languages}
+    fields = translation_editor_fields(queryset.model, excluded_names=excluded_names)
+    try:
+        offset = max(0, int(offset or 0))
+    except (TypeError, ValueError):
+        offset = 0
+    for obj in queryset[offset:offset + limit]:
+        state = translation_state(obj, languages, excluded_names=excluded_names)
+        language_status = [
+            {**item, "name": language_names.get(item["code"], item["code"])}
+            for item in state
+        ]
+        translation_map = {
+            code: translation_values(obj, code, excluded_names=excluded_names)
+            for code in languages
+        }
         editor_languages = []
         for item in state:
             code = item["code"]
@@ -182,7 +300,7 @@ def completeness_for_queryset(queryset, limit=100):
         rows.append({
             "object": obj,
             "identity": identity,
-            "languages": state,
+            "languages": language_status,
             "translations": translation_map,
             "editor_languages": editor_languages,
             "missing": [item["code"] for item in state if not item["complete"]],
@@ -197,3 +315,4 @@ def completeness_for_queryset(queryset, limit=100):
         "complete": complete,
         "incomplete": max(0, checked - complete),
     }
+

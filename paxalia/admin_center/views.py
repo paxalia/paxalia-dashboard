@@ -36,6 +36,15 @@ from .services import (
     save_list_editable,
 )
 from .utils import safe_object_repr
+from ..packages.localization import (
+    is_translatable_model,
+    language_choices,
+    save_translation,
+    translated_field_objects,
+    translated_fields,
+    translation_state,
+    translation_values,
+)
 
 logger = logging.getLogger("paxalia.admin")
 
@@ -121,14 +130,235 @@ def _inline_instances(definition, request, obj=None):
     return items
 
 
+def _translation_languages(definition):
+    """Return configured language choices for a translatable admin model."""
+    if not is_translatable_model(definition.model):
+        return []
+    return [(str(code), str(name)) for code, name in language_choices()]
+
+
+def _translation_language(definition, request, obj=None):
+    """Resolve the language used by the Paxalia Add/Edit translation pane."""
+    choices = _translation_languages(definition)
+    if not choices:
+        return ""
+    codes = {code for code, _name in choices}
+    requested = str(
+        request.POST.get("language")
+        or request.GET.get("language")
+        or ""
+    ).strip()
+    # An explicit language query/POST value is the user’s tab selection and
+    # must take precedence over a ModelAdmin default language.
+    if requested in codes:
+        return requested
+
+    get_form_language = getattr(definition.model_admin, "get_form_language", None)
+    if callable(get_form_language):
+        try:
+            candidate = str(get_form_language(request, obj=obj) or "").strip()
+            if candidate in codes:
+                return candidate
+        except Exception:
+            logger.exception(
+                "Unable to resolve translation form language for %s",
+                definition.label,
+            )
+
+    return choices[0][0]
+
+
+def _attach_translation_fields(definition, request, form, obj=None):
+    """Add missing parler fields to generic Paxalia ModelForms.
+
+    ``TranslatableAdmin`` already supplies a language-aware form. A plain
+    ``ModelAdmin`` does not, so Paxalia adds the translated model fields itself
+    and persists only those fields it added. This keeps existing custom parler
+    forms fully in control while making standard registered ModelAdmins
+    multilingual too.
+    """
+    if not is_translatable_model(definition.model):
+        return ""
+
+    language = _translation_language(definition, request, obj=obj)
+    if not language:
+        return ""
+
+    readonly_names = set()
+    try:
+        readonly_names.update(
+            str(name)
+            for name in (definition.model_admin.get_readonly_fields(request, obj) or ())
+            if isinstance(name, str)
+        )
+    except Exception:
+        logger.exception(
+            "Unable to resolve readonly fields for translation form %s",
+            definition.label,
+        )
+
+    excluded_names = set(definition.hidden_fields) | readonly_names
+    extra_names = []
+    initial_values = {}
+    if obj is not None and getattr(obj, "pk", None):
+        try:
+            initial_values = translation_values(
+                obj,
+                language,
+                excluded_names=excluded_names,
+            )
+        except Exception:
+            logger.exception(
+                "Unable to load translation values for %s",
+                definition.label,
+            )
+
+    for field in translated_field_objects(definition.model, excluded_names=excluded_names):
+        name = str(getattr(field, "name", "") or "")
+        if not name or not getattr(field, "editable", True) or name in form.fields:
+            continue
+        try:
+            form_field = field.formfield()
+        except Exception:
+            logger.exception(
+                "Unable to build translation form field %s.%s",
+                definition.label,
+                name,
+            )
+            continue
+        if form_field is None:
+            continue
+        form.fields[name] = form_field
+        if name in initial_values:
+            form.initial[name] = initial_values[name]
+        extra_names.append(name)
+
+    form._paxalia_translation_language = language
+    form._paxalia_translation_extra_names = tuple(extra_names)
+    return language
+
+
+def _save_attached_translations(definition, request, form, obj):
+    """Persist translation fields added by Paxalia's generic form adapter."""
+    names = tuple(getattr(form, "_paxalia_translation_extra_names", ()) or ())
+    language = str(getattr(form, "_paxalia_translation_language", "") or "").strip()
+    if not names or not language:
+        return
+    values = {name: form.cleaned_data.get(name) for name in names}
+    save_translation(obj, language, values)
+
+
+def _translation_form_context(definition, request, form, obj=None):
+    """Build the Django-parler-style language switcher for Add/Edit forms."""
+    choices = _translation_languages(definition)
+    if not choices:
+        return {
+            "translation_form_enabled": False,
+            "translation_form_fields": (),
+            "translation_language_tabs": (),
+            "translation_language": "",
+            "translation_language_name": "",
+        }
+
+    translated_names = [str(name) for name in translated_fields(definition.model)]
+    translatable_form_names = [
+        name
+        for name in translated_names
+        if name in form.fields and name not in definition.hidden_fields
+    ]
+    if not translatable_form_names:
+        return {
+            "translation_form_enabled": False,
+            "translation_form_fields": (),
+            "translation_language_tabs": (),
+            "translation_language": "",
+            "translation_language_name": "",
+        }
+
+    codes = {str(code) for code, _name in choices}
+    current = str(
+        getattr(form, "_paxalia_translation_language", "")
+        or _translation_language(definition, request, obj=obj)
+    ).strip()
+    if current not in codes:
+        current = choices[0][0]
+
+    state_map = {}
+    if obj is not None and getattr(obj, "pk", None):
+        try:
+            state_map = {
+                item["code"]: bool(item["complete"])
+                for item in translation_state(
+                    obj,
+                    [code for code, _name in choices],
+                    excluded_names=set(definition.hidden_fields),
+                )
+            }
+        except Exception:
+            logger.exception(
+                "Unable to resolve translation state for %s",
+                definition.label,
+            )
+
+    target_url = (
+        definition.url("admin_object_change", object_id=str(obj.pk))
+        if obj is not None and getattr(obj, "pk", None)
+        else definition.url("admin_model_add")
+    )
+    tabs = []
+    for code, name in choices:
+        query = request.GET.copy()
+        query["language"] = str(code)
+        query_string = query.urlencode()
+        tabs.append({
+            "code": str(code),
+            "name": str(name),
+            "url": f"{target_url}?{query_string}" if query_string else target_url,
+            "current": str(code) == current,
+            "complete": state_map.get(str(code)) if state_map else None,
+        })
+
+    return {
+        "translation_form_enabled": True,
+        "translation_form_fields": [form[name] for name in translatable_form_names],
+        "translation_language_tabs": tabs,
+        "translation_language": current,
+        "translation_language_name": dict(choices).get(current, current),
+    }
+
+
+def _normalize_translation_query(request, definition):
+    """Keep parler's language query parameter inside the configured language set."""
+    choices = _translation_languages(definition)
+    if not choices:
+        return
+    codes = {str(code) for code, _name in choices}
+    requested = str(request.GET.get("language") or "").strip()
+    if requested and requested not in codes:
+        query = request.GET.copy()
+        query["language"] = choices[0][0]
+        request.GET = query
+
+
 def _form_context(definition, request, form, obj=None):
     protect_sensitive_form_fields(definition, form, obj=obj)
     readonly_obj = obj if obj is not None else form.instance
-    return {
-        "form_sections": build_form_sections(definition, request, form, obj=obj),
-        "readonly_rows": readonly_context(definition, request, readonly_obj),
+    translation_context = _translation_form_context(definition, request, form, obj=obj)
+    excluded = {
+        field.name
+        for field in translation_context.get("translation_form_fields", ())
     }
-
+    return {
+        "form_sections": build_form_sections(
+            definition,
+            request,
+            form,
+            obj=obj,
+            exclude_names=excluded,
+        ),
+        "readonly_rows": readonly_context(definition, request, readonly_obj),
+        **translation_context,
+    }
 
 def _safe_int(value, default=1):
     try:
@@ -485,8 +715,10 @@ def model_add(request, app_label, model_name):
     _require_enabled()
     definition = registry.get(app_label, model_name, request=request)
     require_add(definition, request)
+    _normalize_translation_query(request, definition)
     form_class = safe_form_class(definition, request, None)
     form = form_class(request.POST or None, request.FILES or None)
+    _attach_translation_fields(definition, request, form)
     formsets = _inline_instances(definition, request, None)
     if request.method == "POST" and form.is_valid() and all(item["formset"].is_valid() for item in formsets):
         try:
@@ -495,6 +727,7 @@ def model_add(request, app_label, model_name):
                 definition.model_admin.save_model(request, obj, form, change=False)
                 inline_formsets = [item["formset"] for item in formsets]
                 definition.model_admin.save_related(request, form, inline_formsets, change=False)
+                _save_attached_translations(definition, request, form, obj)
                 try:
                     message = definition.model_admin.construct_change_message(
                         request, form, inline_formsets, add=True
@@ -504,10 +737,18 @@ def model_add(request, app_label, model_name):
                 django_admin_model_log(request, definition, obj, ADDITION, message=message)
                 audit(request, "created", definition, obj=obj)
             messages.success(request, _("%s was created successfully.") % definition.verbose_name)
+            language = str(getattr(form, "_paxalia_translation_language", "") or "").strip()
+            add_url = definition.url("admin_model_add")
+            continue_url = definition.url("admin_object_change", object_id=str(obj.pk))
+            if language:
+                separator = "&" if "?" in add_url else "?"
+                add_url = f"{add_url}{separator}language={language}"
+                separator = "&" if "?" in continue_url else "?"
+                continue_url = f"{continue_url}{separator}language={language}"
             if "_addanother" in request.POST:
-                return redirect(definition.url("admin_model_add"))
+                return redirect(add_url)
             if "_continue" in request.POST:
-                return redirect(definition.url("admin_object_change", object_id=str(obj.pk)))
+                return redirect(continue_url)
             return redirect(definition.url("admin_object_detail", object_id=str(obj.pk)))
         except Exception:
             logger.exception("Paxalia Admin add failed for %s", definition.label)
@@ -536,11 +777,13 @@ def model_change(request, app_label, model_name, object_id):
     require_staff(request)
     _require_enabled()
     definition = registry.get(app_label, model_name, request=request)
+    _normalize_translation_query(request, definition)
     base_qs = definition.model_admin.get_queryset(request)
     obj = get_object_or_404(base_qs, pk=object_id)
     require_change(definition, request, obj)
     form_class = safe_form_class(definition, request, obj)
     form = form_class(request.POST or None, request.FILES or None, instance=obj)
+    _attach_translation_fields(definition, request, form, obj=obj)
     formsets = _inline_instances(definition, request, obj)
     if request.method == "POST" and form.is_valid() and all(item["formset"].is_valid() for item in formsets):
         try:
@@ -554,6 +797,7 @@ def model_change(request, app_label, model_name, object_id):
                 definition.model_admin.save_model(request, obj_to_save, form, change=True)
                 inline_formsets = [item["formset"] for item in formsets]
                 definition.model_admin.save_related(request, form, inline_formsets, change=True)
+                _save_attached_translations(definition, request, form, obj_to_save)
                 changed_fields = [
                     name
                     for name in form.changed_data
@@ -571,9 +815,15 @@ def model_change(request, app_label, model_name, object_id):
                 django_admin_model_log(request, definition, obj_to_save, CHANGE, message=message)
                 audit(request, "changed", definition, obj=obj_to_save, detail=f"fields={','.join(changed_fields)[:800]}")
             messages.success(request, _("%s was saved successfully.") % definition.verbose_name)
+            language = str(getattr(form, "_paxalia_translation_language", "") or "").strip()
+            continue_url = definition.url("admin_object_change", object_id=str(obj_to_save.pk))
+            detail_url = definition.url("admin_object_detail", object_id=str(obj_to_save.pk))
+            if language:
+                separator = "&" if "?" in continue_url else "?"
+                continue_url = f"{continue_url}{separator}language={language}"
             if "_continue" in request.POST:
-                return redirect(definition.url("admin_object_change", object_id=str(obj_to_save.pk)))
-            return redirect(definition.url("admin_object_detail", object_id=str(obj_to_save.pk)))
+                return redirect(continue_url)
+            return redirect(detail_url)
         except Exception:
             logger.exception("Paxalia Admin change failed for %s", definition.label)
             messages.error(request, _("The object could not be saved. Review the form and try again."))
@@ -828,3 +1078,4 @@ def model_stats(request, app_label, model_name):
         "overview_url": definition.url("admin_model_overview"),
     })
     return _protected_response(render(request, "paxalia/admin/model_stats.html", context), definition)
+

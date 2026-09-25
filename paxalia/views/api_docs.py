@@ -1,6 +1,7 @@
 # paxalia/views/api_docs.py
 from ..admin_security import admin_security_required
 from django.http import Http404
+from django.urls import reverse
 from django.shortcuts import render
 from django.utils.translation import gettext as _
 
@@ -12,7 +13,9 @@ def api_docs(request):
     if not section_enabled('api_keys'):
         raise Http404
 
-    base_url = request.build_absolute_uri('/paxalia-api/v1/')
+    ingest_url = reverse('paxalia:paxalia_api_ingest')
+    base_url = request.build_absolute_uri(ingest_url)
+    base_url = base_url[:base_url.rfind('ingest/')]
 
     context = {
         'active_page': 'api_docs',

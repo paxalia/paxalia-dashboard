@@ -98,11 +98,11 @@ def safe_form_class(definition, request, obj=None):
     return definition.model_admin.get_form(request, obj=obj, change=obj is not None)
 
 
-def build_form_sections(definition, request, form, obj=None):
+def build_form_sections(definition, request, form, obj=None, exclude_names=()):
     fieldsets = list(definition.model_admin.get_fieldsets(request, obj) or ())
     sections = []
     used = set()
-    hidden = definition.hidden_fields
+    hidden = set(definition.hidden_fields) | {str(name) for name in (exclude_names or ())}
     for title, options in fieldsets:
         names = []
         for name in (options or {}).get("fields", ()):

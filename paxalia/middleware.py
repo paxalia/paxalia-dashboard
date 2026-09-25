@@ -9,7 +9,7 @@ from .models import PageView, AnalyticsSettings, DailySiteStats, AnalyticsEvent
 from .settings import get_config
 from .bot_classification import classify_bot
 from django.utils import timezone
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, OperationalError, transaction
 
 logger = logging.getLogger('paxalia')
 
@@ -263,33 +263,48 @@ class AnalyticsMiddleware:
 
     @staticmethod
     def _increment_daily_stats(site_id, today, is_bot, is_api):
-        """Atomically create/update one DailySiteStats row."""
-        with transaction.atomic():
-            try:
-                stats = (
-                    DailySiteStats.objects.select_for_update().get(
-                        site_id=site_id, date=today
-                    )
-                )
-            except DailySiteStats.DoesNotExist:
-                try:
-                    stats = DailySiteStats.objects.create(
-                        site_id=site_id, date=today
-                    )
-                except IntegrityError:
-                    stats = (
-                        DailySiteStats.objects.select_for_update().get(
-                            site_id=site_id, date=today
-                        )
-                    )
+        """Atomically create/update one DailySiteStats row with short lock retries.
 
-            if is_bot:
-                stats.bot_views += 1
-            elif is_api:
-                stats.api_calls += 1
-            else:
-                stats.total_views += 1
-            stats.save(update_fields=['total_views', 'api_calls', 'bot_views'])
+        SQLite can report ``database is locked`` briefly while another request
+        commits the same hot daily aggregate row. Losing the increment silently
+        makes dashboard totals drift, so retry only the transient database-lock
+        case; permanent database errors still propagate to the outer logger.
+        """
+        attempts = 3
+        for attempt in range(attempts):
+            try:
+                with transaction.atomic():
+                    try:
+                        stats = (
+                            DailySiteStats.objects.select_for_update().get(
+                                site_id=site_id, date=today
+                            )
+                        )
+                    except DailySiteStats.DoesNotExist:
+                        try:
+                            stats = DailySiteStats.objects.create(
+                                site_id=site_id, date=today
+                            )
+                        except IntegrityError:
+                            stats = (
+                                DailySiteStats.objects.select_for_update().get(
+                                    site_id=site_id, date=today
+                                )
+                            )
+
+                    if is_bot:
+                        stats.bot_views += 1
+                    elif is_api:
+                        stats.api_calls += 1
+                    else:
+                        stats.total_views += 1
+                    stats.save(update_fields=['total_views', 'api_calls', 'bot_views'])
+                return
+            except OperationalError as exc:
+                message = str(exc).lower()
+                if 'locked' not in message or attempt >= attempts - 1:
+                    raise
+                time.sleep(0.025 * (attempt + 1))
 
 
     @staticmethod

@@ -6,6 +6,7 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.text import capfirst
 
 from ..settings import get_config
+from ..packages.localization import is_translatable_model
 
 DEFAULT_SENSITIVE_FIELDS = {
     "password", "password_hash", "token", "access_token", "refresh_token",
@@ -91,13 +92,8 @@ def display_field_names(model):
 
 
 def has_localization_capability(model):
-    """Detect common translation integrations without requiring one package."""
-    if hasattr(model, "_parler_meta"):
-        return True
-    for field in model._meta.get_fields():
-        if getattr(field, "name", "") == "translations":
-            return True
-    return False
+    """Return True only when the installed localization adapter can edit it."""
+    return bool(is_translatable_model(model))
 
 
 @dataclass(frozen=True)

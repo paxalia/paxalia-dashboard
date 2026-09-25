@@ -4,7 +4,7 @@
 {% get_analytics_config as analytics_config %}
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}" data-analytics-theme="dark"
-      dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}">
+      dir="{% if LANGUAGE_CODE|slice:':2' == 'ar' or LANGUAGE_CODE|slice:':2' == 'fa' %}rtl{% else %}ltr{% endif %}">
 <head>
     <meta charset="UTF-8"/>
     <meta name="csrf-token" content="{{ csrf_token }}">
@@ -114,7 +114,7 @@
                 {% if analytics_all_sites %}
                 <section class="sidebar-site-scope" aria-label="{% trans 'Site scope' %}">
                     <div class="sidebar-site-scope__label">{% trans "Site scope" %}</div>
-                    <form method="get" class="analytics-site-switcher" onchange="this.submit()">
+                    <form method="get" class="analytics-site-switcher" data-paxalia-auto-submit>
                         <label class="sr-only" for="analytics-site-select">{% trans "Filter by site" %}</label>
                         <select id="analytics-site-select" name="site" aria-label="{% trans 'Filter by site' %}">
                             <option value="" {% if not analytics_current_site %}selected{% endif %}>{% trans "All Sites" %}

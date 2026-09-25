@@ -16,11 +16,11 @@ from django.views.decorators.http import require_http_methods
 
 from honeypot.decorators import honeypot_exempt
 
-from paxalia.middleware import AnalyticsMiddleware
+from paxalia.middleware import AnalyticsMiddleware, _resolve_site_id
 from paxalia.models import AnalyticsEvent, JSError
 from paxalia.logging.services import emit_message
 from paxalia.settings import get_config
-from .utils import get_date_range, detect_active_preset, section_enabled
+from .utils import get_date_range, detect_active_preset, section_enabled, get_current_site, site_scoped
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +129,7 @@ def analytics_event_api(request):
     # 4. Store the event
     try:
         AnalyticsEvent.objects.create(
+            site_id=_resolve_site_id(request),
             category=category,
             action=action,
             label=label,
@@ -196,6 +197,7 @@ def analytics_js_error_api(request):
         stack = _clean_str(body.get('stack'), MAX_STACK_LENGTH)
         path = _clean_str(body.get('path'), 255)
         JSError.objects.create(
+            site_id=_resolve_site_id(request),
             message=message,
             filename=filename,
             lineno=lineno,
@@ -317,7 +319,11 @@ def analytics_events(request):
         raise Http404
 
     start_dt, end_dt = get_date_range(request)
-    events_qs = AnalyticsEvent.objects.filter(created_at__range=(start_dt, end_dt))
+    current_site = get_current_site(request)
+    events_qs = site_scoped(
+        AnalyticsEvent.objects.filter(created_at__range=(start_dt, end_dt)),
+        current_site,
+    )
 
     # Stats
     today = timezone.now().date()
@@ -367,7 +373,10 @@ def analytics_events(request):
         period_delta = (end_dt - start_dt).days
         prev_end = start_dt - timedelta(seconds=1)
         prev_start = prev_end - timedelta(days=period_delta)
-        prev_qs = AnalyticsEvent.objects.filter(created_at__range=(prev_start, prev_end))
+        prev_qs = site_scoped(
+            AnalyticsEvent.objects.filter(created_at__range=(prev_start, prev_end)),
+            current_site,
+        )
         prev_daily = (
             prev_qs
             .annotate(day=TruncDate('created_at'))

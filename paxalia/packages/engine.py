@@ -281,7 +281,12 @@ def _relationship_ref(related, request=None, field_name=None):
     if request is not None:
         from django.contrib import admin
         model_admin = admin.site._registry.get(model)
-        if model_admin is None or not model_admin.has_view_permission(request):
+        if model_admin is None:
+            raise PackageError(
+                _("Relationship '%(field)s' points to unregistered model '%(model)s', which cannot be exported safely.")
+                % {"field": field_name or "—", "model": _model_label(model)}
+            )
+        if not model_admin.has_view_permission(request):
             raise PermissionDenied
         if not model_admin.has_view_permission(request, related):
             raise PermissionDenied
@@ -289,24 +294,34 @@ def _relationship_ref(related, request=None, field_name=None):
 
 
 def _translation_data(obj):
+    """Serialize django-parler translations without assuming private meta shapes."""
     if not hasattr(obj, "_parler_meta"):
         return {}
     model = obj.__class__
     try:
-        meta = obj._parler_meta
-        fields = [
-            field.name for field in meta.get_all_fields()
-            if not _is_sensitive(model, field.name)
-        ]
-        from django.conf import settings
-        configured_languages = {str(code) for code, _name in getattr(settings, "LANGUAGES", [])}
+        from .localization import language_choices, translated_field_objects
+
+        fields = translated_field_objects(model)
+        if not fields:
+            raise PackageError(
+                _("Model %(model)s exposes a translation marker but no supported translated fields.")
+                % {"model": _model_label(model)}
+            )
+
+        configured_languages = {str(code) for code, _name in language_choices()}
         language_codes = []
         manager = getattr(obj, "translations", None)
         if manager is not None:
-            qs = manager.all()
-            language_field = getattr(getattr(meta, "fields", None), "language_code", None)
-            if language_field is not None:
-                language_codes = list(qs.values_list(language_field.name, flat=True).distinct())
+            try:
+                language_codes = list(
+                    manager.all()
+                    .values_list("language_code", flat=True)
+                    .distinct()
+                )
+            except Exception:
+                # Some custom translation managers expose a narrower API.
+                language_codes = []
+
         language_codes = [str(code) for code in language_codes if code]
         unsupported_languages = sorted(set(language_codes) - configured_languages)
         if unsupported_languages:
@@ -318,37 +333,41 @@ def _translation_data(obj):
                 }
             )
         if not language_codes:
-            language_codes = list(configured_languages)
+            language_codes = [str(code) for code in configured_languages if code]
+
         getter = getattr(obj, "get_current_language", None)
         current = getter() if callable(getter) else None
         try:
             language_map = {}
-            for language in dict.fromkeys(str(code) for code in language_codes if code):
+            translation_getter = getattr(obj, "safe_translation_getter", None)
+            for language in dict.fromkeys(language_codes):
                 values = {}
-                try:
-                    translation_getter = getattr(obj, "safe_translation_getter", None)
-                    for field_name in fields:
+                for field in fields:
+                    field_name = field.name
+                    try:
                         if callable(translation_getter):
-                            value = translation_getter(field_name, language_code=language, default=None)
+                            value = translation_getter(
+                                field_name,
+                                language_code=language,
+                                default=None,
+                            )
                         else:
                             obj.set_current_language(language)
                             value = getattr(obj, field_name, None)
-                        if value is not None:
-                            values[field_name] = _jsonable(
-                                value,
-                                sensitive_names=_sensitive_names(model),
-                            )
-                except PackageError:
-                    raise
-                except Exception as exc:
-                    logger.exception(
-                        "Translation serialization failed for %s language=%s",
-                        _model_label(model), language,
-                    )
-                    raise PackageError(
-                        _("Translation data could not be exported for %(model)s.")
-                        % {"model": _model_label(model)}
-                    ) from exc
+                    except Exception as exc:
+                        logger.exception(
+                            "Translation serialization failed for %s language=%s field=%s",
+                            _model_label(model), language, field_name,
+                        )
+                        raise PackageError(
+                            _("Translation field '%(field)s' could not be exported for %(model)s.")
+                            % {"field": field_name, "model": _model_label(model)}
+                        ) from exc
+                    if value is not None:
+                        values[field_name] = _jsonable(
+                            value,
+                            sensitive_names=_sensitive_names(model),
+                        )
                 if values:
                     language_map[language] = values
             return language_map
@@ -357,7 +376,10 @@ def _translation_data(obj):
                 try:
                     obj.set_current_language(current)
                 except Exception:
-                    logger.exception("Failed to restore translation language for %s", _model_label(model))
+                    logger.exception(
+                        "Failed to restore translation language for %s",
+                        _model_label(model),
+                    )
     except PackageError:
         raise
     except Exception as exc:
@@ -711,17 +733,17 @@ def _decode_field_value(field, raw, existing=_MISSING):
     return field.to_python(raw)
 
 
-def _assign_scalar_fields(obj, data):
+def _assign_scalar_fields(obj, data, *, restore_primary_key=False):
     valid_fields = {f.name: f for f in obj.__class__._meta.concrete_fields}
     pk_name = obj.__class__._meta.pk.name
     for name, raw in (data or {}).items():
         field = valid_fields.get(name)
         if (
-            name == pk_name
-            or field is None
+            field is None
             or getattr(field, "is_relation", False)
             or _is_sensitive(obj.__class__, name)
             or _is_hidden(obj.__class__, name)
+            or (name == pk_name and not restore_primary_key)
         ):
             continue
         try:
@@ -1137,7 +1159,15 @@ def _prepare_record(index, record, models, request, *, conflict, object_cache, a
     elif not model_admin.has_add_permission(request):
         raise PermissionDenied
     obj = existing or model()
-    _assign_scalar_fields(obj, record.get("fields") or {})
+    restore_primary_key = (
+        existing is None
+        and identity_fields(model) == [model._meta.pk.name]
+    )
+    _assign_scalar_fields(
+        obj,
+        record.get("fields") or {},
+        restore_primary_key=restore_primary_key,
+    )
 
     # Concrete FK/O2O values must be assigned before the first save. A generic
     # importer cannot safely insert a required relation as NULL and hope to

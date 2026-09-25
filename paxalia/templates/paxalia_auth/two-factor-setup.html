@@ -44,10 +44,21 @@
 
             {% if totp_secret %}
             <section class="paxalia-auth-secret paxalia-auth-secret--manual" aria-labelledby="totp-secret-heading">
-                <div>
-                    <span id="totp-secret-heading">{% trans "Manual setup key" %}</span>
-                    <code id="paxaliaTotpSecret">{{ formatted_totp_secret }}</code>
-                    <small>{% trans "Use this only when scanning the QR code is not possible." %}</small>
+                <div class="paxalia-auth-secret__content">
+                    <div class="paxalia-auth-secret__heading">
+                        <div>
+                            <span class="paxalia-auth-eyebrow">{% trans "Manual setup" %}</span>
+                            <strong id="totp-secret-heading">{% trans "Setup key" %}</strong>
+                        </div>
+                        <span class="paxalia-auth-secret__badge">{% trans "Time-based" %}</span>
+                    </div>
+                    <code id="paxaliaTotpSecret" class="paxalia-auth-secret__value" aria-label="{% trans 'TOTP manual setup key' %}">{{ totp_secret }}</code>
+                    <small>{% trans "In Google Authenticator choose Enter a setup key, select Time-based, and paste this key without spaces." %}</small>
+                    <div class="paxalia-auth-secret__details" aria-label="{% trans 'Authenticator parameters' %}">
+                        <span><b>{% trans "Algorithm" %}</b> SHA-1</span>
+                        <span><b>{% trans "Digits" %}</b> {{ totp_digits }}</span>
+                        <span><b>{% trans "Period" %}</b> {{ totp_period }}s</span>
+                    </div>
                 </div>
                 <button type="button" class="btn btn-secondary paxalia-auth-copy" data-copy-value="{{ totp_secret }}" data-copy-success="{% trans 'Copied' %}" data-copy-error="{% trans 'Copy failed' %}">
                     {% trans "Copy key" %}
@@ -76,4 +87,5 @@
     </div>
 </section>
 {% endblock %}
+
 
