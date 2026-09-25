@@ -14,11 +14,11 @@
 
     <div class="table-card">
         <form method="get" class="security-inline-form">
-            <select name="unit" onchange="this.form.submit()">
+            <select name="unit" data-paxalia-auto-submit-control>
                 <option value="week" {% if unit == 'week' %}selected{% endif %}>{% trans "Weekly cohorts" %}</option>
                 <option value="month" {% if unit == 'month' %}selected{% endif %}>{% trans "Monthly cohorts" %}</option>
             </select>
-            <select name="periods" onchange="this.form.submit()">
+            <select name="periods" data-paxalia-auto-submit-control>
                 {% for n in period_options %}
                 <option value="{{ n }}" {% if num_periods == n %}selected{% endif %}>{{ n }} {% trans "periods" %}</option>
                 {% endfor %}
@@ -32,7 +32,7 @@
     <div class="table-card">
         <h2 class="card-title">{% trans "Retention" %}</h2>
         {% if cohort_rows %}
-        <div style="overflow-x: auto;">
+        <div class="table-responsive">
         <table class="analytics-table">
             <thead>
                 <tr>

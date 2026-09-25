@@ -735,6 +735,26 @@ class SecurityPolicyContractTests(SimpleTestCase):
 
         self.assertIs(admin_security.NoReverseMatch, NoReverseMatch)
 
+    def test_completed_admin_responses_are_never_cacheable(self):
+        from django.http import HttpResponse
+        from unittest.mock import patch
+        from .admin_security import admin_security_required
+
+        request = RequestFactory().get(dashboard_url())
+        request.user = SimpleNamespace(is_authenticated=True, is_active=True, is_staff=True, is_superuser=True, pk=1)
+        request.session = {}
+
+        @admin_security_required
+        def view(req):
+            return HttpResponse("private")
+
+        with patch("paxalia.admin_security.host_authentication_enabled", return_value=False), \
+             patch("paxalia.admin_security.admin_session_is_valid", return_value=True):
+            response = view(request)
+
+        self.assertIn("no-store", response["Cache-Control"] )
+        self.assertEqual(response.content, b"private")
+
     def test_admin_security_preflight_is_available(self):
         self.assertTrue(callable(admin_security.admin_security_preflight))
         self.assertEqual(
@@ -758,16 +778,55 @@ class SecurityPolicyContractTests(SimpleTestCase):
         from .views.auth import _format_totp_secret
         self.assertEqual(_format_totp_secret("JBSWY3DPEHPK3PXP"), "JBSW Y3DP EHPK 3PXP")
 
-    def test_totp_setup_visuals_generate_qr_data_uri(self):
+    def test_totp_manual_key_is_canonical_base32_from_hex_storage(self):
+        import base64
         from types import SimpleNamespace
+        from .views.auth import _totp_base32_secret
+
+        raw = bytes.fromhex("3132333435363738393031323334353637383930")
+        device = SimpleNamespace(key=raw.hex(), bin_key=raw, config_url="")
+        expected = base64.b32encode(raw).decode("ascii").rstrip("=")
+        result = _totp_base32_secret(device)
+        self.assertEqual(result, expected)
+        self.assertRegex(result, r"^[A-Z2-7]+$")
+
+    def test_totp_setup_template_displays_unspaced_manual_key(self):
+        from pathlib import Path
+        template = (
+            Path(__file__).resolve().parent
+            / "templates/paxalia_auth/two-factor-setup.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn('<code id="paxaliaTotpSecret" class="paxalia-auth-secret__value"', template)
+        self.assertIn("Enter a setup key", template)
+        self.assertIn("Time-based", template)
+        self.assertNotIn("{{ formatted_totp_secret }}", template)
+
+    def test_totp_setup_visuals_generate_matching_uri_and_qr(self):
+        import base64
+        from types import SimpleNamespace
+        from urllib.parse import parse_qs, urlsplit
         from .views.auth import _totp_setup_visuals
+
+        raw = bytes.fromhex("3132333435363738393031323334353637383930")
+        user = SimpleNamespace(get_username=lambda: "test@example.com")
         device = SimpleNamespace(
-            config_url="otpauth://totp/Paxalia:test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Paxalia",
-            key="JBSWY3DPEHPK3PXP",
+            user=user,
+            key=raw.hex(),
+            bin_key=raw,
+            digits=6,
+            step=30,
+            config_url="otpauth://totp/legacy?secret=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&issuer=Legacy",
         )
         result = _totp_setup_visuals(device)
-        self.assertEqual(result["totp_secret"], "JBSWY3DPEHPK3PXP")
-        self.assertEqual(result["formatted_totp_secret"], "JBSW Y3DP EHPK 3PXP")
+        expected = base64.b32encode(raw).decode("ascii").rstrip("=")
+        query = parse_qs(urlsplit(result["otpauth_url"]).query)
+
+        self.assertEqual(result["totp_secret"], expected)
+        self.assertEqual(query["secret"][0], expected)
+        self.assertEqual(query["issuer"][0], "Paxalia")
+        self.assertEqual(query["algorithm"][0], "SHA1")
+        self.assertEqual(query["digits"][0], "6")
+        self.assertEqual(query["period"][0], "30")
         self.assertTrue(result["qr_code_data_uri"].startswith("data:image/png;base64,"))
 
     def test_admin_security_preflight_can_return_response_before_gate(self):
@@ -985,6 +1044,11 @@ class SecurityTemplateContractTests(SimpleTestCase):
         self.assertIn("data-webauthn-localhost-required", template)
         self.assertIn("localhost-required", script)
 
+    def test_webauthn_backup_eligibility_has_single_definition(self):
+        from pathlib import Path
+        source = (Path(__file__).resolve().parent / "webauthn_services.py").read_text(encoding="utf-8")
+        self.assertEqual(source.count("def _authentication_backup_eligibility("), 1)
+
     def test_webauthn_backup_eligibility_bit_is_detected_without_bypassing_malformed_data(self):
         import base64
         from .webauthn_services import _authentication_backup_eligibility
@@ -1021,3 +1085,4 @@ class SecurityTemplateContractTests(SimpleTestCase):
         self.assertIn("paxalia-auth-recovery-stack", recovery)
         self.assertIn("paxalia-auth-device-stack", register)
         self.assertIn("paxalia-auth-device-stack", verify)
+

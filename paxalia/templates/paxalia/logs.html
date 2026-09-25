@@ -126,7 +126,7 @@
                 <span class="live-log-console__status-dot" data-live-status-dot aria-hidden="true"></span>
                 <div>
                     <h2 id="live-log-console-title">{% trans "Live Console" %}</h2>
-                    <p>{% trans "Full emitted process logging, including DEBUG HTTP/server traffic. The latest 2,000 lines are kept in memory for this process." %}</p>
+                    <p>{% trans "Live emitted logging, including DEBUG HTTP/server traffic. Recent persisted events are merged with this process buffer; the in-memory buffer is capped at 2,000 lines." %}</p>
                 </div>
             </div>
             <div class="live-log-console__state" data-live-status aria-live="polite">{% trans "Connecting…" %}</div>
@@ -163,7 +163,7 @@
             <div class="live-log-console__lines" data-live-lines></div>
         </div>
         <div class="live-log-console__footer">
-            <span>{% trans "In-memory only; not written to PaxaliaLogEvent." %}</span>
+            <span>{% trans "Recent persisted events are merged into the live feed; the local process buffer remains in memory only." %}</span>
             <span>{% trans "Maximum retained: 2,000 lines." %}</span>
         </div>
     </section>

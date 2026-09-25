@@ -53,7 +53,7 @@
                         <ul class="menu-control-menu" id="lang-selector-menu" role="menu">
                             {% for lang in languages %}
                                 <li class="menu-control-menu-item" data-lang="{{ lang.code }}" role="menuitem"
-                                    lang="{{ lang.code }}" dir="{% if lang.code == 'ar' %}rtl{% else %}ltr{% endif %}">
+                                    lang="{{ lang.code }}" dir="{% if lang.code|slice:':2' == 'ar' or lang.code|slice:':2' == 'fa' %}rtl{% else %}ltr{% endif %}">
                                     {{ lang.name }}
                                 </li>
                             {% endfor %}

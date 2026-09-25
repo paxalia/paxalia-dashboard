@@ -255,14 +255,18 @@
             var incoming = payload.entries;
             if (incoming.length) {
                 var seen = {};
-                entries.forEach(function (entry) { seen[String(entry.sequence)] = true; });
+                entries.forEach(function (entry) { seen[String(entry.id || entry.sequence)] = true; });
                 incoming.forEach(function (entry) {
-                    if (!seen[String(entry.sequence)]) {
+                    var key = String(entry.id || entry.sequence);
+                    if (!seen[key]) {
                         entries.push(entry);
-                        seen[String(entry.sequence)] = true;
+                        seen[key] = true;
                     }
                 });
-                entries.sort(function (a, b) { return Number(a.sequence || 0) - Number(b.sequence || 0); });
+                entries.sort(function (a, b) {
+                    var seq = Number(a.sequence || 0) - Number(b.sequence || 0);
+                    return seq || String(a.id || '').localeCompare(String(b.id || ''));
+                });
                 if (entries.length > limit) entries = entries.slice(-limit);
             }
             if (payload.latest_sequence != null) latestSequence = Number(payload.latest_sequence);

@@ -1,6 +1,8 @@
 """Paxalia Logs dashboard and safe log export endpoints."""
 import csv
 import json
+import re
+from datetime import datetime, timezone as dt_timezone
 
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
@@ -53,6 +55,80 @@ def _apply_filters(request, qs):
         qs = qs.filter(Q(message__icontains=needle) | Q(logger_name__icontains=needle) | Q(exception_type__icontains=needle) | Q(request_path__icontains=needle))
     return qs, start_dt, end_dt, site
 
+
+
+def _ai_safe_location(event):
+    """Return a repository/package-relative location without server filesystem paths."""
+    raw = str(getattr(event, 'file_name', '') or '').replace('\\', '/')
+    if '/site-packages/' in raw:
+        raw = raw.split('/site-packages/', 1)[1]
+    else:
+        match = re.search(r'(^|/)(paxalia/.*)$', raw)
+        if match:
+            raw = match.group(2)
+        elif raw.startswith('/'):
+            raw = raw.rsplit('/', 1)[-1]
+    line = getattr(event, 'line_number', None)
+    function = str(getattr(event, 'function_name', '') or '').strip()
+    location = raw or '—'
+    if line:
+        location += f':{line}'
+    if function:
+        location += f' · {function}'
+    return location
+
+
+def _ai_safe_stack(stack_trace):
+    """Keep traceback evidence while removing server-specific path prefixes."""
+    text = strip_ansi(stack_trace or "").replace("\\", "/")
+    # Normalize Paxalia package paths first so they remain recognizable.
+    text = re.sub(r'(?i)(?:[A-Za-z]:)?/[^"\n]*?/site-packages/(paxalia/)', r'\1', text)
+    text = re.sub(r'(?i)(?:[A-Za-z]:)?/[^"\n]*/(paxalia/[A-Za-z0-9_./-]+)', r'\1', text)
+    text = re.sub(
+        r'''File (["'])(?:[A-Za-z]:)?/[^"']*/(paxalia/[A-Za-z0-9_./-]+)(["'])''',
+        r'File \1\2\3',
+        text,
+    )
+    # Remaining absolute Python file paths are reduced to a stable placeholder
+    # plus basename, preserving file identity without exposing server layout.
+    text = re.sub(
+        r'''File (["'])(?:[A-Za-z]:)?/[^"']*/([^/\\"']+)(["'])''',
+        r'File \1<absolute-path>/\2\3',
+        text,
+    )
+    return redact(text, extra_keys=())
+
+def _ai_incident_context(event):
+    """Build a minimal, allowlisted incident payload for external AI tools."""
+    message = redact(event.message or '', extra_keys=())
+    stack = _ai_safe_stack(event.stack_trace or '')
+    lines = [
+        'PAXALIA INCIDENT',
+        '=================',
+        f"Severity: {event.severity or '—'}",
+        f"Source: {event.source or '—'}",
+        f"Category: {event.category or '—'}",
+        f"Action: {event.action or '—'}",
+        f"Logger: {event.logger_name or '—'}",
+        f"Release: {event.release or '—'}",
+        f"Request Method: {event.request_method or '—'}",
+        f"Response Status: {event.response_status or '—'}",
+        f"Duration: {event.duration_ms} ms" if event.duration_ms else 'Duration: —',
+        '',
+        'MESSAGE',
+        '-------',
+        message or '—',
+        '',
+        'EXCEPTION',
+        '---------',
+        f"Type: {event.exception_type or '—'}",
+        f"Location: {_ai_safe_location(event)}",
+        '',
+        'STACK TRACE',
+        '-----------',
+        stack or '—',
+    ]
+    return '\n'.join(lines)
 
 def _serialize_event(event):
     return {
@@ -144,7 +220,7 @@ def logs_overview(request):
 
 @require_section_permission('logs')
 def live_log_feed(request):
-    """Return incremental sanitized process logs for the live console."""
+    """Return a cross-worker live log view from the local buffer + persisted events."""
     if not section_enabled('logs'):
         raise Http404
     raw_since = request.GET.get('since')
@@ -152,7 +228,58 @@ def live_log_feed(request):
         limit = max(1, min(2000, int(request.GET.get('limit', '2000') or 2000)))
     except (TypeError, ValueError):
         limit = 2000
-    payload = get_live_log_buffer().snapshot(since=raw_since, limit=limit)
+
+    local_payload = get_live_log_buffer().snapshot(since=raw_since, limit=limit)
+    entries = list(local_payload.get('entries') or [])
+
+    try:
+        since_value = int(raw_since) if raw_since not in (None, '') else None
+    except (TypeError, ValueError):
+        since_value = None
+
+    persistent = PaxaliaLogEvent.objects.order_by('-timestamp')
+    if since_value is not None:
+        since_dt = datetime.fromtimestamp(since_value / 1_000_000, tz=dt_timezone.utc)
+        persistent = persistent.filter(timestamp__gte=since_dt)
+    persistent = list(persistent[:limit])
+    for event in reversed(persistent):
+        timestamp = event.timestamp.timestamp()
+        sequence = int(timestamp * 1_000_000)
+        message = strip_ansi(event.message or '')[:4000]
+        stack_trace = strip_ansi(event.stack_trace or '')[:12000]
+        text = f"{event.severity or 'INFO'} {message}"
+        if stack_trace:
+            text += f"\n{stack_trace}"
+        entries.append({
+            'id': str(event.id),
+            'sequence': sequence,
+            'timestamp': timestamp,
+            'level': str(event.severity or 'INFO').upper(),
+            'logger': str(event.logger_name or ''),
+            'message': message,
+            'stack_trace': stack_trace,
+            'text': text,
+        })
+
+    entries.sort(key=lambda item: (int(item.get('sequence') or 0), str(item.get('id') or '')))
+    deduped = []
+    seen = set()
+    for entry in entries:
+        key = str(entry.get('id') or entry.get('sequence'))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(entry)
+    deduped = deduped[-limit:]
+
+    persistent_latest = max((int(item.get('sequence') or 0) for item in deduped), default=0)
+    payload = {
+        'entries': deduped,
+        'latest_sequence': max(int(local_payload.get('latest_sequence') or 0), persistent_latest),
+        'oldest_sequence': min((int(item.get('sequence') or 0) for item in deduped), default=0),
+        'reset': bool(local_payload.get('reset')),
+        'limit': limit,
+    }
     response = JsonResponse(payload)
     response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response['Pragma'] = 'no-cache'
@@ -187,6 +314,7 @@ def log_detail(request, event_id):
         'page_subtitle': _('Detailed event, request, correlation, and sanitized metadata'),
         'event': event, 'related': related,
         'metadata_json': json.dumps(metadata, ensure_ascii=False, indent=2, default=str),
+        'ai_incident_context': _ai_incident_context(event),
     })
 
 
@@ -306,3 +434,4 @@ def application_logs(request):
         'start_dt': start_dt, 'end_dt': end_dt,
         'active_preset': detect_active_preset(start_dt.date(), end_dt.date()),
     })
+

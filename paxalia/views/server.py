@@ -1,4 +1,5 @@
 import psutil
+import time
 
 from paxalia.permissions import require_section_permission
 from django.http import JsonResponse
@@ -230,6 +231,7 @@ def api_server_metrics(request):
                 '--no-legend',
             ],
             text=True,
+            timeout=2,
         )
 
         for line in output.strip().split('\n'):
@@ -242,11 +244,11 @@ def api_server_metrics(request):
                     'sub': parts[3] if len(parts) > 3 else '',
                     'description': ' '.join(parts[4:]) if len(parts) > 4 else '',
                 })
-    except (subprocess.SubprocessError, FileNotFoundError):
+    except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired):
         services = None
 
     data = {
-        'timestamp': psutil.boot_time(),
+        'timestamp': time.time(),
         'cpu': {
             'percent': cpu_percent,
             'per_core': cpu_per_core,
@@ -300,7 +302,11 @@ def api_server_history(request):
 
     from paxalia.models import ServerMetricSnapshot
 
-    minutes = int(request.GET.get('minutes', 60))
+    try:
+        minutes = int(request.GET.get('minutes', 60))
+    except (TypeError, ValueError):
+        minutes = 60
+    minutes = max(1, min(minutes, 24 * 60))
     cutoff = timezone.now() - timedelta(minutes=minutes)
     snapshots = list(
         ServerMetricSnapshot.objects.filter(recorded_at__gte=cutoff).order_by('recorded_at')
@@ -328,3 +334,4 @@ def api_server_history(request):
         previous = snap
 
     return JsonResponse(history, safe=False)
+

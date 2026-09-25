@@ -12,12 +12,18 @@
     var hasExistingOpAnalytics = typeof window.opAnalytics === 'function';
 
     // ─── Consent Mode (Phase 14) ─────────────────────────────────
-    // window.PAXALIA_CONSENT_CONFIG is set by the
-    // {% analytics_consent_config %} template tag — include it right
-    // before this script tag. If it's missing, consent mode defaults
-    // to disabled and tracking behaves exactly as it did before this
-    // phase. See the README's "Consent Mode" section.
-    var consentConfig = window.PAXALIA_CONSENT_CONFIG || { enabled: false };
+    // The {% analytics_consent_config %} template tag emits a CSP-safe
+    // metadata element. If it is missing or malformed, consent mode
+    // defaults to disabled for backwards compatibility.
+    var consentConfig = { enabled: false };
+    var consentMeta = document.querySelector('meta[name="paxalia-consent-config"]');
+    if (consentMeta) {
+        try {
+            consentConfig = JSON.parse(consentMeta.getAttribute('content') || '{}') || consentConfig;
+        } catch (_) {
+            consentConfig = { enabled: false };
+        }
+    }
 
     function hasConsent() {
         if (!consentConfig.enabled) return true;

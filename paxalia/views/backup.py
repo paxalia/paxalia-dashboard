@@ -3,6 +3,7 @@ import threading
 import logging
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
+from django.utils.http import url_has_allowed_host_and_scheme
 from paxalia.permissions import require_section_permission
 from django.http import JsonResponse, Http404, HttpResponse, FileResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -42,12 +43,27 @@ def _has_recent_reauth(request):
     return timezone.now() <= reauthed_at + window
 
 
+def _safe_local_next(request, value):
+    """Accept only a same-host relative dashboard URL for post-auth redirects."""
+    value = str(value or '').strip()
+    if not value:
+        return reverse('paxalia:backups')
+    if not url_has_allowed_host_and_scheme(
+        url=value,
+        allowed_hosts={request.get_host().split(':', 1)[0]},
+        require_https=request.is_secure(),
+    ):
+        return reverse('paxalia:backups')
+    return value
+
+
 def _require_recent_reauth(request):
     """Return a redirect to the re-auth screen if needed, else None."""
     if _has_recent_reauth(request):
         return None
     reauth_url = reverse('paxalia:backup_reauth')
-    return redirect(f'{reauth_url}?{urlencode({"next": request.get_full_path()})}')
+    next_url = _safe_local_next(request, request.get_full_path())
+    return redirect(f'{reauth_url}?{urlencode({"next": next_url})}')
 
 
 @require_section_permission('backups')
@@ -60,12 +76,28 @@ def backup_management(request):
 
     # Handle POST for configuration update
     if request.method == 'POST' and 'save_config' in request.POST:
+        backup_paths = request.POST.get('backup_paths', '')
+        storage_path = request.POST.get('storage_path', '')
+        schedule = request.POST.get('schedule', 'manual')
+        try:
+            retention_count = int(request.POST.get('retention_count', 5))
+        except (TypeError, ValueError):
+            messages.error(request, _('Retention count must be a whole number between 1 and 1000.'))
+            return redirect('paxalia:backups')
+        if not 1 <= retention_count <= 1000:
+            messages.error(request, _('Retention count must be between 1 and 1000.'))
+            return redirect('paxalia:backups')
+        valid_schedules = {choice[0] for choice in BackupConfiguration._meta.get_field('schedule').choices}
+        if schedule not in valid_schedules:
+            messages.error(request, _('Invalid backup schedule.'))
+            return redirect('paxalia:backups')
+
         data = {
-            'backup_paths': request.POST.get('backup_paths', ''),
-            'storage_path': request.POST.get('storage_path', ''),
+            'backup_paths': backup_paths,
+            'storage_path': storage_path,
             'enabled': request.POST.get('enabled') == 'on',
-            'schedule': request.POST.get('schedule', 'manual'),
-            'retention_count': int(request.POST.get('retention_count', 5)),
+            'schedule': schedule,
+            'retention_count': retention_count,
         }
 
         # Check for overlap on an unsaved instance before touching the
@@ -152,7 +184,7 @@ def backup_reauth(request):
     its own for pulling a full backup archive off the server — see
     _has_recent_reauth() above.
     """
-    next_url = request.GET.get('next') or request.POST.get('next') or reverse('paxalia:backups')
+    next_url = _safe_local_next(request, request.GET.get('next') or request.POST.get('next'))
 
     if request.method == 'GET':
         return render(request, 'paxalia/backup_reauth.html', {

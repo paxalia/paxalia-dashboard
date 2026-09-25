@@ -317,28 +317,6 @@ def _authentication_backup_eligibility(payload: dict) -> bool:
         return False
 
 
-def _authentication_backup_eligibility(payload: dict) -> bool:
-    """Return the WebAuthn backup-eligibility (BE) bit from an assertion.
-
-    BE is carried in the authenticator-data flags byte. Reading this bit before
-    server-side verification lets the RP choose an appropriate signature-counter
-    policy for multi-device credentials while the WebAuthn library still performs
-    the actual cryptographic, challenge, RP-ID, origin, and user-verification checks.
-    Malformed authenticator data returns False so the normal verifier remains the
-    authority for rejecting malformed assertions.
-    """
-    try:
-        from webauthn import base64url_to_bytes
-
-        encoded = str(((payload.get("response") or {}).get("authenticatorData")) or "")
-        raw = base64url_to_bytes(encoded)
-        if len(raw) < 37:
-            return False
-        return bool(raw[32] & 0x08)
-    except Exception:
-        return False
-
-
 def verify_authentication(request, user, *, challenge, payload: dict) -> PaxaliaDeviceCredential:
     from webauthn import base64url_to_bytes, verify_authentication_response
 

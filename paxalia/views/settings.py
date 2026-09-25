@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.utils.translation import gettext as _
 
 from paxalia.models import AnalyticsSettings
+from paxalia.packages.localization import language_choices
 from paxalia.views.utils import section_enabled
 
 
@@ -56,11 +57,9 @@ def analytics_settings(request):
             {"slug": "onyx", "label": _("Onyx Pearl")},
         ],
         "languages": [
-            {"code": "en", "name": _("English")},
-            {"code": "es", "name": _("Español")},
-            {"code": "ar", "name": _("العربية")},
-            {"code": "zh-hans", "name": _("简体中文")},
-            {"code": "pt-br", "name": _("Português (Brasil)")},
+            {"code": code, "name": name}
+            for code, name in language_choices()
         ],
     }
     return render(request, "paxalia/settings.html", context)
+

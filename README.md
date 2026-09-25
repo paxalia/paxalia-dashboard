@@ -21,7 +21,7 @@ your host project configures them.
 
 ## Table of Contents
 
-- [Paxalia Dashboard v4.0.0 — Final Security & Usage Overview](#paxalia-dashboard-v400--final-security--usage-overview)
+- [Paxalia Dashboard v4.1.0 — Security, Stability & Administration Update](#paxalia-dashboard-v410--security-stability--administration-update)
 - [Runtime Dependency Set](#runtime-dependency-set)
 - [Why paxalia-dashboard?](#why-paxalia-dashboard)
 - [Comparison at a glance](#comparison-at-a-glance)
@@ -71,9 +71,9 @@ your host project configures them.
 
 ---
 
-## Paxalia Dashboard v4.0.0 — Final Security & Usage Overview
+## Paxalia Dashboard v4.1.0 — Security, Stability & Administration Update
 
-Paxalia Dashboard v4.0.0 is a complete Django-native operational workspace: analytics, runtime observability, persistent
+Paxalia Dashboard v4.1.0 is a complete Django-native operational workspace: analytics, runtime observability, persistent
 logging, security monitoring, administration, data portability, reporting, integrations, localization, and a dedicated
 administrator authentication boundary all live inside the Django application that owns the data.
 
@@ -139,6 +139,62 @@ logout behavior from becoming the Paxalia administrator session.
 The complete v4 presentation layer also includes twelve built-in themes built on shared design tokens, responsive
 desktop,
 tablet, and mobile layouts, RTL support, bundled chart/map assets, and reusable component styling.
+
+---
+
+## v4.1.0 Release Notes — Security, Stability & Administration
+
+Paxalia Dashboard v4.1.0 is the hardening and polish release following the v4.0.0 platform expansion. It preserves the
+existing v4 architecture and feature surface while strengthening correctness, security boundaries, operational reliability,
+administration, localization, diagnostics, and regression coverage.
+
+### Administration & localization
+
+- Hardened the generic Django Admin registry, adapters, services, package views, and CRUD workflows.
+- Improved compatibility with Django `ModelAdmin` behavior, permissions, query state, relationships, deletion semantics,
+  and generic forms.
+- Improved translation-system discovery and normalized translated-field handling.
+- Improved language-aware Add/Edit forms and the dedicated Localization workspace.
+- Preserved translations and model identity correctly through package workflows.
+- Added focused regression coverage for the complete-fixes surface.
+
+### Administrator authentication & 2FA
+
+- Hardened the layered administrator authentication boundary around password, mandatory TOTP/recovery verification,
+  authorized WebAuthn credentials, rate limits, CSRF protection, isolated sessions, and the private dashboard path.
+- Aligned manual TOTP secrets and QR provisioning with the same canonical device-backed secret material.
+- Polished administrator authentication, setup, recovery, and failure-state presentation.
+
+### Security & reliability
+
+- Strengthened protected-response and cache behavior.
+- Hardened upload rollback/compensation paths and backup/share-link protections.
+- Improved multi-site analytics correctness for site-scoped and all-sites calculations.
+- Reduced transient SQLite daily-stat write failures with bounded retry handling.
+- Tightened structured logging, bounded observability payloads, sensitive-field redaction, and AI-safe incident context.
+- Preserved CSRF, session-isolation, private-path, permission, and encryption boundaries during administrative/package operations.
+
+### Operations & diagnostics
+
+- Improved server/runtime inspection and dependency health handling.
+- Hardened scheduled-report claiming and validation.
+- Improved package validation, relationship/error reporting, retry behavior, and package identity restoration.
+- Corrected API documentation route handling and operational edge cases.
+- Added a dedicated complete-fixes regression suite alongside the existing administration and security/authentication coverage.
+
+### Presentation & internationalization polish
+
+- Cleaned up administrator forms, localization screens, authentication flows, failure states, logs, settings, and responsive
+  layouts.
+- Improved RTL/direction-aware behavior and CSP-safe browser integration.
+- Removed fragile inline event/style patterns where the packaged UI can provide safer external behavior.
+- Kept packaged presentation assets self-contained and suitable for strict CSP deployments.
+
+### Validation
+
+The v4.1.0 hardening cycle was validated with the project's regression suites covering Administration, Security/Authentication,
+and the complete-fixes regression set. The release is intended as a compatibility-preserving improvement release rather
+than a new major API or data-model generation.
 
 ---
 
@@ -4281,7 +4337,7 @@ This is useful as a defense-in-depth measure.
 
 It must not be treated as an authentication mechanism by itself.
 
-For the final v4.0.0 deployment model, the private path is configured through `DASHBOARD_URL` and, in production, is
+For the v4.1.0 deployment model, the private path is configured through `DASHBOARD_URL` and, in production, is
 validated as a 32–128 character URL-safe random segment.
 
 All privileged dashboard routes and the Paxalia administrator authentication lifecycle can live beneath that same
@@ -4491,7 +4547,7 @@ Avoid hard-coding host application models into Paxalia itself.
 
 ---
 
-## Final v4.0.0 Security Checklist
+## Final v4.1.0 Security Checklist
 
 Before exposing Paxalia Dashboard to real users, verify the deployment as one complete boundary:
 
@@ -4573,8 +4629,6 @@ A representative source tree looks like:
 
 ```text
 paxalia-dashboard/
-
-
 ├── paxalia
 │   ├── admin_auth_middleware.py
 │   ├── admin_center

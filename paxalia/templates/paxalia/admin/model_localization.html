@@ -7,47 +7,94 @@
 {% block dashboard_content %}
 <div class="pa-admin-shell">
     <header class="pa-admin-page-head">
-        <div class="pa-admin-page-head__copy"><div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><a href="{{ overview_url }}">{{ definition.verbose_name_plural }}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Localization" %}</span></div><span class="pa-admin-page-head__eyebrow">{{ definition.label }}</span><h2>{% trans "Translation coverage" %}</h2><p>{% trans "Languages come from the active Django configuration. Missing languages can be added directly from each record's compact translation workspace." %}</p></div>
+        <div class="pa-admin-page-head__copy">
+            <div class="pa-admin-breadcrumbs"><a href="{% url 'paxalia:admin_home' %}">{% trans "Paxalia Admin" %}</a><span class="pa-admin-breadcrumbs__separator">/</span><a href="{{ overview_url }}">{{ definition.verbose_name_plural }}</a><span class="pa-admin-breadcrumbs__separator">/</span><span>{% trans "Localization" %}</span></div>
+            <span class="pa-admin-page-head__eyebrow">{{ definition.label }}</span>
+            <h2>{% trans "Translation workspace" %}</h2>
+            <p>{% trans "Review every configured language and edit translations directly. The language status stays visible so missing content is easy to find." %}</p>
+        </div>
         <div class="pa-admin-page-head__actions"><a class="btn btn-secondary" href="{{ overview_url }}">{% trans "Overview" %}</a>{% if support %}<a class="btn btn-secondary" href="{{ import_url }}">{% trans "Import translations" %}</a><a class="btn btn-secondary" href="{{ export_url }}">{% trans "Export translations" %}</a>{% endif %}</div>
     </header>
 
     {% if support %}
-    <div class="pa-admin-package-summary"><div class="pa-admin-package-stat"><span>{% trans "Total records" %}</span><strong>{{ total }}</strong></div><div class="pa-admin-package-stat"><span>{% trans "Checked" %}</span><strong>{{ checked }}</strong></div><div class="pa-admin-package-stat"><span>{% trans "Complete" %}</span><strong>{{ complete }}</strong></div><div class="pa-admin-package-stat"><span>{% trans "Incomplete" %}</span><strong>{{ incomplete }}</strong></div></div>
+    <div class="pa-admin-package-summary">
+        <div class="pa-admin-package-stat"><span>{% trans "Total records" %}</span><strong>{{ total }}</strong></div>
+        <div class="pa-admin-package-stat"><span>{% trans "Checked on this page" %}</span><strong>{{ checked }}</strong></div>
+        <div class="pa-admin-package-stat"><span>{% trans "Complete" %}</span><strong>{{ complete }}</strong></div>
+        <div class="pa-admin-package-stat"><span>{% trans "Incomplete" %}</span><strong>{{ incomplete }}</strong></div>
+    </div>
 
-    <section class="pa-admin-card">
-        <div class="pa-admin-card-header"><div><span class="pa-admin-eyebrow">{% trans "Languages" %}</span><h2>{% trans "Translation matrix" %}</h2><p>{% trans "Open a record to add or edit any configured language. Missing translations start with an empty editor." %}</p></div><span class="pa-admin-status pa-admin-status--muted">{{ languages|length }} {% trans "languages" %}</span></div>
-        <div class="pa-admin-table-inset">
-            <div class="pa-admin-table-wrap">
-                <table class="analytics-table pa-admin-data-table pa-admin-localization-table">
-                    <thead><tr><th>{% trans "Record" %}</th>{% for code in languages %}<th class="pa-admin-language-cell">{{ code }}</th>{% endfor %}<th>{% trans "Missing" %}</th><th>{% trans "Translations" %}</th></tr></thead>
-                    <tbody>
-                    {% for row in rows %}
-                    <tr>
-                        <td>{{ row.identity }}</td>
-                        {% for language in row.languages %}<td><span class="pa-admin-language-status {% if language.complete %}is-complete{% else %}is-missing{% endif %}" aria-label="{% if language.complete %}{% trans 'Complete' %}{% else %}{% trans 'Missing' %}{% endif %}">{% if language.complete %}✓{% else %}—{% endif %}</span></td>{% endfor %}
-                        <td>{% if row.missing %}{{ row.missing|join:", " }}{% else %}—{% endif %}</td>
-                        <td><details class="pa-admin-translation-details"><summary class="btn btn-secondary btn-sm">{% trans "Manage" %}</summary><div class="pa-admin-translation-editor" data-pa-translation-editor data-default-language="{{ row.editor_languages.0.code }}"><div class="pa-admin-language-tabs" role="tablist" aria-label="{% trans 'Translation languages' %}">{% for language in row.editor_languages %}<button type="button" class="pa-admin-language-tab {% if forloop.first %}is-active{% endif %}" data-pa-language-tab="{{ language.code }}" id="pa-language-tab-{{ row.object.pk }}-{{ language.code }}" aria-controls="pa-language-pane-{{ row.object.pk }}-{{ language.code }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}" role="tab">{{ language.name }}<small>{{ language.code }}</small></button>{% endfor %}</div>
-                            {% for language in row.editor_languages %}
-                            <div class="pa-admin-language-pane" id="pa-language-pane-{{ row.object.pk }}-{{ language.code }}" aria-labelledby="pa-language-tab-{{ row.object.pk }}-{{ language.code }}" aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}" data-pa-language-pane="{{ language.code }}"{% if not forloop.first %} hidden{% endif %} role="tabpanel">
-                                <div class="pa-admin-language-pane__head"><div><strong>{{ language.name }}</strong><span>{{ language.code }}</span></div>{% if language.complete %}<span class="pa-admin-status pa-admin-status--ok">{% trans "Complete" %}</span>{% else %}<span class="pa-admin-status pa-admin-status--warning">{% trans "Missing or incomplete" %}</span>{% endif %}</div>
-                                <form method="post" class="pa-admin-translation-form">
-                                    {% csrf_token %}<input type="hidden" name="translation_save" value="1"><input type="hidden" name="object_id" value="{{ row.object.pk }}"><input type="hidden" name="language" value="{{ language.code }}">
-                                    <div class="pa-admin-translation-fields">
-                                    {% for field in language.fields %}
-                                        <label class="pa-admin-form-field"><span>{{ field.label }}</span>{% if field.choices %}<select name="{{ field.name }}">{% for value,label in field.choices %}<option value="{{ value }}"{% if value|stringformat:"s" == field.value|stringformat:"s" %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>{% elif field.widget == 'textarea' %}<textarea name="{{ field.name }}" rows="4">{{ field.value }}</textarea>{% elif field.input_type == 'checkbox' %}<span class="pa-admin-checkbox-field"><input type="checkbox" name="{{ field.name }}" value="on"{% if field.value %} checked{% endif %}> {% trans "Enabled" %}</span>{% else %}<input type="text" name="{{ field.name }}" value="{{ field.value }}">{% endif %}</label>
-                                    {% empty %}<p class="pa-admin-empty">{% trans "No editable translation fields were detected for this model." %}</p>{% endfor %}
-                                    </div>
-                                    {% if language.fields %}<div class="pa-admin-form-actions"><button class="btn btn-primary btn-sm" type="submit">{% trans "Save translation" %}</button></div>{% endif %}
-                                </form>
-                            </div>
-                            {% endfor %}
-                        </div></details></td>
-                    </tr>
-                    {% empty %}<tr><td colspan="99"><div class="pa-admin-empty">{% trans "No translatable records were found." %}</div></td></tr>{% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <section class="pa-admin-localization-workspace" aria-labelledby="localization-workspace-heading">
+        <div class="pa-admin-localization-workspace__head">
+            <div><span class="pa-admin-eyebrow">{% trans "Languages" %}</span><h2 id="localization-workspace-heading">{% trans "Translation coverage" %}</h2><p>{% trans "Each record uses the same configured languages. Open a record to add or update its translations." %}</p></div>
+            <span class="pa-admin-status pa-admin-status--muted">{{ languages|length }} {% trans "languages" %}</span>
         </div>
+
+        <div class="pa-admin-localization-list">
+            {% for row in rows %}
+            <article class="pa-admin-localization-record" data-pa-translation-record>
+                <header class="pa-admin-localization-record__head">
+                    <div class="pa-admin-localization-record__identity">
+                        <span class="pa-admin-eyebrow">{{ definition.verbose_name }}</span>
+                        <strong>{{ row.identity }}</strong>
+                        <span>{% trans "Record" %} {{ forloop.counter0|add:page_obj.start_index }}</span>
+                    </div>
+                    <div class="pa-admin-localization-record__actions">
+                        {% if row.missing %}<span class="pa-admin-status pa-admin-status--warning">{{ row.missing|length }} {% trans "missing" %}</span>{% else %}<span class="pa-admin-status pa-admin-status--ok">{% trans "Complete" %}</span>{% endif %}
+                        <button type="button" class="btn btn-secondary btn-sm" data-pa-translation-toggle aria-expanded="false" aria-controls="pa-translation-workspace-{{ row.object.pk }}">{% trans "Manage translations" %}</button>
+                    </div>
+                </header>
+
+                <div class="pa-admin-localization-language-grid" aria-label="{% trans 'Translation status by language' %}">
+                    {% for language in row.languages %}
+                    <div class="pa-admin-localization-language{% if language.complete %} is-complete{% else %} is-missing{% endif %}">
+                        <div><strong>{{ language.name }}</strong><span>{{ language.code }}</span></div>
+                        {% if language.complete %}<strong>{% trans "Ready" %}</strong>{% else %}<strong>{% trans "Missing" %}</strong>{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div id="pa-translation-workspace-{{ row.object.pk }}" class="pa-admin-translation-editor pa-admin-translation-editor--workspace" data-pa-translation-editor data-default-language="{{ row.editor_languages.0.code }}" hidden>
+                    <div class="pa-admin-language-tabs" role="tablist" aria-label="{% trans 'Translation languages' %}">
+                        {% for language in row.editor_languages %}
+                        <button type="button" class="pa-admin-language-tab {% if forloop.first %}is-active{% endif %}" data-pa-language-tab="{{ language.code }}" id="pa-language-tab-{{ row.object.pk }}-{{ language.code }}" aria-controls="pa-language-pane-{{ row.object.pk }}-{{ language.code }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}" role="tab">
+                            <span>{{ language.name }}</span><small>{{ language.code }}</small>{% if language.complete %}<em class="pa-admin-language-tab__status is-complete">✓</em>{% else %}<em class="pa-admin-language-tab__status is-missing">—</em>{% endif %}
+                        </button>
+                        {% endfor %}
+                    </div>
+
+                    {% for language in row.editor_languages %}
+                    <div class="pa-admin-language-pane" id="pa-language-pane-{{ row.object.pk }}-{{ language.code }}" aria-labelledby="pa-language-tab-{{ row.object.pk }}-{{ language.code }}" aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}" data-pa-language-pane="{{ language.code }}"{% if not forloop.first %} hidden{% endif %} role="tabpanel">
+                        <div class="pa-admin-language-pane__head"><div><strong>{{ language.name }}</strong><span>{{ language.code }}</span></div>{% if language.complete %}<span class="pa-admin-status pa-admin-status--ok">{% trans "Complete" %}</span>{% else %}<span class="pa-admin-status pa-admin-status--warning">{% trans "Missing or incomplete" %}</span>{% endif %}</div>
+                        <form method="post" class="pa-admin-translation-form">
+                            {% csrf_token %}<input type="hidden" name="translation_save" value="1"><input type="hidden" name="object_id" value="{{ row.object.pk }}"><input type="hidden" name="language" value="{{ language.code }}"><input type="hidden" name="page" value="{{ page_obj.number }}">
+                            <div class="pa-admin-translation-fields">
+                            {% for field in language.fields %}
+                                <label class="pa-admin-form-field"><span>{{ field.label }}</span>{% if field.choices %}<select name="{{ field.name }}">{% for value,label in field.choices %}<option value="{{ value }}"{% if value|stringformat:"s" == field.value|stringformat:"s" %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>{% elif field.widget == 'textarea' %}<textarea name="{{ field.name }}" rows="4">{{ field.value }}</textarea>{% elif field.input_type == 'checkbox' %}<span class="pa-admin-checkbox-field"><input type="checkbox" name="{{ field.name }}" value="on"{% if field.value %} checked{% endif %}> {% trans "Enabled" %}</span>{% else %}<input type="text" name="{{ field.name }}" value="{{ field.value }}">{% endif %}</label>
+                            {% empty %}<p class="pa-admin-empty">{% trans "No editable translation fields were detected for this model." %}</p>{% endfor %}
+                            </div>
+                            {% if language.fields %}<div class="pa-admin-form-actions"><button class="btn btn-primary btn-sm" type="submit">{% trans "Save translation" %}</button></div>{% endif %}
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
+            {% empty %}
+            <div class="pa-admin-empty-state"><h2>{% trans "No translatable records were found." %}</h2><p>{% trans "Create a record first, then return here to manage its translations." %}</p></div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="pa-admin-pagination pa-admin-localization-pagination" aria-label="{% trans 'Localization pages' %}">
+            {% if page_obj.has_previous %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}">{% trans "Previous" %}</a>{% endif %}
+            <div class="pa-admin-pagination__pages">
+                {% for page_number in page_range %}
+                    {% if page_number == page_obj.paginator.ELLIPSIS %}<span aria-hidden="true">…</span>{% elif page_number == page_obj.number %}<span class="is-current" aria-current="page">{{ page_number }}</span>{% else %}<a href="?page={{ page_number }}">{{ page_number }}</a>{% endif %}
+                {% endfor %}
+            </div>
+            {% if page_obj.has_next %}<a class="btn btn-secondary btn-sm" href="?page={{ page_obj.next_page_number }}">{% trans "Next" %}</a>{% endif %}
+        </nav>
+        {% endif %}
     </section>
     {% else %}
     <div class="pa-admin-empty-state"><h2>{% trans "Localization is not available for this model" %}</h2><p>{% trans "Paxalia did not detect a supported translation layer on this registered model." %}</p></div>

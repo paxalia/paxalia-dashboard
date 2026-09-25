@@ -1,5 +1,7 @@
 # paxalia/views/reports.py
 from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from ..admin_security import admin_security_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -26,11 +28,25 @@ def reports_management(request):
         if frequency not in ('weekly', 'monthly'):
             frequency = 'weekly'
 
-        if not name or not recipient_emails:
+        recipients = [line.strip() for line in recipient_emails.splitlines() if line.strip()]
+        invalid_recipients = []
+        for address in recipients:
+            try:
+                validate_email(address)
+            except ValidationError:
+                invalid_recipients.append(address)
+
+        if not name or not recipients:
             messages.error(request, _('Name and at least one recipient email are required.'))
+        elif invalid_recipients:
+            messages.error(
+                request,
+                _('One or more recipient email addresses are invalid: %(addresses)s')
+                % {'addresses': ', '.join(invalid_recipients[:5])},
+            )
         else:
             ScheduledReport.objects.create(
-                site=current_site, name=name, recipient_emails=recipient_emails,
+                site=current_site, name=name, recipient_emails='\n'.join(recipients),
                 frequency=frequency, created_by=request.user,
             )
             log_action(request, 'report.created', detail=f'name={name} frequency={frequency}')

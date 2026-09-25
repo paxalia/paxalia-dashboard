@@ -222,12 +222,12 @@
                 document.getElementById('net-speed').textContent = speed + ' MB';
 
                 // ─── Update charts ───
-                updateCharts(data);
+                updateCharts(data, cpu, memory);
             })
             .catch(console.error);
     }
 
-    function updateCharts(data) {
+    function updateCharts(data, cpu, memory) {
         // ─── CPU per core ───
         if (cpuCoreChart) {
             const perCore = Array.isArray(cpu.per_core) ? cpu.per_core : [];

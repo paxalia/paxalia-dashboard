@@ -101,6 +101,27 @@
         }
 
         // ----------------------------
+        // CSP-safe auto-submit controls
+        // ----------------------------
+        document.querySelectorAll('[data-paxalia-auto-submit]').forEach(function (form) {
+            const controls = form.querySelectorAll('select, input:not([type="hidden"]), textarea');
+            controls.forEach(function (control) {
+                control.addEventListener('change', function () {
+                    form.requestSubmit();
+                });
+            });
+        });
+        document.querySelectorAll('[data-paxalia-auto-submit-control]').forEach(function (control) {
+            if (control.dataset.paxaliaAutoSubmitBound === 'true') return;
+            const form = control.form;
+            if (!form) return;
+            control.dataset.paxaliaAutoSubmitBound = 'true';
+            control.addEventListener('change', function () {
+                form.requestSubmit();
+            });
+        });
+
+        // ----------------------------
         // Administrator account menu
         // ----------------------------
         const accountButton = document.querySelector('[data-sidebar-account-toggle]');

@@ -686,13 +686,30 @@ def model_localization(request, app_label, model_name):
                 save_translation(obj, language, values)
                 log_action(request, "admin.translation.save", detail=f"model={definition.label};object={object_id};language={language}")
                 messages.success(request, _("Translation saved."))
-                return redirect(definition.url("admin_model_localization"))
+                localization_url = definition.url("admin_model_localization")
+                page = str(request.POST.get("page") or "").strip()
+                if page.isdigit() and int(page) > 1:
+                    localization_url = f"{localization_url}?page={int(page)}"
+                return redirect(localization_url)
             except PermissionDenied:
                 raise
             except Exception as exc:
                 messages.error(request, _public_package_error(exc))
 
-    data = completeness_for_queryset(definition.model_admin.get_queryset(request), limit=100)
+    queryset = definition.model_admin.get_queryset(request)
+    try:
+        page_size = max(10, min(int(get_config().get("ADMIN_LIST_PER_PAGE", 50) or 50), 100))
+    except (TypeError, ValueError):
+        page_size = 50
+    paginator = Paginator(queryset, page_size)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+    data = completeness_for_queryset(
+        queryset,
+        limit=page_size,
+        offset=(page_obj.number - 1) * page_size,
+        excluded_names=set(definition.hidden_fields),
+    )
+    page_range = paginator.get_elided_page_range(page_obj.number)
     return render(request, "paxalia/admin/model_localization.html", _base(
         definition,
         page_title=_("Localization"),
@@ -702,6 +719,9 @@ def model_localization(request, app_label, model_name):
         import_url=definition.url("admin_model_import"),
         export_url=definition.url("admin_model_export"),
         support=True,
+        page_obj=page_obj,
+        page_range=page_range,
+        page_size=page_size,
         **data,
     ))
 
@@ -733,5 +753,5 @@ def package_retry(request, retry_id):
     response["Content-Disposition"] = 'attachment; filename="paxalia-failed-records-retry.paxalia"'
     response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response["X-Content-Type-Options"] = "nosniff"
-    _clear_retry(request)
     return response
+

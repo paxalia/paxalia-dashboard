@@ -34,7 +34,7 @@
     </div>
 
     <div class="table-card">
-        <h2 class="card-title">POST /paxalia-api/v1/ingest/</h2>
+        <h2 class="card-title">POST {{ base_url }}ingest/</h2>
         <p>{% trans "Requires the ingest scope. Same payload shape as the public event snippet." %}</p>
         <pre class="api-reference-code"><code>curl -X POST {{ base_url }}ingest/ \
   -H "Authorization: Bearer pxa_..." \
@@ -43,7 +43,7 @@
     </div>
 
     <div class="table-card">
-        <h2 class="card-title">GET /paxalia-api/v1/stats/summary/</h2>
+        <h2 class="card-title">GET {{ base_url }}stats/summary/</h2>
         <p>{% trans "Requires the read scope. Query params: start_date, end_date (YYYY-MM-DD, default: last 30 days)." %}</p>
         <pre class="api-reference-code"><code>curl {{ base_url }}stats/summary/?start_date=2026-01-01&end_date=2026-01-31 \
   -H "Authorization: Bearer pxa_..."
@@ -57,7 +57,7 @@
     </div>
 
     <div class="table-card">
-        <h2 class="card-title">GET /paxalia-api/v1/pageviews/</h2>
+        <h2 class="card-title">GET {{ base_url }}pageviews/</h2>
         <p>{% trans "Requires the read scope. Query params: start_date, end_date, limit (max 500, default 100), offset." %}</p>
         <pre class="api-reference-code"><code>curl "{{ base_url }}pageviews/?limit=50" \
   -H "Authorization: Bearer pxa_..."
@@ -74,7 +74,7 @@
     </div>
 
     <div class="table-card">
-        <h2 class="card-title">GET /paxalia-api/v1/events/</h2>
+        <h2 class="card-title">GET {{ base_url }}events/</h2>
         <p>{% trans "Requires the read scope. Query params: start_date, end_date, limit, offset, category." %}</p>
         <pre class="api-reference-code"><code>curl "{{ base_url }}events/?category=signup" \
   -H "Authorization: Bearer pxa_..."</code></pre>

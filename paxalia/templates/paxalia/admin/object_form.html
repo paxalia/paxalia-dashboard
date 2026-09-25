@@ -19,8 +19,62 @@
     <form method="post" enctype="multipart/form-data" class="pa-admin-form">
         {% csrf_token %}
         {{ form.media }}
+        {% if translation_form_enabled %}<input type="hidden" name="language" value="{{ translation_language }}">{% endif %}
         {% if form.non_field_errors %}<div class="pa-admin-form-errors">{{ form.non_field_errors }}</div>{% endif %}
         {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+
+        {% if translation_form_enabled %}
+        <section class="pa-admin-form-card pa-admin-translation-form-card" aria-labelledby="translation-form-heading">
+            <div class="pa-admin-card-header pa-admin-translation-form-card__header">
+                <div class="pa-admin-translation-form-card__title">
+                    <span class="pa-admin-eyebrow">{% trans "Localization" %}</span>
+                    <h2 id="translation-form-heading">{% trans "Translation" %}</h2>
+                    <p>{% if object %}{% blocktrans with language=translation_language_name %}Editing the {{ language }} translation for this record.{% endblocktrans %}{% else %}{% blocktrans with language=translation_language_name %}Enter the {{ language }} translation while creating this record.{% endblocktrans %}{% endif %}</p>
+                </div>
+            </div>
+
+            <div class="pa-admin-card-body pa-admin-translation-form-card__body">
+                {% if object %}
+                <nav class="pa-admin-language-tabs pa-admin-language-tabs--form" aria-label="{% trans 'Translation language' %}">
+                    {% for tab in translation_language_tabs %}
+                    <a class="pa-admin-language-tab{% if tab.current %} is-active{% endif %}" href="{{ tab.url }}"{% if tab.current %} aria-current="page"{% endif %}>
+                        <span>{{ tab.name }}</span><small>{{ tab.code }}</small>{% if tab.complete is True %}<em class="pa-admin-language-tab__status is-complete">✓</em>{% elif tab.complete is False %}<em class="pa-admin-language-tab__status is-missing">—</em>{% endif %}
+                    </a>
+                    {% endfor %}
+                </nav>
+                {% endif %}
+
+                <div class="pa-admin-translation-form-card__language-row">
+                    <div>
+                        <span class="pa-admin-eyebrow">{% trans "Active language" %}</span>
+                        <strong>{{ translation_language_name }}</strong>
+                    </div>
+                    <span class="pa-admin-language-chip">{{ translation_language }}</span>
+                </div>
+
+                <div class="pa-admin-translation-form-fields">
+                    {% for field in translation_form_fields %}
+                    <div class="pa-admin-form-field pa-admin-translation-form-field {% if field.errors %}has-error{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>
+                        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                        {{ field }}
+                        {% for error in field.errors %}<div class="pa-admin-field-error">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% empty %}
+                    <p class="pa-admin-empty">{% trans "No editable translation fields are available for this language." %}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="pa-admin-translation-form-card__hint">
+                    {% if object %}
+                        <span>{% trans "Choose another language above to edit its translation. Your changes are saved with this record." %}</span>
+                    {% else %}
+                        <span>{% trans "This language is saved with the new record. After creation, use Localization to add or update the other languages." %}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+        {% endif %}
 
         {% for section in form_sections %}
         <section class="pa-admin-form-card">
