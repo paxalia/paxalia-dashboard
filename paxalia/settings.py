@@ -4,7 +4,7 @@ from django.conf import settings
 DEFAULTS = {
     'SIDEBAR_SECTIONS': [
         'overview', 'pages', 'api', 'traffic', 'realtime', 'bots',
-        'geography', 'events', 'logs', 'billing', 'releases', 'backups', 'security',
+        'geography', 'events', 'logs', 'billing', 'releases', 'backups', 'server_files', 'security',
         'sites', 'broken_links', 'goals', 'funnels', 'segments', 'campaigns',
         'annotations', 'cohorts', 'api_keys', 'reports', 'share_links', 'notifications', 'rum', 'uptime', 'compliance', 'data_import', 'settings'
     ],
@@ -23,6 +23,28 @@ DEFAULTS = {
     'UPLOAD_MAX_FILE_SIZE_MB': 2048,
     'DATA_IMPORT_MAX_FILE_SIZE_MB': 100,
     'UPLOAD_SESSION_TTL_HOURS': 24,                          # optional, default 2048 (2GB)
+    # ── Paxalia Server Files ──
+    # Disabled by default. Host projects must explicitly opt in and configure
+    # one or more non-root, non-overlapping filesystem directories.
+    'FILE_MANAGER_ENABLED': False,
+    'FILE_MANAGER_ALLOWED_ROOTS': [],
+    'FILE_MANAGER_DENIED_PATHS': [],
+    'FILE_MANAGER_SENSITIVE_PATTERNS': None,
+    'FILE_MANAGER_ALLOW_HIDDEN': False,
+    'FILE_MANAGER_ALLOW_SENSITIVE_MUTATIONS': False,
+    'FILE_MANAGER_MAX_UPLOAD_SIZE_MB': 100,
+    'FILE_MANAGER_MAX_DOWNLOAD_SIZE_MB': 1024,
+    'FILE_MANAGER_PREVIEW_MAX_BYTES': 262144,
+    'FILE_MANAGER_DIRECTORY_PAGE_SIZE': 100,
+    'FILE_MANAGER_HISTORY_PAGE_SIZE': 50,
+    'FILE_MANAGER_MAX_DIRECTORY_ENTRIES': 10000,
+    'FILE_MANAGER_MAX_COPY_SIZE_MB': 100,
+    'FILE_MANAGER_MAX_MUTATIONS_PER_MINUTE': 30,
+    'FILE_MANAGER_MAX_READS_PER_MINUTE': 120,
+    'FILE_MANAGER_RATE_LIMIT_WINDOW_SECONDS': 60,
+    'FILE_MANAGER_MAX_OPERATION_RECORDS': 20000,
+    'FILE_MANAGER_OPERATION_RETENTION_DAYS': 90,
+    'FILE_MANAGER_CLEANUP_BATCH_SIZE': 500,
 
     # ── Security: IP resolution ──
     # Whether this deployment sits behind a reverse proxy / load balancer

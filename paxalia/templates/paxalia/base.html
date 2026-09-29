@@ -742,9 +742,49 @@
                             {% trans "Processes" %}
                         </a>
 
-
                     </div>
                 </section>
+                {% endif %}
+
+                {# Secure server filesystem management #}
+                {% if analytics_config.FILE_MANAGER_ENABLED %}
+                    {% if 'server_files' in analytics_config.SIDEBAR_SECTIONS %}
+                        {% if perms.paxalia.view_server_files %}
+                        <section class="sidebar-group sidebar-group--server-files" data-sidebar-group>
+                            <button type="button" class="sidebar-group__toggle" data-sidebar-group-toggle aria-expanded="false"
+                                    aria-controls="sidebar-group-server-files">
+                                <span class="sidebar-group__marker" aria-hidden="true"></span>
+                                <span class="sidebar-group__title">{% trans "Server Files" %}</span>
+                                <span class="sidebar-group__chevron" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor"
+                                                                                      d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"></path></svg>
+                                </span>
+                            </button>
+                            <div class="sidebar-group__panel" id="sidebar-group-server-files" hidden>
+                                <a href="{% url 'paxalia:server_files' %}"
+                                   class="analytics-sidebar-link {% if active_page == 'server_files' %}active{% endif %}">
+                                    <span class="icon icon--sm" aria-hidden="true">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                            <path fill="currentColor" d="M4 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>
+                                            <path fill="currentColor" d="M4 9h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>
+                                        </svg>
+                                    </span>
+                                    {% trans "Browse Files" %}
+                                </a>
+                                <a href="{% url 'paxalia:server_files_history' %}"
+                                   class="analytics-sidebar-link {% if active_page == 'server_files_history' %}active{% endif %}">
+                                    <span class="icon icon--sm" aria-hidden="true">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                            <path fill="currentColor" d="M12 7v5l3.5 2.1-.75 1.23L10.5 13V7z"/>
+                                            <path fill="currentColor" d="M12 3a9 9 0 1 1-8.49 6h2.17A7 7 0 1 0 12 5a6.93 6.93 0 0 0-4.95 2.05L5.5 6.5V11H10l-1.5-1.5A4.93 4.93 0 0 1 12 8a4 4 0 1 1-4 4H6a6 6 0 1 0 6-6z"/>
+                                        </svg>
+                                    </span>
+                                    {% trans "History" %}
+                                </a>
+                            </div>
+                        </section>
+                        {% endif %}
+                    {% endif %}
                 {% endif %}
 
                 {# Reliability, performance and delivery #}

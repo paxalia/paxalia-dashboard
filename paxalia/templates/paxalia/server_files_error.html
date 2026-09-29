@@ -1,0 +1,27 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Server Files Unavailable" %} — Paxalia{% endblock %}
+{% block page_title %}{% trans "Server Files Unavailable" %}{% endblock %}
+{% block page_subtitle %}{% trans "The requested Server Files action could not be completed." %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/server-files.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="sf-page">
+    <section class="sf-surface sf-error-card" aria-labelledby="sf-error-title">
+        <div class="sf-error-card__icon" aria-hidden="true">!</div>
+        <div>
+            <p class="sf-overline">{% trans "Server Files" %}</p>
+            <h2 id="sf-error-title">{{ error_message }}</h2>
+            <p>{% trans "No filesystem contents were exposed by this response. Check the dashboard configuration and the operation permissions, then try again." %}</p>
+            <div class="sf-form__actions">
+                <a class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" href="{% url 'paxalia:server_files' %}">{% trans "Return to files" %}</a>
+                <a class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" href="{% url 'paxalia:dashboard' %}">{% trans "Return to dashboard" %}</a>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -5,6 +5,9 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+# Paxalia Server Files operation-history model.
+from .server_files.models import ServerFileOperation
+
 
 # Create your models here.
 

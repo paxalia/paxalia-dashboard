@@ -1,0 +1,121 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Server Files History" %} — Paxalia{% endblock %}
+{% block page_title %}{% trans "Operation History" %}{% endblock %}
+{% block page_subtitle %}{% trans "A content-free audit trail of Server Files activity. Protected paths remain redacted." %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/server-files.css' %}">
+{% endblock %}
+
+{% block filter_bar %}
+<form class="filter-bar sf-filter-bar sf-history-filter" method="get" aria-label="{% trans 'Server Files history filters' %}">
+    <div class="filter-bar__inner sf-filter-bar__inner">
+        <div class="sf-filter-bar__field">
+            <label for="sf-history-operation">{% trans "Operation" %}</label>
+            <select id="sf-history-operation" name="operation">
+                <option value="">{% trans "All operations" %}</option>
+                {% for value,label in operation_choices %}
+                <option value="{{ value }}" {% if operation_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="sf-filter-bar__field">
+            <label for="sf-history-status">{% trans "Result" %}</label>
+            <select id="sf-history-status" name="status">
+                <option value="">{% trans "All results" %}</option>
+                {% for value,label in status_choices %}
+                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="sf-filter-bar__field sf-filter-bar__field--search">
+            <label for="sf-history-search">{% trans "Search" %}</label>
+            <div class="sf-filter-bar__search-wrap">
+                <span class="icon icon--xs" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <input id="sf-history-search" type="search" name="q" value="{{ search }}" maxlength="128"
+                       placeholder="{% trans 'Path, root, or request ID' %}">
+            </div>
+        </div>
+
+        <div class="sf-filter-bar__actions">
+            <button class="analytics-btn analytics-btn--primary sf-button sf-button--primary" type="submit">{% trans "Apply" %}</button>
+            <a class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" href="{% url 'paxalia:server_files_history' %}">{% trans "Reset" %}</a>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="sf-page">
+    <nav class="sf-subnav" aria-label="{% trans 'Server Files sections' %}">
+        <a class="sf-subnav__item" href="{{ browse_url }}">{% trans "Browse Files" %}</a>
+        <a class="sf-subnav__item sf-subnav__item--active" href="{% url 'paxalia:server_files_history' %}">
+            <span class="sf-subnav__dot" aria-hidden="true"></span>
+            {% trans "Operation History" %}
+        </a>
+    </nav>
+
+    <section class="sf-surface sf-table-card" aria-labelledby="sf-history-title">
+        <header class="sf-table-card__header">
+            <div>
+                <p class="sf-overline">{% trans "Audit trail" %}</p>
+                <h2 id="sf-history-title">{% trans "Server Files operations" %}</h2>
+            </div>
+            <div class="sf-table-card__summary">
+                {% blocktrans with total=total_records %}{{ total }} matching records{% endblocktrans %}
+            </div>
+        </header>
+
+        <div class="sf-table-wrap">
+            <table class="sf-table sf-history-table">
+                <thead>
+                    <tr>
+                        <th>{% trans "Time" %}</th>
+                        <th>{% trans "Actor" %}</th>
+                        <th>{% trans "Operation" %}</th>
+                        <th>{% trans "Path" %}</th>
+                        <th>{% trans "Target" %}</th>
+                        <th>{% trans "Result" %}</th>
+                        <th>{% trans "Request ID" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in history_rows %}
+                    <tr>
+                        <td class="sf-nowrap">{{ row.created_at|date:"Y-m-d H:i:s T" }}</td>
+                        <td>{% if row.actor_name %}{{ row.actor_name }}{% else %}<span class="sf-muted">{% trans "System / unknown" %}</span>{% endif %}</td>
+                        <td><strong>{{ row.operation }}</strong></td>
+                        <td><code>{{ row.root_id }}{% if row.path %}:{{ row.path }}{% endif %}</code></td>
+                        <td><code>{% if row.target_root_id %}{{ row.target_root_id }}{% endif %}{% if row.target_path %}:{{ row.target_path }}{% endif %}{% if not row.target_root_id and not row.target_path %}—{% endif %}</code></td>
+                        <td>
+                            <span class="sf-status sf-status--{{ row.status }}">{{ row.status_display }}</span>
+                            {% if row.error_code %}<small class="sf-status__detail">{{ row.error_code }}</small>{% endif %}
+                        </td>
+                        <td><code>{{ row.request_id|default:"—" }}</code></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="sf-empty">{% trans "No operation-history records match these filters." %}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <footer class="sf-pagination">
+            <span>{% blocktrans with page=page_number pages=page_count total=total_records %}Page {{ page }} of {{ pages }} · {{ total }} matching records{% endblocktrans %}</span>
+            <div>
+                {% if has_previous %}<a class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" href="{{ previous_url }}">{% trans "Previous" %}</a>{% endif %}
+                {% if has_next %}<a class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" href="{{ next_url }}">{% trans "Next" %}</a>{% endif %}
+            </div>
+        </footer>
+    </section>
+</div>
+{% endblock %}

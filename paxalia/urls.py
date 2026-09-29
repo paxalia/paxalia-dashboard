@@ -13,6 +13,7 @@ from .views import compliance as compliance_views
 from .views import data_import as data_import_views
 from .views import server as server_views
 from .views import backup as backup_views
+from .server_files import views as server_files_views
 from .views import security as security_views
 from .views import csp_reports as csp_report_views
 from .views import sites as sites_views
@@ -114,6 +115,12 @@ dashboard_urlpatterns = [
     path('billing/', analytics_billing, name='billing'),
     path('bots/', bots_overview, name='bots'),
 
+    path('server-files/', server_files_views.server_files, name='server_files'),
+    path('server-files/preview/', server_files_views.server_files_preview, name='server_files_preview'),
+    path('server-files/download/', server_files_views.server_files_download, name='server_files_download'),
+    path('server-files/operation/', server_files_views.server_files_operation, name='server_files_operation'),
+    path('server-files/history/', server_files_views.server_files_history, name='server_files_history'),
+    path('server-files/reauth/', server_files_views.server_files_reauth, name='server_files_reauth'),
     path('server/overview/', server_views.server_overview, name='server_overview'),
     path('server/cpu/', server_views.server_cpu, name='server_cpu'),
     path('server/memory/', server_views.server_memory, name='server_memory'),
