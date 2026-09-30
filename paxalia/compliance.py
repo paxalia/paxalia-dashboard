@@ -5,13 +5,13 @@ a visitor's session_id or IP, for compliance/data-subject-request
 purposes. Used by views/compliance.py.
 
 Real deletion, not symbolic: AnalyticsSettings.anonymize_ip defaults
-off (see Phase 0), so PageView/AnalyticsEvent.ip_hash normally holds a
+off by default, so PageView/AnalyticsEvent.ip_hash normally holds a
 raw IP address, not a hash — deleting by IP here actually removes
 identifying data, it isn't just marking rows as "forgotten" while the
 IP sits there.
 
 KNOWN GAP: JSError has a session_id field but no IP field (see that
-model's docstring, Phase 11) — it can only be purged by session_id,
+model's docstring) — it can only be purged by session_id,
 not by IP. Documented here and in the README rather than silently
 leaving JSError rows behind on an IP-based request.
 """

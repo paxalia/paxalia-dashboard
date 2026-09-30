@@ -28,7 +28,7 @@ def analytics_consent_config():
         'browserLogEnabled': bool(config.get('LOGGING_ENABLED', True)),
         'browserLogUrl': '/api/paxalia/browser-log/',
         'captureConsole': bool(config.get('LOG_BROWSER_CAPTURE_CONSOLE', False)),
-        'captureResourceErrors': bool(config.get('LOG_BROWSER_CAPTURE_RESOURCE_ERRORS', True)),
+        'captureResourceErrors': bool(config.get('LOG_BROWSER_CAPTURE_RESOURCE_ERRORS', False)),
         'maxBrowserEvents': int(config.get('LOG_BROWSER_MAX_EVENTS_PER_PAGE', 50)),
     }
     safe_json = json.dumps(payload, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')

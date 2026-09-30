@@ -307,9 +307,9 @@ class PaxaliaAdminHost2FARedirectMiddleware:
         if host_2fa_request and response.status_code in self._REDIRECT_STATUSES:
             if response.get("Location"):
                 if admin_user(user):
-                    logger.debug("Paxalia admin host-auth 2FA handoff redirect: %s -> %s", request.path, self._safe_admin_destination(request))
+                    logger.debug("Paxalia admin host-auth 2FA handoff redirect completed")
                 else:
-                    logger.debug("Paxalia admin host-auth 2FA handoff recovered without active Django user: %s -> %s", request.path, self._safe_admin_destination(request))
+                    logger.debug("Paxalia admin host-auth 2FA handoff recovered without active Django user")
                 response["Location"] = self._consume_handoff(request)
             return response
 
@@ -319,7 +319,7 @@ class PaxaliaAdminHost2FARedirectMiddleware:
         # because the host may have rotated the Django session during 2FA.
         if host_login_request and response.status_code in self._REDIRECT_STATUSES:
             if response.get("Location"):
-                logger.debug("Paxalia admin host-auth fallback handoff redirect: %s -> %s", request.path, self._safe_admin_destination(request))
+                logger.debug("Paxalia admin host-auth fallback handoff redirect completed")
                 response["Location"] = self._consume_handoff(request)
             return response
 

@@ -37,6 +37,7 @@
                 <th>#</th>
                 <th>{% trans "Page" %}</th>
                 <th>{% trans "Views" %}</th>
+                {% if can_manage_bot_paths %}<th>{% trans "Bot / Scanner rule" %}</th>{% endif %}
             </tr>
             </thead>
             <tbody>
@@ -48,10 +49,25 @@
                            class="analytics-table-link">{{ page.path }}</a>
                     </td>
                     <td>{{ page.count }}</td>
+                    {% if can_manage_bot_paths %}
+                    <td>
+                        {% if page.path != "/" %}
+                        <form method="post" action="{% url 'paxalia:bot_path_mark' %}" data-bot-path-form>
+                            {% csrf_token %}
+                            <input type="hidden" name="path" value="{{ page.path }}">
+                            <input type="hidden" name="remove_normal_views" value="1">
+                            <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
+                            <button type="submit" class="analytics-btn analytics-btn--secondary analytics-btn--small">{% trans "Mark as bot + clean" %}</button>
+                        </form>
+                        {% else %}
+                        <span class="bot-muted">{% trans "Root path" %}</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="3">
+                    <td colspan="4">
                         {% trans "No data for this period." %}
                     </td>
                 </tr>
@@ -82,4 +98,5 @@
         };
     </script>
     <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/filter-bar.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/bot-path-actions.js' %}"></script>
 {% endblock %}

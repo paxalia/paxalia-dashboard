@@ -67,10 +67,18 @@ class PaxaliaLiveLogBuffer:
     workers still see logs from other workers when persistence is enabled.
     """
 
-    MAX_ENTRIES = 2000
+    MAX_ENTRIES = 5000  # compatibility fallback; runtime bound comes from settings
     _lock = threading.RLock()
-    _entries = __import__("collections").deque(maxlen=MAX_ENTRIES)
+    _entries = __import__("collections").deque(maxlen=50000)
     _sequence = 0
+
+    @classmethod
+    def _max_entries(cls):
+        try:
+            from ..settings import get_config
+            return max(1, min(50000, int(get_config().get("LOG_BROWSER_MAX_REALTIME_BUFFER", 5000))))
+        except Exception:
+            return 5000
 
     @classmethod
     def append(cls, record):
@@ -120,13 +128,19 @@ class PaxaliaLiveLogBuffer:
                 "stack_trace": stack_trace,
                 "text": f"{level} {message}{suffix}",
             })
+            max_entries = cls._max_entries()
+            while len(cls._entries) > max_entries:
+                cls._entries.popleft()
 
     @classmethod
-    def snapshot(cls, *, since=None, limit=MAX_ENTRIES):
+    def snapshot(cls, *, since=None, limit=None):
+        max_entries = cls._max_entries()
+        if limit is None:
+            limit = max_entries
         try:
-            limit = max(1, min(cls.MAX_ENTRIES, int(limit)))
+            limit = max(1, min(max_entries, int(limit)))
         except (TypeError, ValueError):
-            limit = cls.MAX_ENTRIES
+            limit = max_entries
         try:
             since_value = None if since in (None, "") else int(since)
         except (TypeError, ValueError):

@@ -1,6 +1,6 @@
 """Comprehensive Paxalia Dashboard logging diagnostics.
 
-This command intentionally avoids ``makemigrations``. The v4 development
+This command intentionally avoids ``makemigrations``. It validates the installed
 branch uses the already-finalized migration chain and this command tests the
 runtime logging pipeline against the existing database schema.
 """

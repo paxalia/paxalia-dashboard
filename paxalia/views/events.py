@@ -66,7 +66,7 @@ def _consent_denied(request):
     """
     True if consent mode is on and this request's cookie doesn't show
     granted consent — mirrors AnalyticsMiddleware's server-side gate
-    and paxalia-events.js's client-side gate (Phase 14). Checked
+    and paxalia-events.js's client-side gate. Checked
     here too as defense in depth: the client-side gate stops the
     normal tracker from firing, but nothing stops a request sent
     directly to this endpoint from bypassing it.
@@ -147,7 +147,7 @@ def analytics_event_api(request):
         return JsonResponse({'error': 'Failed to save event'}, status=500)
 
 
-# ─── Public JS Error API (Phase 11 — Real User Monitoring) ─────────────
+# ─── Public JS Error API (Real User Monitoring) ─────────────────────────
 
 MAX_STACK_LENGTH = 4000
 
@@ -254,7 +254,35 @@ def _browser_source(kind):
         'error': 'JavaScript',
         'rejection': 'JavaScript',
         'resource': 'Browser',
+        'transfer': 'JavaScript Transfer Center',
     }.get(kind, 'Browser')
+
+
+_BROWSER_TRANSFER_METADATA_FIELDS = (
+    'transfer_id', 'direction', 'status', 'chunk_index', 'total_chunks',
+    'bytes_transferred', 'total_bytes', 'http_status', 'next_state',
+    'elapsed_ms', 'attempt', 'retry_budget', 'error_class', 'error_code',
+)
+
+
+def _clean_transfer_metadata(value):
+    """Allow-list Transfer Center browser telemetry before persistence/logging."""
+    source = value if isinstance(value, dict) else {}
+    cleaned = {}
+    for key in _BROWSER_TRANSFER_METADATA_FIELDS:
+        if key not in source:
+            continue
+        item = source[key]
+        if item is None:
+            continue
+        if key in {'chunk_index', 'total_chunks', 'bytes_transferred', 'total_bytes', 'http_status', 'elapsed_ms', 'attempt', 'retry_budget'}:
+            try:
+                cleaned[key] = int(item)
+            except (TypeError, ValueError):
+                continue
+        else:
+            cleaned[key] = _clean_str(item, 160)
+    return cleaned
 
 
 @csrf_exempt
@@ -277,7 +305,7 @@ def analytics_browser_log_api(request):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
     kind = _clean_str(body.get('kind'), 20).lower()
-    allowed = {'console', 'error', 'rejection', 'resource'}
+    allowed = {'console', 'error', 'rejection', 'resource', 'transfer'}
     if kind not in allowed:
         return JsonResponse({'error': 'Unsupported browser event'}, status=400)
     if kind == 'console' and not bool(get_config().get('LOG_BROWSER_CAPTURE_CONSOLE', False)):
@@ -290,7 +318,8 @@ def analytics_browser_log_api(request):
     if not message:
         return JsonResponse({'error': 'message is required'}, status=400)
 
-    metadata = body.get('metadata') if isinstance(body.get('metadata'), dict) else {}
+    raw_metadata = body.get('metadata') if isinstance(body.get('metadata'), dict) else {}
+    metadata = _clean_transfer_metadata(raw_metadata) if kind == 'transfer' else raw_metadata
     emit_message(
         message,
         level=severity,

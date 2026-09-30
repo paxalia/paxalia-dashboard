@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{% static 'paxalia/icons/brand/icon-brand.svg' %}" type="image/svg+xml">
     <title>{% block title %}{{ brand_name|default:'Paxalia' }}{% endblock %}</title>
     <meta name="description" content="{% block description %}{{ dashboard_name|default:'Paxalia Dashboard' }}{% endblock %}">
     <link rel="stylesheet" href="{% static 'paxalia/styles/themes.css' %}">
@@ -26,7 +27,17 @@
         }());
     </script>
 </head>
-<body class="paxalia-auth-body" data-auth-generic-error="{% trans 'The request could not be completed.' %}" data-auth-password-show="{% trans 'Show' %}" data-auth-password-hide="{% trans 'Hide' %}" data-auth-password-show-label="{% trans 'Show password' %}" data-auth-password-hide-label="{% trans 'Hide password' %}">
+<body class="paxalia-auth-body"
+      data-auth-generic-error="{% trans 'The request could not be completed.' %}"
+      data-auth-password-show="{% trans 'Show' %}"
+      data-auth-password-hide="{% trans 'Hide' %}"
+      data-auth-password-show-label="{% trans 'Show password' %}"
+      data-auth-password-hide-label="{% trans 'Hide password' %}"
+      data-paxalia-telemetry-enabled="{% if logging_enabled|default:True %}1{% else %}0{% endif %}"
+      data-paxalia-telemetry-url="{% url 'paxalia:browser_log_api' %}"
+      data-paxalia-telemetry-max-events="50"
+      data-paxalia-telemetry-resource-errors="{% if browser_telemetry_resource_errors %}1{% else %}0{% endif %}">
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/browser-telemetry.js' %}?v=5.0.0"></script>
 <main class="paxalia-auth-shell" id="main-content">
     <header class="paxalia-auth-brand" aria-label="Paxalia">
         <a href="{{ auth_home_url|default:'/' }}" class="paxalia-auth-brand__link">
@@ -58,7 +69,8 @@
         <span aria-hidden="true">·</span><a href="{{ auth_support_url }}">{% trans "Support" %}</a>{% endif %}
     </footer>
 </main>
-<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/auth.js' %}"></script>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/auth.js' %}?v=5.0.0"></script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>
+

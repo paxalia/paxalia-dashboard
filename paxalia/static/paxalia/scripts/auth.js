@@ -14,6 +14,31 @@
         return match ? decodeURIComponent(match[1]) : '';
     }
 
+    function normalizeRecoveryCode(value) {
+        var raw = String(value || '').toUpperCase();
+        var compact = raw.replace(/[^A-Z0-9]/g, '').slice(0, 64);
+        var parts = [];
+        for (var index = 0; index < compact.length; index += 4) {
+            parts.push(compact.slice(index, index + 4));
+        }
+        return parts.join('-');
+    }
+
+    function showAuthError(message) {
+        var target = document.querySelector('[data-auth-error]');
+        if (!target) return;
+        target.textContent = message;
+        target.hidden = false;
+        target.setAttribute('role', 'alert');
+    }
+
+    function clearAuthError() {
+        var target = document.querySelector('[data-auth-error]');
+        if (!target) return;
+        target.hidden = true;
+        target.textContent = '';
+    }
+
     var defaultShow = attr('data-auth-password-show', 'Show');
     var defaultHide = attr('data-auth-password-hide', 'Hide');
     var defaultShowLabel = attr('data-auth-password-show-label', 'Show password');
@@ -36,18 +61,46 @@
 
     var otpGrid = document.querySelector('[data-otp-grid]');
     if (otpGrid) {
+        var form = otpGrid.closest('form');
         var hidden = document.getElementById('paxaliaOtpToken');
+        var recoveryInput = form ? form.querySelector('[data-recovery-code]') : null;
         var digits = Array.prototype.slice.call(otpGrid.querySelectorAll('.paxalia-otp-digit'));
+
+        function syncOtpToken() {
+            if (hidden) hidden.value = digits.map(function (field) { return field.value || ''; }).join('');
+        }
+
+        function setDigits(value) {
+            var text = String(value || '').replace(/\D/g, '').slice(0, digits.length);
+            digits.forEach(function (field, index) {
+                field.value = text.charAt(index) || '';
+            });
+            syncOtpToken();
+            var next = digits.findIndex(function (field) { return !field.value; });
+            var focusTarget = digits[next >= 0 ? next : digits.length - 1];
+            if (focusTarget) focusTarget.focus();
+            clearAuthError();
+        }
+
         digits.forEach(function (input, index) {
             input.addEventListener('input', function () {
-                input.value = (input.value || '').replace(/\D/g, '').slice(0, 1);
+                var raw = (input.value || '').replace(/\D/g, '');
+                if (raw.length > 1) {
+                    setDigits(raw);
+                    return;
+                }
+                input.value = raw.slice(0, 1);
+                if (input.value && recoveryInput) recoveryInput.value = '';
                 if (input.value && index < digits.length - 1) digits[index + 1].focus();
-                if (hidden) hidden.value = digits.map(function (field) { return field.value; }).join('');
+                syncOtpToken();
+                clearAuthError();
             });
+
             input.addEventListener('keydown', function (event) {
                 if (event.key === 'Backspace' && !input.value && index > 0) {
                     digits[index - 1].value = '';
                     digits[index - 1].focus();
+                    syncOtpToken();
                     event.preventDefault();
                 } else if (event.key === 'ArrowLeft' && index > 0) {
                     digits[index - 1].focus();
@@ -57,33 +110,52 @@
                     event.preventDefault();
                 }
             });
+
             input.addEventListener('paste', function (event) {
                 var clipboard = event.clipboardData || window.clipboardData;
+                var text = ((clipboard && clipboard.getData('text')) || '').replace(/\D/g, '');
+                if (!text) return;
                 event.preventDefault();
-                var text = ((clipboard && clipboard.getData('text')) || '').replace(/\D/g, '').slice(0, digits.length);
-                text.split('').forEach(function (character, idx) {
-                    if (digits[idx]) digits[idx].value = character;
-                });
-                if (hidden) hidden.value = digits.map(function (field) { return field.value; }).join('');
-                var next = digits.findIndex(function (field) { return !field.value; });
-                var focusTarget = digits[next >= 0 ? next : digits.length - 1] || input;
-                focusTarget.focus();
+                setDigits(text);
             });
         });
 
-        var form = otpGrid.closest('form');
+        if (recoveryInput) {
+            recoveryInput.addEventListener('input', function () {
+                var before = recoveryInput.value || '';
+                recoveryInput.value = normalizeRecoveryCode(before);
+                if (recoveryInput.value.trim()) {
+                    digits.forEach(function (field) { field.value = ''; });
+                    syncOtpToken();
+                }
+                clearAuthError();
+            });
+        }
+
         if (form) {
             form.addEventListener('submit', function (event) {
-                if (hidden) hidden.value = digits.map(function (field) { return field.value; }).join('');
-                if (!hidden || hidden.value.length !== digits.length) {
-                    event.preventDefault();
-                    var target = document.querySelector('[data-auth-error]');
-                    if (target) {
-                        target.textContent = otpGrid.closest('[data-auth-step="2fa"]') ?
-                            (otpGrid.closest('[data-auth-step="2fa"]').getAttribute('data-otp-incomplete-message') || 'Enter the complete verification code.') :
-                            'Enter the complete verification code.';
-                        target.hidden = false;
+                syncOtpToken();
+                var recovery = recoveryInput ? normalizeRecoveryCode(recoveryInput.value) : '';
+                var otp = hidden ? hidden.value : '';
+                if (recovery) {
+                    recoveryInput.value = recovery;
+                    if (hidden) hidden.value = '';
+                    if (recovery.replace(/-/g, '').length !== 16) {
+                        event.preventDefault();
+                        showAuthError('Enter the complete 16-character recovery code.');
+                        return;
                     }
+                    return;
+                }
+                if (!otp || otp.length !== digits.length) {
+                    event.preventDefault();
+                    var step = otpGrid.closest('[data-auth-step="2fa"]');
+                    showAuthError(
+                        step
+                            ? (step.getAttribute('data-otp-incomplete-message') || 'Enter the complete verification code, or use a recovery code.')
+                            : 'Enter the complete verification code.'
+                    );
+                    return;
                 }
             });
         }
@@ -117,7 +189,7 @@
             var value = button.getAttribute('data-copy-value') || '';
             if (!value) {
                 var target = document.getElementById(button.getAttribute('data-copy-target') || '');
-                value = target ? target.textContent.replace(/\\s+/g, '') : '';
+                value = target ? target.textContent.replace(/\s+/g, '') : '';
             }
             if (!value) return;
             var original = button.textContent;
@@ -157,7 +229,8 @@
     });
 
     document.querySelectorAll('.paxalia-auth-form').forEach(function (form) {
-        form.addEventListener('submit', function () {
+        form.addEventListener('submit', function (event) {
+            if (event.defaultPrevented) return;
             var button = form.querySelector('.paxalia-auth-submit[type="submit"]');
             if (button) {
                 button.disabled = true;
@@ -192,4 +265,3 @@
         }
     };
 }());
-

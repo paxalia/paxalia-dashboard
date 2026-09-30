@@ -29,7 +29,7 @@ from .models import (
     ScheduledReport,
     ShareLink,
     Notification,
-    PaxaliaLogEvent, PaxaliaLogGroup,
+    PaxaliaLogEvent, PaxaliaLogGroup, PaxaliaTransfer,
 )
 
 
@@ -329,3 +329,34 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ('category', 'is_read')
     search_fields = ('subject', 'message')
     readonly_fields = ('created_at',)
+
+
+@admin.register(PaxaliaTransfer)
+class PaxaliaTransferAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'direction', 'filename', 'status', 'bytes_transferred', 'size', 'actor')
+    list_filter = ('direction', 'status', 'created_at')
+    search_fields = ('filename', 'request_id', 'error_message')
+    date_hierarchy = 'created_at'
+    exclude = ('server_relative_path', 'staging_path')
+    readonly_fields = [
+        field.name for field in PaxaliaTransfer._meta.fields
+        if field.name not in {'server_relative_path', 'staging_path'}
+    ]
+
+    def has_view_permission(self, request, obj=None):
+        if not getattr(request.user, 'is_authenticated', False):
+            return False
+        if not getattr(request.user, 'is_active', True):
+            return False
+        if getattr(request.user, 'is_superuser', False):
+            return True
+        return bool(request.user.has_perm('paxalia.view_transfers'))
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

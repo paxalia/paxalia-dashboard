@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Category breakdown (doughnut) — Phase 10
+    // Category breakdown (doughnut)
     const categoryChartEl = document.getElementById('categoryChart');
     if (categoryChartEl && data.category_labels && data.category_labels.length) {
         new Chart(categoryChartEl.getContext('2d'), {

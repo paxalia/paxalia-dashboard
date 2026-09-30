@@ -1,0 +1,43 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Confirm Password" %} — Paxalia{% endblock %}
+{% block page_title %}{% trans "Confirm Password" %}{% endblock %}
+{% block page_subtitle %}{% trans "A recent password confirmation is required for this sensitive Server Files action." %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/server-files.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="sf-page">
+    <section class="sf-surface sf-reauth-card" aria-labelledby="sf-reauth-title">
+        <div class="sf-reauth-card__accent" aria-hidden="true"></div>
+        <div class="sf-reauth-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+                <path d="M7 10V8a5 5 0 0 1 10 0v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                <rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/>
+                <circle cx="12" cy="15" r="1.2" fill="currentColor"/>
+            </svg>
+        </div>
+        <div class="sf-reauth-card__copy">
+            <div class="sf-reauth-card__intro">
+            <p class="sf-overline">{% trans "Sensitive action" %}</p>
+            <h2 id="sf-reauth-title">{% trans "Confirm your password" %}</h2>
+            <p>{% trans "This extra step helps protect protected-file access and destructive operations when a dashboard session is left open." %}</p>
+            </div>
+
+            <form method="post" class="sf-reauth-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+                <label for="sf-password">{% trans "Password" %}</label>
+                <input id="sf-password" type="password" name="password" autocomplete="current-password" required maxlength="4096" autofocus>
+                <div class="sf-form__actions">
+                    <button class="analytics-btn analytics-btn--primary sf-button sf-button--primary" type="submit">{% trans "Confirm password" %}</button>
+                    <a class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" href="{% url 'paxalia:server_files' %}">{% trans "Cancel" %}</a>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
+{% endblock %}

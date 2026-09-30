@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from importlib import import_module
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -11,6 +12,8 @@ from django.utils.translation import gettext as _
 
 from .models import PaxaliaDevice, PaxaliaDeviceCredential
 from .settings import get_config
+from .transfer_center.policy import transfer_root
+from .server_files.policy import get_roots, is_enabled as server_files_enabled
 
 PASS = "PASS"
 WARNING = "WARNING"
@@ -495,7 +498,82 @@ def run_security_health_checks(request=None):
         href=_href("paxalia:security_overview"),
     ))
 
-    max_session = int(config.get("ADMIN_SESSION_MAX_AGE_SECONDS", 0) or 0)
+    max_session = _safe_int_config(config.get("ADMIN_SESSION_MAX_AGE_SECONDS", 0), 0)
+    # current operational security controls: read-only diagnostics, never a
+    # mechanism for changing the host project's filesystem/network policy.
+    file_enabled = bool(config.get('FILE_MANAGER_ENABLED', False))
+    roots = config.get('FILE_MANAGER_ALLOWED_ROOTS') or []
+    file_status = PASS if (not file_enabled or roots) else DANGER
+    file_current = (
+        _('Server Files is enabled with %d explicitly configured root(s).') % len(roots)
+        if file_enabled else _('Server Files is disabled by default.')
+    )
+    checks.append(_check(
+        'server-files-policy', _('Paxalia Server Files filesystem boundary'), file_status, file_current,
+        _('Disabled by default, or enabled only with explicit allowed roots and protected-path policy.'),
+        _('Filesystem access must remain bounded by server-side policy and never expose an unrestricted root.'),
+        _('PAXALIA_DASHBOARD FILE_MANAGER_ENABLED / FILE_MANAGER_ALLOWED_ROOTS'),
+        _('Keep Server Files disabled until explicit non-overlapping roots and permissions are configured.'),
+        href=_href('paxalia:server_files'),
+    ))
+
+    transfer_enabled = bool(config.get('TRANSFER_CENTER_ENABLED', True))
+    transfer_max_mb = _safe_int_config(config.get('TRANSFER_MAX_FILE_SIZE_MB', 0), 0)
+    transfer_status = DISABLED if not transfer_enabled else PASS
+    if transfer_enabled:
+        if transfer_max_mb <= 0:
+            transfer_status = DANGER
+            transfer_current = _('Transfer Center is enabled without a positive file-size limit.')
+        else:
+            try:
+                effective_root = transfer_root()
+                if server_files_enabled():
+                    server_roots = get_roots()
+                    if not server_roots:
+                        transfer_status = NOT_CONFIGURED
+                        transfer_current = _('Transfer Center is enabled, but Server Files has no configured allowed roots yet.')
+                    elif any(
+                        effective_root == Path(item.path).resolve()
+                        or effective_root.is_relative_to(Path(item.path).resolve())
+                        or Path(item.path).resolve().is_relative_to(effective_root)
+                        for item in server_roots
+                    ):
+                        transfer_status = DANGER
+                        transfer_current = _('Transfer staging overlaps a Server Files root.')
+                    else:
+                        transfer_current = _('Transfer Center is enabled with a %d MB per-file limit and an isolated staging root.') % transfer_max_mb
+                else:
+                    transfer_status = NOT_CONFIGURED
+                    transfer_current = _('Transfer Center is enabled, but Server Files is disabled; transfers cannot reach server files until an explicit root is configured.')
+            except Exception:
+                transfer_status = DANGER
+                transfer_current = _('Transfer Center staging configuration could not be validated safely.')
+    else:
+        transfer_current = _('Transfer Center is disabled.')
+    checks.append(_check(
+        'transfer-policy', _('Paxalia Transfer Center limits'), transfer_status, transfer_current,
+        _('A positive file-size limit plus bounded chunking, retries, concurrency, and staging retention.'),
+        _('Transfer operations must never become an unbounded upload/download channel.'),
+        _('PAXALIA_DASHBOARD transfer policy'),
+        _('Keep transfer limits positive and configure a dedicated staging root; never grant unrestricted filesystem access.'),
+        href=_href('paxalia:transfer_center'),
+    ))
+
+    availability_interval = _safe_int_config(config.get('AVAILABILITY_DEFAULT_INTERVAL_SECONDS', 0), 0)
+    availability_timeout = _safe_int_config(config.get('AVAILABILITY_DEFAULT_TIMEOUT_SECONDS', 0), 0)
+    availability_status = PASS if 30 <= availability_interval <= 86400 and 1 <= availability_timeout <= 60 else DANGER
+    checks.append(_check(
+        'availability-policy', _('Paxalia Availability execution bounds'), availability_status,
+        _('Default interval=%d seconds; timeout=%d seconds; scheduler bound=%d checks/run.') % (
+            availability_interval, availability_timeout, _safe_int_config(config.get('AVAILABILITY_MAX_CHECKS_PER_RUN', 100), 100)
+        ),
+        _('Bounded interval, timeout, response body, and checks-per-run limits.'),
+        _('Monitoring work must remain bounded even when a large number of monitors become due simultaneously.'),
+        _('PAXALIA_DASHBOARD availability policy'),
+        _('Keep monitor intervals/timeouts and scheduler batch limits within production-safe bounds.'),
+        href=_href('paxalia:availability'),
+    ))
+
     checks.append(_check(
         "admin-session", _("Admin session security"), PASS if max_session > 0 else DANGER,
         _("Paxalia administrator sessions have a bounded verification age of %d seconds.") % max_session if max_session > 0 else _("No positive privileged session verification lifetime is configured."),

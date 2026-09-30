@@ -2,10 +2,10 @@
 {% load static i18n %}
 
 {% block page_title %}{% trans "Broken Links" %}{% endblock %}
-{% block page_subtitle %}{% trans "404s and the referrers pointing at them" %}{% endblock %}
+{% block page_subtitle %}{% trans "Investigate real 404s, crawler probes, and the clients reaching missing paths" %}{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'paxalia/styles/components/security.css' %}">
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/bot-traffic.css' %}">
 {% endblock %}
 
 {% block filter_bar %}
@@ -13,72 +13,134 @@
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="security-page analytics-page-stack">
+<div class="bots-dashboard analytics-page-stack">
+    <form method="get" class="bot-filter-bar broken-links-filter" aria-label="{% trans 'Broken link filters' %}">
+        <input type="hidden" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+        <input type="hidden" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+        <label>{% trans "Missing path" %}
+            <input type="text" name="path" value="{{ path_query }}" maxlength="255" autocomplete="off" placeholder="{% trans 'Search 404 path' %}">
+        </label>
+        <button type="submit" class="analytics-btn analytics-btn--secondary analytics-btn--small">{% trans "Search" %}</button>
+        <a class="analytics-btn analytics-btn--secondary analytics-btn--small" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">{% trans "Clear" %}</a>
+    </form>
+
     <div class="stat-grid">
-        <div class="stat-card {% if total_404s > 0 %}stat-card--highlight{% endif %}">
-            <span class="stat-label">{% trans "Total 404s" %}</span>
-            <span class="stat-value">{{ total_404s }}</span>
-        </div>
+        <div class="stat-card {% if human_404s %}stat-card--highlight{% endif %}"><span class="stat-label">{% trans "All 404s" %}</span><span class="stat-value">{{ total_404s }}</span></div>
+        <div class="stat-card"><span class="stat-label">{% trans "Real / normal" %}</span><span class="stat-value">{{ human_404s }}</span></div>
+        <div class="stat-card"><span class="stat-label">{% trans "Bot / scanner" %}</span><span class="stat-value">{{ bot_404s }}</span></div>
+        <div class="stat-card"><span class="stat-label">{% trans "Unique missing paths" %}</span><span class="stat-value">{{ unique_missing_paths }}</span></div>
     </div>
 
-    <div class="table-card">
-        <h2 class="card-title">{% trans "Most-hit broken paths" %}</h2>
+    <section class="table-card">
+        <div class="card-title-row">
+            <div>
+                <h2 class="card-title">{% trans "Broken pages to fix" %}</h2>
+                <p class="form-hint">{% trans "Normal 404 requests are separated from automation. Hits, clients, referrers, and first/last sightings help distinguish a genuine broken link from background scanning." %}</p>
+            </div>
+            <span class="bot-section-badge">{{ date_range_label }}</span>
+        </div>
         {% if top_broken_paths %}
-        <table class="analytics-table">
-            <thead>
-                <tr>
-                    <th>{% trans "Path" %}</th>
-                    <th>{% trans "Hits" %}</th>
-                    <th>{% trans "Last seen" %}</th>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="table-scroll">
+            <table class="analytics-table">
+                <thead><tr><th>{% trans "Path" %}</th><th>{% trans "Hits" %}</th><th>{% trans "IPs" %}</th><th>{% trans "Referrers" %}</th><th>{% trans "First seen" %}</th><th>{% trans "Last seen" %}</th>{% if can_manage_bot_paths %}<th>{% trans "Rule" %}</th>{% endif %}</tr></thead>
+                <tbody>
                 {% for row in top_broken_paths %}
-                <tr>
-                    <td><code>{{ row.path }}</code></td>
-                    <td>{{ row.count }}</td>
-                    <td>{{ row.last_seen|date:"Y-m-d H:i" }}</td>
-                </tr>
+                    <tr>
+                        <td><code>{{ row.path }}</code></td>
+                        <td>{{ row.count }}</td>
+                        <td>{{ row.unique_ips }}</td>
+                        <td>{{ row.unique_referrers }}</td>
+                        <td>{{ row.first_seen|date:"Y-m-d H:i" }}</td>
+                        <td>{{ row.last_seen|date:"Y-m-d H:i" }}</td>
+                        {% if can_manage_bot_paths %}
+                        <td>
+                            {% if row.path != "/" %}
+                            <form method="post" action="{% url 'paxalia:bot_path_mark' %}" data-bot-path-form>
+                                {% csrf_token %}
+                                <input type="hidden" name="path" value="{{ row.path }}">
+                                <input type="hidden" name="remove_normal_views" value="1">
+                                <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
+                                <button type="submit" class="analytics-btn analytics-btn--secondary analytics-btn--small">{% trans "Set as bot + clean" %}</button>
+                            </form>
+                            {% else %}<span class="bot-muted">{% trans "Root path" %}</span>{% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
                 {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="security-empty">{% trans "No 404s in this date range." %}</div>
+                </tbody>
+            </table>
+        </div>
+        {% else %}<div class="security-empty">{% trans "No normal 404 paths were recorded in this date range." %}</div>{% endif %}
+        {% if broken_paths_page.paginator.num_pages > 1 %}
+        <nav class="pagination" aria-label="{% trans 'Broken links pages' %}">
+            {% if broken_paths_page.has_previous %}<a href="?{{ pagination_query.urlencode }}&page={{ broken_paths_page.previous_page_number }}">&laquo; {% trans "Previous" %}</a>{% endif %}
+            <span>{% trans "Page" %} {{ broken_paths_page.number }} {% trans "of" %} {{ broken_paths_page.paginator.num_pages }}</span>
+            {% if broken_paths_page.has_next %}<a href="?{{ pagination_query.urlencode }}&page={{ broken_paths_page.next_page_number }}">{% trans "Next" %} &raquo;</a>{% endif %}
+        </nav>
         {% endif %}
+    </section>
+
+    <div class="bot-investigation-grid">
+        <section class="table-card">
+            <div class="card-title-row"><div><h2 class="card-title">{% trans "Clients reaching real 404s" %}</h2><p class="form-hint">{% trans "Each client is grouped with the missing paths it requested, making repeated broken-link attempts easier to investigate." %}</p></div><span class="bot-section-badge">{{ human_clients|length }}</span></div>
+            {% if human_clients %}
+            <div class="bot-ip-list">
+                {% for row in human_clients %}
+                <article class="bot-ip-card">
+                    <header class="bot-ip-card__header"><div><code class="bot-ip-card__ip">{{ row.ip_hash }}</code></div><div class="bot-ip-card__stats"><strong>{{ row.hits }}</strong> {% trans "404s" %} · <strong>{{ row.unique_paths }}</strong> {% trans "missing paths" %}</div></header>
+                    <div class="bot-ip-card__meta">{% trans "First" %} {{ row.first_seen|date:"Y-m-d H:i" }} · {% trans "Last" %} {{ row.last_seen|date:"Y-m-d H:i" }}</div>
+                    <table class="analytics-table bot-ip-paths"><thead><tr><th>{% trans "Missing path" %}</th><th>{% trans "Hits" %}</th><th>{% trans "Last seen" %}</th></tr></thead><tbody>{% for path in row.paths %}<tr><td><code>{{ path.path }}</code></td><td>{{ path.count }}</td><td>{{ path.last_seen|date:"Y-m-d H:i" }}</td></tr>{% endfor %}</tbody></table>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}<div class="security-empty">{% trans "No identifiable client IP/hash was recorded for normal 404s." %}</div>{% endif %}
+        </section>
+
+        <section class="table-card">
+            <div class="card-title-row"><div><h2 class="card-title">{% trans "Referrers" %}</h2><p class="form-hint">{% trans "A referrer indicates another page or external source actively points at the missing URL." %}</p></div></div>
+            {% if top_referrers %}<table class="analytics-table"><thead><tr><th>{% trans "Referrer" %}</th><th>{% trans "Hits" %}</th><th>{% trans "Missing paths" %}</th><th>{% trans "Last seen" %}</th></tr></thead><tbody>{% for row in top_referrers %}<tr><td class="bot-ua">{{ row.referrer }}</td><td>{{ row.count }}</td><td>{{ row.unique_paths }}</td><td>{{ row.last_seen|date:"Y-m-d H:i" }}</td></tr>{% endfor %}</tbody></table>{% else %}<div class="security-empty">{% trans "No referred normal 404s were recorded." %}</div>{% endif %}
+        </section>
     </div>
 
-    <div class="table-card">
-        <h2 class="card-title">{% trans "Referrers pointing at a 404" %}</h2>
-        <p class="form-hint">
-            {% trans "A referrer here means something (an internal link, an external site) is pointing at a page that no longer resolves — usually more worth fixing than a 404 with no referrer, which is often just a scanner probing random paths." %}
-        </p>
-        {% if top_referrers %}
-        <table class="analytics-table">
-            <thead>
-                <tr>
-                    <th>{% trans "Referrer" %}</th>
-                    <th>{% trans "Count" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in top_referrers %}
-                <tr>
-                    <td>{{ row.referrer }}</td>
-                    <td>{{ row.count }}</td>
-                </tr>
+    <section class="table-card">
+        <div class="card-title-row"><div><h2 class="card-title">{% trans "Scanner / crawler 404s" %}</h2><p class="form-hint">{% trans "Automation is kept separate from the work queue. A path rule makes future classification deterministic; the one-click cleanup removes matching historical normal-page records in the current filtered scope." %}</p></div></div>
+        {% if scanner_paths %}
+        <div class="table-scroll">
+            <table class="analytics-table">
+                <thead><tr><th>{% trans "Path" %}</th><th>{% trans "Category" %}</th><th>{% trans "Hits" %}</th><th>{% trans "IPs" %}</th><th>{% trans "First seen" %}</th><th>{% trans "Last seen" %}</th>{% if can_manage_bot_paths %}<th>{% trans "Rule" %}</th>{% endif %}</tr></thead>
+                <tbody>
+                {% for row in scanner_paths %}
+                    <tr>
+                        <td><code>{{ row.path }}</code></td>
+                        <td><span class="bot-category-pill bot-category-pill--{{ row.bot_category|default:'unknown' }}">{{ row.bot_category|default:"Unclassified" }}</span></td>
+                        <td>{{ row.count }}</td><td>{{ row.unique_ips }}</td>
+                        <td>{{ row.first_seen|date:"Y-m-d H:i" }}</td><td>{{ row.last_seen|date:"Y-m-d H:i" }}</td>
+                        {% if can_manage_bot_paths %}<td>{% if row.path != "/" %}<form method="post" action="{% url 'paxalia:bot_path_mark' %}" data-bot-path-form>{% csrf_token %}<input type="hidden" name="path" value="{{ row.path }}"><input type="hidden" name="remove_normal_views" value="1"><input type="hidden" name="return_to" value="{{ request.get_full_path }}"><button type="submit" class="analytics-btn analytics-btn--secondary analytics-btn--small">{% trans "Lock path rule" %}</button></form>{% endif %}</td>{% endif %}
+                    </tr>
                 {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="security-empty">
-            <strong>{% trans "No referred 404s in this date range." %}</strong>
-            <span>{% trans "This means the recorded 404 requests did not include a usable HTTP referrer. Check the Broken Paths table for scanners, stale bookmarks, or direct requests." %}</span>
+                </tbody>
+            </table>
         </div>
-        {% endif %}
+        {% else %}<div class="security-empty">{% trans "No bot/scanner 404s were recorded in this date range." %}</div>{% endif %}
+    </section>
+
+    <div class="bot-investigation-grid">
+        <section class="table-card">
+            <div class="card-title-row"><div><h2 class="card-title">{% trans "Automation clients" %}</h2><p class="form-hint">{% trans "See which IP/hash is responsible for repeated automated 404 probes and which paths it targeted." %}</p></div></div>
+            {% if bot_clients %}
+            <div class="bot-ip-list">{% for row in bot_clients %}<article class="bot-ip-card"><header class="bot-ip-card__header"><div><code class="bot-ip-card__ip">{{ row.ip_hash }}</code></div><div class="bot-ip-card__stats"><strong>{{ row.hits }}</strong> {% trans "404s" %} · <strong>{{ row.unique_paths }}</strong> {% trans "paths" %}</div></header><div class="bot-ip-card__meta">{% trans "First" %} {{ row.first_seen|date:"Y-m-d H:i" }} · {% trans "Last" %} {{ row.last_seen|date:"Y-m-d H:i" }}</div><table class="analytics-table bot-ip-paths"><thead><tr><th>{% trans "Target" %}</th><th>{% trans "Hits" %}</th></tr></thead><tbody>{% for path in row.paths %}<tr><td><code>{{ path.path }}</code></td><td>{{ path.count }}</td></tr>{% endfor %}</tbody></table></article>{% endfor %}</div>
+            {% else %}<div class="security-empty">{% trans "No identifiable bot/scanner client IPs were recorded." %}</div>{% endif %}
+        </section>
+
+        <section class="table-card">
+            <h2 class="card-title">{% trans "404 category mix" %}</h2>
+            {% if category_breakdown %}<table class="analytics-table"><thead><tr><th>{% trans "Category" %}</th><th>{% trans "Hits" %}</th></tr></thead><tbody>{% for row in category_breakdown %}<tr><td><span class="bot-category-pill bot-category-pill--{{ row.bot_category|default:'unknown' }}">{{ row.label }}</span></td><td>{{ row.count }}</td></tr>{% endfor %}</tbody></table>{% else %}<div class="security-empty">{% trans "No classified bot 404 traffic." %}</div>{% endif %}
+        </section>
     </div>
 </div>
 {% endblock %}
 
 {% block page_scripts %}
     <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/filter-bar.js' %}"></script>
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/bot-path-actions.js' %}"></script>
 {% endblock %}

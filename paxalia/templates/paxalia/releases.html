@@ -1,8 +1,9 @@
 {% extends "paxalia/base.html" %}
-{% load static %}
-{% load i18n %}
+{% load static i18n %}
 
-{% block title %}{% trans "Releases" %}{% endblock %}
+{% block title %}{% trans "Release Center" %} – Paxalia Dashboard{% endblock %}
+{% block page_title %}{% trans "Release Center" %}{% endblock %}
+{% block page_subtitle %}{% trans "Prepare and deliver build artifacts through a controlled, chunked upload workflow" %}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'paxalia/styles/components/upload.css' %}">
@@ -10,31 +11,94 @@
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="page-header release-center-shell">
-    <h1>{% trans "File Uploads" %}</h1>
-    <p class="page-subtitle">{% trans "Upload large build artifacts over HTTPS in chunks. Works even when SSH/rsync is blocked." %}</p>
-</div>
+<div class="release-center-page analytics-page-stack">
 
-
-<div class="upload-dropzone-card">
-    <div id="upload-dropzone"
-         class="upload-dropzone"
-         data-init-url="{{ ANALYTICS_UPLOAD_INIT_URL }}"
-         data-chunk-url-template="{{ ANALYTICS_UPLOAD_CHUNK_URL }}"
-         data-complete-url-template="{{ ANALYTICS_UPLOAD_COMPLETE_URL }}"
-         data-delete-url-template="{{ ANALYTICS_UPLOAD_DELETE_URL }}"
-         data-list-url="{{ ANALYTICS_UPLOAD_LIST_URL }}">
-        <input type="file" id="upload-file-input" multiple />
-        <div class="upload-dropzone-text">
-            <strong>{% trans "Drop files here" %}</strong>
-            <span>{% trans "or click to browse" %}</span>
+    <section class="release-hero">
+        <div>
+            <span class="release-eyebrow">{% trans "Artifact delivery" %}</span>
+            <h2>{% trans "Release from one controlled workspace" %}</h2>
+            <p>{% trans "Upload build artifacts over HTTPS in bounded chunks, keep the upload state visible, and hand the resulting artifact to the next deployment step without relying on SSH or rsync." %}</p>
+            <div class="release-hero__badges">
+                <span>{% trans "HTTPS" %}</span>
+                <span>{% trans "Chunked upload" %}</span>
+                <span>{% trans "Resumable state" %}</span>
+                <span>{% trans "Server-side policy" %}</span>
+            </div>
         </div>
-    </div>
-</div>
+        <div class="release-hero__stats">
+            <div><span>{% trans "Chunk size" %}</span><strong>{{ upload_chunk_size|filesizeformat }}</strong></div>
+            <div><span>{% trans "Maximum artifact" %}</span><strong>{% if upload_max_file_size %}{{ upload_max_file_size|filesizeformat }}{% else %}{% trans "Configured" %}{% endif %}</strong></div>
+        </div>
+    </section>
 
-<div class="uploads-card">
-    <h2>{% trans "Recent Uploads" %}</h2>
-    <div id="upload-list"></div>
+    <section class="release-workspace-grid">
+        <article class="table-card release-upload-card">
+            <div class="release-section-heading">
+                <div>
+                    <span class="release-eyebrow">{% trans "Upload" %}</span>
+                    <h2 class="card-title">{% trans "Add release artifacts" %}</h2>
+                    <p>{% trans "Drop one or more build files below. The browser sends them in chunks and keeps the current operation visible." %}</p>
+                </div>
+            </div>
+
+            <div class="release-dropzone-shell">
+                <div id="upload-dropzone"
+                     class="upload-dropzone release-dropzone"
+                     data-init-url="{{ ANALYTICS_UPLOAD_INIT_URL }}"
+                     data-chunk-url-template="{{ ANALYTICS_UPLOAD_CHUNK_URL }}"
+                     data-complete-url-template="{{ ANALYTICS_UPLOAD_COMPLETE_URL }}"
+                     data-delete-url-template="{{ ANALYTICS_UPLOAD_DELETE_URL }}"
+                     data-list-url="{{ ANALYTICS_UPLOAD_LIST_URL }}"
+                     data-chunk-size="{{ upload_chunk_size }}">
+                    <input type="file" id="upload-file-input" multiple aria-label="{% trans 'Choose release artifacts' %}" />
+                    <div class="release-dropzone__icon" aria-hidden="true">↑</div>
+                    <div class="upload-dropzone-text release-dropzone__text">
+                        <strong>{% trans "Drop build artifacts here" %}</strong>
+                        <span>{% trans "or click to browse from this device" %}</span>
+                    </div>
+                    <small>{% trans "Server-side extension and size policies still apply." %}</small>
+                </div>
+            </div>
+
+            <div class="release-upload-footnote">
+                <span>{% trans "Current chunk size" %} <strong>{{ upload_chunk_size|filesizeformat }}</strong></span>
+                <span>{% trans "Transport" %} <strong>{% trans "HTTPS POST" %}</strong></span>
+                <span>{% trans "Storage" %} <strong>{% trans "Server-side staging" %}</strong></span>
+            </div>
+        </article>
+
+        <aside class="table-card release-flow-card">
+            <div>
+                <span class="release-eyebrow">{% trans "Workflow" %}</span>
+                <h2 class="card-title">{% trans "What happens next" %}</h2>
+                <p>{% trans "The Release Center is intentionally focused on controlled artifact delivery; deployment remains an explicit downstream operation." %}</p>
+            </div>
+            <ol class="release-flow-list">
+                <li><span>1</span><div><strong>{% trans "Select" %}</strong><small>{% trans "Choose the build artifact or artifacts you need to move." %}</small></div></li>
+                <li><span>2</span><div><strong>{% trans "Transfer" %}</strong><small>{% trans "Chunks are sent over HTTPS and the session remains observable while it progresses." %}</small></div></li>
+                <li><span>3</span><div><strong>{% trans "Complete" %}</strong><small>{% trans "The server finalizes the upload only after the configured upload policy accepts it." %}</small></div></li>
+            </ol>
+        </aside>
+    </section>
+
+    <section class="table-card release-history-card" aria-labelledby="release-history-heading">
+        <div class="release-section-heading">
+            <div>
+                <span class="release-eyebrow">{% trans "Artifact history" %}</span>
+                <h2 id="release-history-heading" class="card-title">{% trans "Recent release uploads" %}</h2>
+                <p>{% trans "Track artifact upload state and remove completed or stale records when they are no longer needed." %}</p>
+            </div>
+        </div>
+        <div id="upload-list" class="release-upload-list"></div>
+    </section>
+
+    <section class="release-security-note">
+        <div class="release-security-note__icon" aria-hidden="true">✓</div>
+        <div>
+            <strong>{% trans "Artifact handling remains policy-bound" %}</strong>
+            <p>{% trans "Release uploads use the dashboard's existing upload limits and blocked-extension rules. This screen does not expose a filesystem path or bypass Server Files security controls." %}</p>
+        </div>
+    </section>
 </div>
 {% endblock %}
 

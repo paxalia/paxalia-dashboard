@@ -1,0 +1,29 @@
+.bots-dashboard { display:flex; flex-direction:column; gap:1.25rem; }
+.bot-investigation-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.25rem; }
+.bot-section-badge { white-space:nowrap; font-size:.78rem; opacity:.72; }
+.bot-ip-list { display:grid; gap:.9rem; }
+.bot-ip-card { border:1px solid var(--analytics-border,rgba(127,127,127,.2)); border-radius:14px; padding:1rem; background:var(--analytics-surface,transparent); overflow:hidden; }
+.bot-ip-card__header { display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:.45rem; }
+.bot-ip-card__identity { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; min-width:0; }
+.bot-ip-card__ip { font-size:.9rem; overflow-wrap:anywhere; }
+.bot-ip-card__stats,.bot-ip-card__meta { font-size:.78rem; opacity:.72; }
+.bot-ip-card__meta { margin-bottom:.4rem; }
+.bot-ip-paths { margin-top:.75rem; }
+.bot-category-pill,.bot-identity-pill { display:inline-flex; align-items:center; border:1px solid var(--analytics-border,rgba(127,127,127,.2)); border-radius:999px; padding:.18rem .5rem; font-size:.72rem; font-weight:600; }
+.bot-category-pill--malicious { background:rgba(220,70,70,.12); }
+.bot-category-pill--search_engine { background:rgba(70,130,220,.12); }
+.bot-category-pill--ai_crawler { background:rgba(140,90,220,.12); }
+.bot-category-pill--social_preview { background:rgba(70,170,150,.12); }
+.bot-category-pill--seo_tool { background:rgba(210,150,70,.12); }
+.bot-category-pill--unknown,.bot-category-pill-- { background:rgba(127,127,127,.1); }
+.bot-identity-pill { opacity:.82; background:rgba(127,127,127,.06); }
+.bot-ua { max-width:32rem; min-width:12rem; overflow-wrap:anywhere; font-size:.78rem; }
+.bot-small-note,.bot-muted { font-size:.75rem; opacity:.65; }
+.bot-prefix-list { display:flex; flex-wrap:wrap; gap:.5rem; }
+.bot-prefix-list code { border:1px solid var(--analytics-border,rgba(127,127,127,.2)); padding:.35rem .5rem; border-radius:8px; overflow-wrap:anywhere; }
+.analytics-btn--small { padding:.42rem .65rem; font-size:.76rem; }
+.table-scroll { overflow-x:auto; }
+@media (max-width:1000px) {
+  .bot-investigation-grid { grid-template-columns:1fr; }
+  .bot-ip-card__header { align-items:flex-start; flex-direction:column; }
+}

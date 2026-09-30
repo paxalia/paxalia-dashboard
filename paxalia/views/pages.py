@@ -6,6 +6,7 @@ from django.db.models import Count
 from django.core.paginator import Paginator
 
 from paxalia.models import PageView
+from ..bot_management import can_manage_bot_paths
 
 from paxalia.segments import segment_scoped
 from .utils import get_date_range, detect_active_preset, section_enabled, get_current_site, site_scoped, get_current_segment
@@ -45,5 +46,6 @@ def analytics_pages(request):
         'show_search': True,
         'search_path': path_query,
         'active_page': 'pages',
+        'can_manage_bot_paths': can_manage_bot_paths(request.user),
     }
     return render(request, 'paxalia/pages.html', context)

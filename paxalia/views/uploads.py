@@ -8,16 +8,21 @@ network.
 All settings come from the project's PAXALIA_DASHBOARD dict — see
 conf_uploads.py.
 
-Flow:
-  1. POST /insights/releases/upload/init/
-  2. POST /insights/releases/upload/chunk/<id>/
-  3. POST /insights/releases/upload/complete/<id>/
+Transfer Center flow:
+  1. POST /insights/transfer-center/send/init/
+  2. POST /insights/api/uploads/chunk/<id>/
+  3. POST /insights/api/uploads/complete/<id>/
+
+Transfer-owned uploads are private staging records. The Transfer Center
+performs the final integrity verification and promotion into the fixed
+server-side exchange directory.
 """
 
 import os
+from pathlib import PurePath
 
 from ..admin_security import admin_security_preflight, admin_security_required
-from django.db import transaction
+from django.db import connection, transaction
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -31,19 +36,33 @@ from ..conf_uploads import (
     get_upload_blocked_extensions,
     get_upload_allowed_extensions,
 )
+from ..transfer_center.policy import send_root, send_upload_temp_path
 
 
 def _get_temp_dir():
-    """Return the temporary upload directory, creating it if necessary."""
-    temp_dir = os.path.join(get_uploads_incoming_root(), '.tmp')
-    os.makedirs(temp_dir, exist_ok=True)
-    return temp_dir
+    """Return a private upload staging directory without following a symlink."""
+    from pathlib import Path
 
+    base = Path(get_uploads_incoming_root()).expanduser()
+    try:
+        if base.exists() and base.is_symlink():
+            raise OSError('Upload root must not be a symbolic link.')
+        base.mkdir(parents=True, exist_ok=True)
+        base = base.resolve()
+        temp_dir = base / '.tmp'
+        if temp_dir.exists() and temp_dir.is_symlink():
+            raise OSError('Upload staging directory must not be a symbolic link.')
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        return str(temp_dir.resolve())
+    except (OSError, RuntimeError) as exc:
+        raise OSError('Upload staging directory is unavailable.') from exc
 
 def _safe_filename(name):
-    """Strip path components as defense in depth against path traversal."""
-    return os.path.basename(name).replace('..', '')
-
+    """Accept a single filename; reject path components instead of sanitizing them."""
+    raw = str(name or '').strip()
+    if not raw or raw in {'.', '..'} or PurePath(raw).name != raw or '/' in raw or "\\" in raw:
+        return ''
+    return raw[:255]
 
 def _extension_error(filename):
     """
@@ -153,6 +172,9 @@ def _upload_chunk_preflight(request, upload_id, *args, **kwargs):
     upload = _get_owned_upload(request, upload_id)
     if upload is None:
         return None
+    transfer_error = _transfer_upload_error(request, upload, for_write=True)
+    if transfer_error is not None:
+        return transfer_error
 
     chunk_index_raw = request.POST.get('chunk_index')
     chunk_file = request.FILES.get('chunk')
@@ -173,6 +195,8 @@ def _upload_chunk_preflight(request, upload_id, *args, **kwargs):
     )
     if expected_size <= 0 or chunk_file.size != expected_size or chunk_file.size > configured_chunk_size:
         return JsonResponse({'error': 'Invalid chunk size'}, status=413)
+    if chunk_index < upload.chunks_received:
+        return None
     if upload.bytes_received + chunk_file.size > upload.total_size:
         return JsonResponse({'error': 'Chunk exceeds declared upload size'}, status=413)
     return None
@@ -189,6 +213,37 @@ def _get_owned_upload(request, upload_id, *, lock=False):
     return qs.first()
 
 
+def _transfer_upload_error(request, upload, *, for_write=True, transfer=None):
+    """Enforce Transfer Center policy when a transfer upload reaches a shared upload endpoint."""
+    if getattr(upload, 'purpose', 'release') != 'transfer_send':
+        return None
+    from ..server_files.policy import has_capability
+    from ..models import PaxaliaTransfer
+
+    if not has_capability(request.user, 'view_transfers'):
+        return JsonResponse({'error': 'Transfer Center permission is required for this upload.'}, status=403)
+    if not has_capability(request.user, 'create_transfers'):
+        return JsonResponse({'error': 'Transfer creation permission is required for this upload.'}, status=403)
+    if for_write and not has_capability(request.user, 'upload_server_files'):
+        return JsonResponse({'error': 'Server Files upload permission is required for this transfer.'}, status=403)
+    if transfer is None:
+        transfer_qs = PaxaliaTransfer.objects.filter(pk=upload.transfer_id, direction='send')
+        if connection.in_atomic_block:
+            transfer_qs = transfer_qs.select_for_update()
+        transfer = transfer_qs.first()
+    if transfer is None:
+        return JsonResponse({'error': 'Transfer session not found.'}, status=409)
+    if transfer.actor_id != upload.uploaded_by_id:
+        return JsonResponse({'error': 'Transfer session ownership is inconsistent.'}, status=409)
+    if not request.user.is_superuser and transfer.actor_id != request.user.pk:
+        return JsonResponse({'error': 'You do not own this transfer.'}, status=403)
+    if transfer.status == 'paused' and for_write:
+        return JsonResponse({'error': 'This transfer is paused.'}, status=409)
+    if transfer.status in {'cancelled', 'expired', 'failed', 'completed'}:
+        return JsonResponse({'error': 'This transfer is no longer active.'}, status=409)
+    return None
+
+
 def _public_upload(upload):
     """Serialize upload metadata without leaking a server filesystem path."""
     return {
@@ -200,6 +255,8 @@ def _public_upload(upload):
         'created_at': upload.created_at.isoformat(),
         'completed_at': upload.completed_at.isoformat() if upload.completed_at else None,
         'uploaded_by': str(upload.uploaded_by) if upload.uploaded_by else None,
+        'purpose': upload.purpose,
+        'transfer_id': str(upload.transfer_id) if upload.transfer_id else None,
     }
 
 
@@ -290,7 +347,15 @@ def upload_chunk(request, upload_id):
         return JsonResponse({'error': 'chunk_index out of range'}, status=400)
 
     expected_index = upload.chunks_received
-    if chunk_index != expected_index:
+    if chunk_index < expected_index:
+        return JsonResponse({
+            'chunks_received': upload.chunks_received,
+            'total_chunks': upload.total_chunks,
+            'bytes_received': upload.bytes_received,
+            'progress_percent': upload.progress_percent,
+            'idempotent': True,
+        })
+    if chunk_index > expected_index:
         return JsonResponse({
             'error': f'Expected chunk {expected_index}, got {chunk_index}. Chunks must arrive in order.'
         }, status=409)
@@ -306,23 +371,62 @@ def upload_chunk(request, upload_id):
     if upload.bytes_received + chunk_file.size > upload.total_size:
         return JsonResponse({'error': 'Chunk exceeds declared upload size'}, status=413)
 
-    temp_path = os.path.join(_get_temp_dir(), str(upload.id))
+    temp_path = (
+        str(send_upload_temp_path(upload.id))
+        if getattr(upload, 'purpose', 'release') == 'transfer_send'
+        else os.path.join(_get_temp_dir(), str(upload.id))
+    )
     previous_size = 0
     try:
         with transaction.atomic():
+            candidate = _get_owned_upload(request, upload_id)
+            if candidate is None:
+                return JsonResponse({'error': 'Upload session not found'}, status=404)
+            transfer = None
+            if getattr(candidate, 'purpose', 'release') == 'transfer_send':
+                from ..models import PaxaliaTransfer
+                transfer = PaxaliaTransfer.objects.select_for_update().filter(
+                    pk=candidate.transfer_id, direction='send'
+                ).first()
             locked = _get_owned_upload(request, upload_id, lock=True)
             if locked is None:
                 return JsonResponse({'error': 'Upload session not found'}, status=404)
+            if transfer is not None and locked.transfer_id != transfer.pk:
+                return JsonResponse({'error': 'Upload session changed; retry this chunk'}, status=409)
+            transfer_error = _transfer_upload_error(request, locked, for_write=True, transfer=transfer)
+            if transfer_error is not None:
+                return transfer_error
             if locked.status == 'completed':
                 return JsonResponse({'error': 'Upload already completed'}, status=400)
-            if locked.chunks_received != expected_index:
+            if locked.chunks_received > expected_index:
+                return JsonResponse({
+                    'chunks_received': locked.chunks_received,
+                    'total_chunks': locked.total_chunks,
+                    'bytes_received': locked.bytes_received,
+                    'progress_percent': locked.progress_percent,
+                    'idempotent': True,
+                })
+            if locked.chunks_received < expected_index:
                 return JsonResponse({'error': 'Upload state changed; retry this chunk'}, status=409)
 
             if os.path.exists(temp_path):
+                if os.path.islink(temp_path):
+                    raise OSError('Upload staging file is a symbolic link')
                 previous_size = os.path.getsize(temp_path)
-            with open(temp_path, 'ab') as stream:
-                for piece in chunk_file.chunks():
-                    stream.write(piece)
+            flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
+            if hasattr(os, 'O_NOFOLLOW'):
+                flags |= os.O_NOFOLLOW
+            if hasattr(os, 'O_CLOEXEC'):
+                flags |= os.O_CLOEXEC
+            fd = os.open(temp_path, flags, 0o600)
+            try:
+                with os.fdopen(fd, 'ab', closefd=True) as stream:
+                    fd = None
+                    for piece in chunk_file.chunks():
+                        stream.write(piece)
+            finally:
+                if fd is not None:
+                    os.close(fd)
 
             locked.bytes_received += chunk_file.size
             locked.chunks_received += 1
@@ -342,14 +446,6 @@ def upload_chunk(request, upload_id):
             except OSError:
                 pass
         if isinstance(exc, OSError):
-            try:
-                failed = _get_owned_upload(request, upload_id)
-                if failed is not None:
-                    failed.status = 'failed'
-                    failed.error_message = f'Disk write error: {exc}'[:500]
-                    failed.save(update_fields=['status', 'error_message', 'updated_at'])
-            except Exception:
-                pass
             return JsonResponse({'error': 'Failed to write chunk to disk'}, status=500)
         return JsonResponse({'error': 'Upload state could not be committed; retry this chunk'}, status=500)
 
@@ -370,9 +466,23 @@ def upload_complete(request, upload_id):
     temp_path = None
     try:
         with transaction.atomic():
+            candidate = _get_owned_upload(request, upload_id)
+            if candidate is None:
+                return JsonResponse({'error': 'Upload session not found'}, status=404)
+            transfer = None
+            if getattr(candidate, 'purpose', 'release') == 'transfer_send':
+                from ..models import PaxaliaTransfer
+                transfer = PaxaliaTransfer.objects.select_for_update().filter(
+                    pk=candidate.transfer_id, direction='send'
+                ).first()
             upload = _get_owned_upload(request, upload_id, lock=True)
             if upload is None:
                 return JsonResponse({'error': 'Upload session not found'}, status=404)
+            if transfer is not None and upload.transfer_id != transfer.pk:
+                return JsonResponse({'error': 'Upload session changed; retry completion'}, status=409)
+            transfer_error = _transfer_upload_error(request, upload, for_write=True, transfer=transfer)
+            if transfer_error is not None:
+                return transfer_error
             if upload.status == 'completed':
                 return JsonResponse({'upload': _public_upload(upload), 'already_completed': True})
             if upload.chunks_received != upload.total_chunks:
@@ -380,7 +490,16 @@ def upload_complete(request, upload_id):
                     'error': f'Not all chunks received ({upload.chunks_received}/{upload.total_chunks})'
                 }, status=400)
 
-            temp_path = os.path.join(_get_temp_dir(), str(upload.id))
+            temp_path = (
+                str(send_upload_temp_path(upload.id))
+                if getattr(upload, 'purpose', 'release') == 'transfer_send'
+                else os.path.join(_get_temp_dir(), str(upload.id))
+            )
+            if os.path.islink(temp_path):
+                upload.status = 'failed'
+                upload.error_message = 'Upload temp file is a symbolic link and cannot be finalized safely.'
+                upload.save(update_fields=['status', 'error_message', 'updated_at'])
+                return JsonResponse({'error': 'Upload temp file is not safe'}, status=400)
             if not os.path.exists(temp_path):
                 upload.status = 'failed'
                 upload.error_message = 'Temp file missing at completion time'
@@ -394,7 +513,7 @@ def upload_complete(request, upload_id):
                 upload.save(update_fields=['status', 'error_message', 'updated_at'])
                 return JsonResponse({'error': upload.error_message}, status=400)
 
-            final_dir = get_uploads_incoming_root()
+            final_dir = send_root() if upload.purpose == 'transfer_send' else get_uploads_incoming_root()
             final_path = os.path.join(final_dir, f'{upload.id}_{upload.original_filename}')
             try:
                 os.replace(temp_path, final_path)
@@ -435,6 +554,10 @@ def upload_delete(request, upload_id):
     upload = _get_owned_upload(request, upload_id)
     if upload is None:
         return JsonResponse({'error': 'Upload session not found'}, status=404)
+    if getattr(upload, 'purpose', 'release') == 'transfer_send':
+        return JsonResponse({
+            'error': 'Transfer Center uploads must be cancelled from the Transfer Center.'
+        }, status=409)
 
     paths_to_try = [
         _safe_managed_path(upload.storage_path),

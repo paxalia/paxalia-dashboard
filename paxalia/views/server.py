@@ -282,10 +282,10 @@ def api_server_history(request):
     """
     Real historical data from ServerMetricSnapshot, written by
     `manage.py record_server_metrics` (see that command's docstring
-    for the required cron/Celery beat scheduling). Before Phase 13
+    for the required cron/Celery beat scheduling). In earlier releases
     this endpoint returned synthetic random.randint() data — a
     placeholder that looked real but wasn't (flagged explicitly in
-    Phase 8's audit pass and deliberately deferred here). If the
+    the earlier audit pass and deliberately deferred here). If the
     command has never been scheduled, this now returns an empty list
     rather than fabricating a chart — the frontend shows an empty
     state, not fake numbers.

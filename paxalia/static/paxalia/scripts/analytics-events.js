@@ -11,7 +11,7 @@
     var EVENT_URL = '/api/paxalia/event/';
     var hasExistingOpAnalytics = typeof window.opAnalytics === 'function';
 
-    // ─── Consent Mode (Phase 14) ─────────────────────────────────
+    // ─── Consent Mode ────────────────────────────────────────────────────
     // The {% analytics_consent_config %} template tag emits a CSP-safe
     // metadata element. If it is missing or malformed, consent mode
     // defaults to disabled for backwards compatibility.

@@ -9,11 +9,11 @@ same behavior as billing: if not configured, related UI doesn't appear
 or falls back gracefully.
 
 NOTE: this module read the pre-rebrand ZAYDANY_ANALYTICS key until
-Phase 8 — a leftover the Phase 0 rebrand missed since this file wasn't
-touched in that phase. Anything set under UPLOADS_INCOMING_ROOT /
+an earlier audit — a leftover from the initial rebrand since this file wasn't
+touched in that update. Anything set under UPLOADS_INCOMING_ROOT /
 UPLOAD_CHUNK_SIZE_MB / UPLOAD_MAX_FILE_SIZE_MB in a project's
 PAXALIA_DASHBOARD dict was silently ignored until now — those keys
-were effectively unconfigurable. Fixed here as part of the Phase 8
+were effectively unconfigurable. Fixed here as part of the cleanup
 audit pass; flagging in case any deployment was relying on the old
 key name (unlikely, since it never worked).
 """

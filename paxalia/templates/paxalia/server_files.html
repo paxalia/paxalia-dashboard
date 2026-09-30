@@ -1,0 +1,392 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Server Files" %} — Paxalia{% endblock %}
+{% block page_title %}{% trans "Server Files" %}{% endblock %}
+{% block page_subtitle %}{% trans "Browse and manage only the filesystem locations explicitly authorized for this dashboard." %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/server-files.css' %}">
+{% endblock %}
+
+{% block filter_bar %}
+<form class="filter-bar sf-filter-bar" method="get" aria-label="{% trans 'Server Files filters' %}">
+    <div class="filter-bar__inner sf-filter-bar__inner">
+        <div class="sf-filter-bar__field sf-filter-bar__field--location">
+            <label for="sf-root">{% trans "Location" %}</label>
+            <select id="sf-root" name="root">
+                {% for root in roots %}
+                <option value="{{ root.id }}" {% if listing and root.id == listing.root.id %}selected{% endif %}>{{ root.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% if listing %}
+        <input type="hidden" name="path" value="{{ listing.path }}">
+        {% if listing.show_hidden %}<input type="hidden" name="hidden" value="1">{% endif %}
+        {% if listing.show_sensitive %}<input type="hidden" name="protected" value="1">{% endif %}
+
+        <div class="sf-filter-bar__field sf-filter-bar__field--search">
+            <label for="sf-search">{% trans "Search" %}</label>
+            <div class="sf-filter-bar__search-wrap">
+                <span class="icon icon--xs" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <input id="sf-search" type="search" name="q" value="{{ listing.search }}" maxlength="128"
+                       placeholder="{% trans 'Search this directory' %}">
+            </div>
+        </div>
+
+        <div class="sf-filter-bar__field sf-filter-bar__field--toggles">
+            <span class="sf-filter-bar__label">{% trans "Visibility" %}</span>
+            <div class="sf-filter-bar__toggles">
+                {% if listing.hidden_allowed %}
+                <label class="sf-check">
+                    <input type="checkbox" name="hidden" value="1" {% if listing.show_hidden %}checked{% endif %}>
+                    <span>{% trans "Hidden" %}</span>
+                </label>
+                {% endif %}
+                {% if capabilities.view_sensitive_files %}
+                <a class="sf-toggle-link{% if listing.show_sensitive %} is-active{% endif %}"
+                   href="{{ listing.protected_toggle_url }}">
+                    {% if listing.show_sensitive %}{% trans "Protected on" %}{% else %}{% trans "Protected off" %}{% endif %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="sf-filter-bar__actions">
+            <button class="analytics-btn analytics-btn--primary sf-button sf-button--primary" type="submit">{% trans "Apply" %}</button>
+            <a class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary"
+               href="{% url 'paxalia:server_files' %}?root={{ listing.root.id|urlencode }}">
+                {% trans "Reset" %}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="sf-page">
+    <nav class="sf-subnav" aria-label="{% trans 'Server Files sections' %}">
+        <a class="sf-subnav__item sf-subnav__item--active" href="{% url 'paxalia:server_files' %}">
+            <span class="sf-subnav__dot" aria-hidden="true"></span>
+            {% trans "Browse Files" %}
+        </a>
+        <a class="sf-subnav__item" href="{% url 'paxalia:server_files_history' %}">
+            {% trans "Operation History" %}
+        </a>
+    </nav>
+
+    {% if empty_roots %}
+    <section class="sf-empty-state sf-surface" aria-labelledby="sf-empty-title">
+        <div class="sf-empty-state__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H10l2 2h5.5A2.5 2.5 0 0 1 20 8.5v7A2.5 2.5 0 0 1 17.5 18h-11A2.5 2.5 0 0 1 4 15.5z" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+        </div>
+        <div>
+            <p class="sf-overline">{% trans "Configuration required" %}</p>
+            <h2 id="sf-empty-title">{% trans "No allowed locations are configured" %}</h2>
+            <p>{% trans "Server Files is enabled, but this deployment has not authorized a filesystem directory. Add one or more existing, dedicated, non-overlapping directories through FILE_MANAGER_ALLOWED_ROOTS." %}</p>
+        </div>
+    </section>
+    {% elif listing %}
+    <section class="sf-location sf-surface">
+        <div class="sf-location__main">
+            <div class="sf-location__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H10l2 2h5.5A2.5 2.5 0 0 1 20 8.5v7a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 15.5z" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/>
+                </svg>
+            </div>
+            <div class="sf-location__copy">
+                <div class="sf-location__heading">
+                    <strong>{{ listing.root.name }}</strong>
+                    <span class="sf-status sf-status--neutral">{% trans "Authorized root" %}</span>
+                </div>
+                <nav class="sf-breadcrumbs" aria-label="{% trans 'Current path' %}">
+                    <a href="{% url 'paxalia:server_files' %}?root={{ listing.root.id|urlencode }}{% if listing.show_hidden %}&hidden=1{% endif %}{% if listing.show_sensitive %}&protected=1{% endif %}">
+                        {{ listing.root.name }}
+                    </a>
+                    {% for crumb in listing.breadcrumbs %}
+                        <span aria-hidden="true">/</span>
+                        {% if not forloop.last %}
+                            <a href="{% url 'paxalia:server_files' %}?root={{ listing.root.id|urlencode }}&path={{ crumb.path|urlencode }}{% if listing.show_hidden %}&hidden=1{% endif %}{% if listing.show_sensitive %}&protected=1{% endif %}">{{ crumb.name }}</a>
+                        {% else %}
+                            <span aria-current="page">{{ crumb.name }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </nav>
+            </div>
+        </div>
+        <div class="sf-location__meta">
+            <div>
+                <span class="sf-meta-label">{% trans "Visible entries" %}</span>
+                <strong>{{ listing.total }}</strong>
+            </div>
+            <a class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary"
+               href="{% url 'paxalia:server_files' %}?root={{ listing.root.id|urlencode }}&path={{ listing.path|urlencode }}{% if listing.show_hidden %}&hidden=1{% endif %}{% if listing.show_sensitive %}&protected=1{% endif %}">
+                {% trans "Refresh" %}
+            </a>
+        </div>
+    </section>
+
+    {% if listing.truncated %}
+    <div class="sf-notice sf-notice--warning" role="status">
+        <strong>{% trans "Directory scan limit reached." %}</strong>
+        <span>{% trans "Results are intentionally bounded. Search or open a narrower directory to inspect additional entries." %}</span>
+    </div>
+    {% endif %}
+
+    <section class="sf-action-grid">
+        {% if capabilities.upload_server_files %}
+        <details class="sf-action-card">
+            <summary>
+                <span class="sf-action-card__icon" aria-hidden="true">↑</span>
+                <span>
+                    <strong>{% trans "Upload file" %}</strong>
+                    <small>{% trans "Add a new file without overwriting an existing name." %}</small>
+                </span>
+                <span class="sf-action-card__chevron" aria-hidden="true">›</span>
+            </summary>
+            <form method="post" action="{% url 'paxalia:server_files_operation' %}" enctype="multipart/form-data" class="sf-form">
+                {% csrf_token %}
+                <input type="hidden" name="operation" value="upload">
+                <input type="hidden" name="root" value="{{ listing.root.id }}">
+                <input type="hidden" name="path" value="{{ listing.path }}">
+                <div class="sf-form__grid">
+                    <label>{% trans "File" %}<input type="file" name="file" required></label>
+                    <label>{% trans "Destination filename" %}<input type="text" name="name" maxlength="255" autocomplete="off" placeholder="{% trans 'Optional; keeps the original name when empty' %}"></label>
+                </div>
+                <div class="sf-form__actions">
+                    <button class="analytics-btn analytics-btn--primary sf-button sf-button--primary" type="submit">{% trans "Upload file" %}</button>
+                </div>
+            </form>
+        </details>
+        {% endif %}
+
+        {% if capabilities.modify_server_files %}
+        <details class="sf-action-card">
+            <summary>
+                <span class="sf-action-card__icon" aria-hidden="true">+</span>
+                <span>
+                    <strong>{% trans "New folder" %}</strong>
+                    <small>{% trans "Create an empty directory in the current location." %}</small>
+                </span>
+                <span class="sf-action-card__chevron" aria-hidden="true">›</span>
+            </summary>
+            <form method="post" action="{% url 'paxalia:server_files_operation' %}" class="sf-form">
+                {% csrf_token %}
+                <input type="hidden" name="operation" value="mkdir">
+                <input type="hidden" name="root" value="{{ listing.root.id }}">
+                <input type="hidden" name="path" value="{{ listing.path }}">
+                <div class="sf-form__grid">
+                    <label>{% trans "Folder name" %}<input type="text" name="name" maxlength="255" required autocomplete="off"></label>
+                </div>
+                <div class="sf-form__actions">
+                    <button class="analytics-btn analytics-btn--primary sf-button sf-button--primary" type="submit">{% trans "Create folder" %}</button>
+                </div>
+            </form>
+        </details>
+        {% endif %}
+    </section>
+
+    {% if capabilities.modify_server_files or capabilities.delete_server_files %}
+    <section class="sf-manage-panel sf-surface" id="sf-management-panel" hidden aria-labelledby="sf-management-title">
+        <header class="sf-manage-panel__header">
+            <div>
+                <p class="sf-overline">{% trans "Selected entry" %}</p>
+                <h2 id="sf-management-title">{% trans "Manage file or folder" %}</h2>
+                <p class="sf-manage-panel__hint" data-sf-manage-hint>{% trans "Choose Manage on a row below to edit its name, copy or move it, or delete it." %}</p>
+            </div>
+            <button type="button" class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" data-sf-manage-close>{% trans "Close" %}</button>
+        </header>
+
+        <div class="sf-manage-panel__target" data-sf-manage-target hidden>
+            <span class="sf-kind sf-kind--file" aria-hidden="true" data-sf-manage-kind>
+                <svg viewBox="0 0 24 24" fill="none"><path d="M7 3.5h7l4 4v13H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="1.6"/><path d="M14 3.5v4h4" stroke="currentColor" stroke-width="1.6"/></svg>
+            </span>
+            <div>
+                <strong data-sf-manage-name>—</strong>
+                <code data-sf-manage-path>—</code>
+            </div>
+        </div>
+
+        <div class="sf-manage-panel__forms">
+            {% if capabilities.modify_server_files %}
+            <form method="post" action="{% url 'paxalia:server_files_operation' %}" class="sf-manage-form">
+                {% csrf_token %}
+                <input type="hidden" name="operation" value="rename">
+                <input type="hidden" name="root" value="" data-sf-manage-root>
+                <input type="hidden" name="path" value="" data-sf-manage-path-input>
+                <div class="sf-manage-form__heading">
+                    <strong>{% trans "Rename" %}</strong>
+                    <span>{% trans "Change the selected entry's name without changing its parent directory." %}</span>
+                </div>
+                <label>{% trans "New name" %}<input type="text" name="name" maxlength="255" autocomplete="off" data-sf-manage-rename required></label>
+                <div class="sf-form__actions"><button class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" type="submit">{% trans "Rename" %}</button></div>
+            </form>
+
+            <form method="post" action="{% url 'paxalia:server_files_operation' %}" class="sf-manage-form" data-sf-manage-copy-form>
+                {% csrf_token %}
+                <input type="hidden" name="operation" value="copy">
+                <input type="hidden" name="root" value="" data-sf-manage-copy-root>
+                <input type="hidden" name="path" value="" data-sf-manage-copy-path>
+                <input type="hidden" name="target_root" value="{{ listing.root.id }}">
+                <input type="hidden" name="target_path" value="{{ listing.path }}">
+                <div class="sf-manage-form__heading">
+                    <strong>{% trans "Copy" %}</strong>
+                    <span>{% trans "Create a new file in the current directory without overwriting an existing name." %}</span>
+                </div>
+                <label>{% trans "Copy as" %}<input type="text" name="name" maxlength="255" autocomplete="off" data-sf-manage-copy-name required></label>
+                <div class="sf-form__actions"><button class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" type="submit">{% trans "Copy" %}</button></div>
+            </form>
+
+            <form method="post" action="{% url 'paxalia:server_files_operation' %}" class="sf-manage-form">
+                {% csrf_token %}
+                <input type="hidden" name="operation" value="move">
+                <input type="hidden" name="root" value="" data-sf-manage-move-root>
+                <input type="hidden" name="path" value="" data-sf-manage-move-path>
+                <div class="sf-manage-form__heading">
+                    <strong>{% trans "Move" %}</strong>
+                    <span>{% trans "Move the selected entry to another authorized directory or root." %}</span>
+                </div>
+                <div class="sf-form__grid">
+                    <label>{% trans "Destination root" %}<select name="target_root" data-sf-manage-target-root>{% for root in roots %}<option value="{{ root.id }}">{{ root.name }}</option>{% endfor %}</select></label>
+                    <label>{% trans "Destination directory" %}<input type="text" name="target_path" maxlength="2048" value="{{ listing.path }}" data-sf-manage-target-path></label>
+                    <label>{% trans "New name" %}<input type="text" name="name" maxlength="255" autocomplete="off" data-sf-manage-move-name required></label>
+                </div>
+                <div class="sf-form__actions"><button class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" type="submit">{% trans "Move" %}</button></div>
+            </form>
+            {% endif %}
+
+            {% if capabilities.delete_server_files %}
+            <form method="post" action="{% url 'paxalia:server_files_operation' %}" class="sf-manage-form sf-manage-form--danger" data-sf-manage-delete-form>
+                {% csrf_token %}
+                <input type="hidden" name="operation" value="delete">
+                <input type="hidden" name="root" value="" data-sf-manage-delete-root>
+                <input type="hidden" name="path" value="" data-sf-manage-delete-path>
+                <div class="sf-manage-form__heading">
+                    <strong>{% trans "Delete" %}</strong>
+                    <span>{% trans "Delete the selected file or empty folder. Non-empty directories are rejected server-side." %}</span>
+                </div>
+                <div class="sf-form__actions"><button class="analytics-btn analytics-btn--danger sf-button sf-button--danger" type="submit" data-confirm="{% trans 'Delete the selected item? Non-empty directories cannot be deleted.' %}">{% trans "Delete selected" %}</button></div>
+            </form>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="sf-surface sf-table-card" aria-labelledby="sf-entries-title">
+        <header class="sf-table-card__header">
+            <div>
+                <p class="sf-overline">{% trans "Directory" %}</p>
+                <h2 id="sf-entries-title">{% trans "Files and folders" %}</h2>
+            </div>
+            <div class="sf-table-card__summary">
+                {% blocktrans with page=listing.page pages=listing.page_count total=listing.total %}
+                    Page {{ page }} of {{ pages }} · {{ total }} visible entries
+                {% endblocktrans %}
+            </div>
+        </header>
+
+        <div class="sf-table-wrap">
+            <table class="sf-table">
+                <thead>
+                    <tr>
+                        <th><a href="{{ listing.sort_links.name }}">{% trans "Name" %}</a></th>
+                        <th><a href="{{ listing.sort_links.type }}">{% trans "Type" %}</a></th>
+                        <th><a href="{{ listing.sort_links.size }}">{% trans "Size" %}</a></th>
+                        <th><a href="{{ listing.sort_links.modified }}">{% trans "Modified" %}</a></th>
+                        <th>{% trans "Permissions" %}</th>
+                        <th>{% trans "Owner / group" %}</th>
+                        <th>{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if listing.path %}
+                    <tr class="sf-parent-row">
+                        <td colspan="7">
+                            <a href="{% url 'paxalia:server_files' %}?root={{ listing.root.id|urlencode }}&path={{ listing.parent_path|urlencode }}{% if listing.show_hidden %}&hidden=1{% endif %}{% if listing.show_sensitive %}&protected=1{% endif %}">
+                                <span aria-hidden="true">↩</span> {% trans "Parent directory" %}
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+
+                {% for item in listing.items %}
+                <tr>
+                    <td class="sf-name">
+                        <div class="sf-name__cell">
+                            <span class="sf-kind {% if item.is_directory %}sf-kind--directory{% else %}sf-kind--file{% endif %}" aria-hidden="true">
+                                {% if item.is_directory %}
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M3.5 7.5A2.5 2.5 0 0 1 6 5h4l2 2h6A2.5 2.5 0 0 1 20.5 9.5V17A2.5 2.5 0 0 1 18 19.5H6A2.5 2.5 0 0 1 3.5 17z" stroke="currentColor" stroke-width="1.6"/><path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/></svg>
+                                {% else %}
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M7 3.5h7l4 4v13H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="1.6"/><path d="M14 3.5v4h4" stroke="currentColor" stroke-width="1.6"/></svg>
+                                {% endif %}
+                            </span>
+                            {% if item.is_directory %}
+                                <a class="sf-name__link" href="{% url 'paxalia:server_files' %}?root={{ listing.root.id|urlencode }}&path={{ item.path|urlencode }}{% if listing.show_hidden %}&hidden=1{% endif %}{% if listing.show_sensitive %}&protected=1{% endif %}">{{ item.name }}</a>
+                            {% else %}
+                                <span class="sf-name__link">{{ item.name }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td><span class="sf-type">{{ item.kind }}</span>{% if item.content_type %}<small>{{ item.content_type }}</small>{% endif %}</td>
+                    <td>{% if item.is_regular_file %}{{ item.size|filesizeformat }}{% else %}<span class="sf-muted">—</span>{% endif %}</td>
+                    <td class="sf-nowrap">{{ item.modified|date:"Y-m-d H:i:s T" }}</td>
+                    <td><code>{{ item.permissions }}</code></td>
+                    <td>{{ item.owner }} / {{ item.group }}</td>
+                    <td class="sf-actions">
+                        <div class="sf-primary-actions">
+                            {% if item.can_preview %}
+                            <a class="sf-action-link sf-utility-link" href="{% url 'paxalia:server_files_preview' %}?root={{ listing.root.id|urlencode }}&path={{ item.path|urlencode }}">{% trans "Preview" %}</a>
+                            {% endif %}
+                            {% if item.is_regular_file and capabilities.download_server_files %}
+                            <a class="sf-action-link sf-utility-link" href="{% url 'paxalia:server_files_download' %}?root={{ listing.root.id|urlencode }}&path={{ item.path|urlencode }}">{% trans "Download" %}</a>
+                            {% endif %}
+                            {% if capabilities.modify_server_files or capabilities.delete_server_files %}
+                            <button type="button" class="sf-action-button" data-sf-manage
+                                    data-root="{{ listing.root.id|escape }}"
+                                    data-path="{{ item.path|escape }}"
+                                    data-name="{{ item.name|escape }}"
+                                    data-kind="{{ item.kind|escape }}"
+                                    data-is-file="{% if item.is_regular_file %}1{% else %}0{% endif %}"
+                                    data-parent-path="{{ listing.path|escape }}">
+                                {% trans "Manage" %}
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="sf-empty">{% trans "No files or folders found in this directory." %}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <footer class="sf-pagination">
+            <span>{% blocktrans with page=listing.page pages=listing.page_count total=listing.total %}Page {{ page }} of {{ pages }} · {{ total }} visible entries{% endblocktrans %}</span>
+            <div>
+                {% if listing.page > 1 %}
+                <a class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" href="?root={{ listing.root.id|urlencode }}&path={{ listing.path|urlencode }}&q={{ listing.search|urlencode }}&sort={{ listing.sort_by|urlencode }}&dir={{ listing.direction|urlencode }}&page={{ listing.page|add:'-1' }}{% if listing.show_hidden %}&hidden=1{% endif %}{% if listing.show_sensitive %}&protected=1{% endif %}">{% trans "Previous" %}</a>
+                {% endif %}
+                {% if listing.page < listing.page_count %}
+                <a class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" href="?root={{ listing.root.id|urlencode }}&path={{ listing.path|urlencode }}&q={{ listing.search|urlencode }}&sort={{ listing.sort_by|urlencode }}&dir={{ listing.direction|urlencode }}&page={{ listing.page|add:'1' }}{% if listing.show_hidden %}&hidden=1{% endif %}{% if listing.show_sensitive %}&protected=1{% endif %}">{% trans "Next" %}</a>
+                {% endif %}
+            </div>
+        </footer>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/server-files.js' %}" defer></script>
+{% endblock %}

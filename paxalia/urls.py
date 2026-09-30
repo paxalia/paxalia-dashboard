@@ -3,7 +3,7 @@ from .views import (
     analytics_dashboard, analytics_pages, analytics_page_detail, analytics_api,
     analytics_traffic, analytics_realtime, analytics_realtime_data, analytics_settings,
     analytics_export, analytics_geography, analytics_event_api, analytics_events,
-    analytics_billing, uploads, releases_page, admin_overview, bots_overview, about
+    analytics_billing, uploads, releases_page, admin_overview, about
 )
 from .views.events import analytics_js_error_api, analytics_browser_log_api
 from .views.chat_ops import slack_command, discord_interaction
@@ -13,10 +13,13 @@ from .views import compliance as compliance_views
 from .views import data_import as data_import_views
 from .views import server as server_views
 from .views import backup as backup_views
+from .server_files import views as server_files_views
+from .transfer_center import views as transfer_views
 from .views import security as security_views
 from .views import csp_reports as csp_report_views
 from .views import sites as sites_views
 from .views import broken_links as broken_links_views
+from .views.bots import bots_overview, bot_path_mark
 from .views import goals as goals_views
 from .views import segments as segments_views
 from .views import campaigns as campaigns_views
@@ -106,14 +109,37 @@ dashboard_urlpatterns = [
     path('logs/export/', logs_views.logs_export, name='logs_export'),
     path('application-logs/', logs_views.application_logs, name='application_logs'),
     path('rum/', rum_views.rum_overview, name='rum'),
+    path('availability/', uptime_views.uptime_overview, name='availability'),
     path('uptime/', uptime_views.uptime_overview, name='uptime'),
     path('uptime/<int:monitor_id>/toggle/', uptime_views.uptime_monitor_toggle, name='uptime_monitor_toggle'),
+    path('uptime/<int:monitor_id>/update/', uptime_views.uptime_monitor_update, name='uptime_monitor_update'),
     path('uptime/<int:monitor_id>/delete/', uptime_views.uptime_monitor_delete, name='uptime_monitor_delete'),
+    path('availability/incidents/<int:incident_id>/acknowledge/', uptime_views.availability_incident_acknowledge, name='availability_incident_acknowledge'),
     path('compliance/', compliance_views.compliance_overview, name='compliance'),
     path('import/', data_import_views.data_import_page, name='data_import'),
     path('billing/', analytics_billing, name='billing'),
     path('bots/', bots_overview, name='bots'),
+    path('bots/path-mark/', bot_path_mark, name='bot_path_mark'),
 
+    path('transfer-center/', transfer_views.transfer_center, name='transfer_center'),
+    path('transfer-center/pause/<uuid:transfer_id>/', transfer_views.transfer_pause, name='transfer_pause'),
+    path('transfer-center/retry/<uuid:transfer_id>/', transfer_views.transfer_retry, name='transfer_retry'),
+    path('transfer-center/send/init/', transfer_views.transfer_send_init, name='transfer_send_init'),
+    path('transfer-center/send/resume/', transfer_views.transfer_send_resume, name='transfer_send_resume'),
+    path('transfer-center/send/<uuid:transfer_id>/finalize/', transfer_views.transfer_send_finalize, name='transfer_send_finalize'),
+    path('transfer-center/receive/init/', transfer_views.transfer_receive_init, name='transfer_receive_init'),
+    path('transfer-center/receive/resume/', transfer_views.transfer_receive_resume, name='transfer_receive_resume'),
+    path('transfer-center/receive/<uuid:transfer_id>/chunk/<int:chunk_index>/', transfer_views.transfer_receive_chunk, name='transfer_receive_chunk'),
+    path('transfer-center/receive/<uuid:transfer_id>/complete/', transfer_views.transfer_receive_complete, name='transfer_receive_complete'),
+    path('transfer-center/<uuid:transfer_id>/status/', transfer_views.transfer_status, name='transfer_status'),
+    path('transfer-center/<uuid:transfer_id>/cancel/', transfer_views.transfer_cancel, name='transfer_cancel'),
+
+    path('server-files/', server_files_views.server_files, name='server_files'),
+    path('server-files/preview/', server_files_views.server_files_preview, name='server_files_preview'),
+    path('server-files/download/', server_files_views.server_files_download, name='server_files_download'),
+    path('server-files/operation/', server_files_views.server_files_operation, name='server_files_operation'),
+    path('server-files/history/', server_files_views.server_files_history, name='server_files_history'),
+    path('server-files/reauth/', server_files_views.server_files_reauth, name='server_files_reauth'),
     path('server/overview/', server_views.server_overview, name='server_overview'),
     path('server/cpu/', server_views.server_cpu, name='server_cpu'),
     path('server/memory/', server_views.server_memory, name='server_memory'),

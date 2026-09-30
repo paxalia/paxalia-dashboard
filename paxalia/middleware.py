@@ -156,7 +156,7 @@ class AnalyticsMiddleware:
         utm_term = request.GET.get('utm_term', '')[:255]
         utm_content = request.GET.get('utm_content', '')[:255]
 
-        # 2b. Consent gate (Phase 14). Deliberately placed after the
+        # 2b. Consent gate. Deliberately placed after the
         # ignored-path checks above (those stay free either way) but
         # before the session cookie is set below — setting a tracking
         # cookie before consent would defeat the point of a consent

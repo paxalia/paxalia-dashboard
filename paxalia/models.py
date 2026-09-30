@@ -5,6 +5,10 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+# Paxalia Server Files operation-history model.
+from .server_files.models import ServerFileOperation
+from .transfer_center.models import PaxaliaTransfer, PaxaliaTransferLock
+
 
 # Create your models here.
 
@@ -816,6 +820,10 @@ class FileUpload(models.Model):
         ('completed', 'Completed'),
         ('failed', 'Failed'),
     ]
+    PURPOSE_CHOICES = [
+        ('release', 'Release upload'),
+        ('transfer_send', 'Transfer Center send'),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     uploaded_by = models.ForeignKey(
@@ -835,6 +843,8 @@ class FileUpload(models.Model):
     total_chunks = models.IntegerField()
     chunks_received = models.IntegerField(default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    purpose = models.CharField(max_length=24, choices=PURPOSE_CHOICES, default='release', db_index=True)
+    transfer_id = models.UUIDField(null=True, blank=True, db_index=True)
     storage_path = models.CharField(
         max_length=500,
         help_text="Absolute path to the file on disk once completed"
@@ -973,7 +983,7 @@ class Segment(models.Model):
 
 class ChartAnnotation(models.Model):
     """A marker on a specific date, shown on the traffic charts (e.g. a
-    deploy, a campaign launch). See Phase-13's deployment tracker for a
+    deploy, a campaign launch). See the deployment tracker for a
     more automated version of this same idea."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True, related_name='annotations')
@@ -1012,6 +1022,14 @@ class DashboardAccess(models.Model):
             ('view_server', 'Can view Server monitoring'),
             ('view_compliance', 'Can view Compliance tools'),
             ('view_logs', 'Can view Paxalia Logs'),
+            ('view_server_files', 'Can view Paxalia Server Files'),
+            ('view_availability', 'Can view Paxalia Availability'),
+            ('view_transfers', 'Can view Paxalia Transfer Center'),
+            ('create_transfers', 'Can create Paxalia transfers'),
+            ('manage_availability', 'Can manage Paxalia Availability'),
+            ('view_incidents', 'Can view Paxalia Availability incidents'),
+            ('manage_resource_policies', 'Can manage Paxalia resource policies'),
+            ('manage_bot_paths', 'Can manage Bot/Scanner path rules and cleanup'),
         ]
 
 
@@ -1167,35 +1185,62 @@ class Notification(models.Model):
 
 
 class UptimeMonitor(models.Model):
-    """
-    A configured URL to periodically check — see paxalia/uptime.py
-    for the actual HTTP check logic and paxalia/management/commands/
-    check_uptime.py for the scheduled command that drives it.
-    """
+    """Configurable Paxalia Availability monitor."""
+    KIND_CHOICES = [
+        ('server', 'Server'),
+        ('website', 'Website'),
+        ('api', 'API'),
+        ('endpoint', 'Endpoint'),
+    ]
     METHOD_CHOICES = [('GET', 'GET'), ('HEAD', 'HEAD'), ('POST', 'POST')]
+    REDIRECT_CHOICES = [('deny', 'Do not follow'), ('safe', 'Follow safe redirects')]
 
     name = models.CharField(max_length=200)
     url = models.URLField(max_length=500)
+    kind = models.CharField(max_length=12, choices=KIND_CHOICES, default='website', db_index=True)
     method = models.CharField(max_length=6, choices=METHOD_CHOICES, default='GET')
     expected_status_code = models.PositiveIntegerField(default=200)
     timeout_seconds = models.PositiveIntegerField(default=10)
-    check_interval_minutes = models.PositiveIntegerField(
-        default=5,
-        help_text="How often this monitor is checked. check_uptime can run as often as "
-                  "you like (every minute is typical) — it only actually pings a monitor "
-                  "once this many minutes have passed since its last check."
-    )
-    is_active = models.BooleanField(default=True)
+    # Compatibility field retained for v4 installations. current schedules by seconds.
+    check_interval_minutes = models.PositiveIntegerField(default=5)
+    check_interval_seconds = models.PositiveIntegerField(default=300, db_index=True)
+    # Preserve v4's one-failure/one-recovery incident behavior for code-created monitors.
+    # The Availability UI applies the configured threshold defaults explicitly.
+    failure_threshold = models.PositiveIntegerField(default=1)
+    recovery_threshold = models.PositiveIntegerField(default=1)
+    follow_redirects = models.BooleanField(default=False)
+    request_headers = models.JSONField(default=dict, blank=True)
+    request_body = models.TextField(blank=True)
+    expected_content_type = models.CharField(max_length=120, blank=True)
+    response_assertions = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
     site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True, related_name='uptime_monitors')
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ['name']
-        verbose_name = 'Uptime Monitor'
-        verbose_name_plural = 'Uptime Monitors'
+        verbose_name = 'Paxalia Availability Monitor'
+        verbose_name_plural = 'Paxalia Availability Monitors'
+        indexes = [
+            models.Index(fields=['is_active', 'check_interval_seconds'], name='paxalia_uptime_due_idx'),
+            models.Index(fields=['kind', 'is_active'], name='paxalia_uptime_kind_active_idx'),
+        ]
 
     def __str__(self):
         return self.name
+
+    @property
+    def effective_interval_seconds(self):
+        try:
+            value = int(self.check_interval_seconds or 0)
+        except (TypeError, ValueError):
+            value = 0
+        if value <= 0:
+            try:
+                value = int(self.check_interval_minutes or 5) * 60
+            except (TypeError, ValueError):
+                value = 300
+        return max(30, min(value, 86400))
 
     @property
     def latest_check(self):
@@ -1203,13 +1248,12 @@ class UptimeMonitor(models.Model):
 
     @property
     def open_incident(self):
-        return self.incidents.filter(resolved_at__isnull=True).first()
+        return self.incidents.filter(state__in=['open', 'acknowledged']).first()
 
 
 class UptimeCheck(models.Model):
-    """One HTTP check result. Every check is stored — see compute_uptime_percentage()
-    in uptime.py for how these roll up into an uptime %."""
-    STATUS_CHOICES = [('up', 'Up'), ('down', 'Down')]
+    """Observed Availability result; UNKNOWN is reserved for monitor-side uncertainty."""
+    STATUS_CHOICES = [('up', 'Up'), ('down', 'Down'), ('unknown', 'Unknown')]
 
     monitor = models.ForeignKey(UptimeMonitor, on_delete=models.CASCADE, related_name='checks')
     checked_at = models.DateTimeField(default=timezone.now, db_index=True)
@@ -1217,14 +1261,13 @@ class UptimeCheck(models.Model):
     status_code = models.PositiveIntegerField(null=True, blank=True)
     response_time_ms = models.PositiveIntegerField(null=True, blank=True)
     error_message = models.CharField(max_length=500, blank=True)
+    assertion_result = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering = ['-checked_at']
         indexes = [
-            models.Index(
-                fields=['monitor', 'checked_at'],
-                name='paxalia_upt_monitor_d38f8e_idx',
-            ),
+            models.Index(fields=['monitor', 'checked_at'], name='paxalia_upt_monitor_d38f8e_idx'),
+            models.Index(fields=['monitor', 'status', 'checked_at'], name='paxalia_upt_status_time_idx'),
         ]
 
     def __str__(self):
@@ -1232,43 +1275,49 @@ class UptimeCheck(models.Model):
 
 
 class UptimeIncident(models.Model):
-    """
-    Opened on an up->down transition (or a monitor's very first check
-    coming back down), resolved on the next down->up transition. See
-    uptime.py::record_check() for the state-transition logic —
-    deliberately transition-based rather than "one row per down check",
-    so a monitor failing every minute for an hour is one incident, not
-    sixty.
-    """
+    """Transition-based availability incident with explicit observation boundaries."""
+    STATE_CHOICES = [('open', 'Open'), ('acknowledged', 'Acknowledged'), ('recovered', 'Recovered')]
+
     monitor = models.ForeignKey(UptimeMonitor, on_delete=models.CASCADE, related_name='incidents')
+    state = models.CharField(max_length=16, choices=STATE_CHOICES, default='open', db_index=True)
     started_at = models.DateTimeField(default=timezone.now, db_index=True)
+    last_confirmed_healthy_at = models.DateTimeField(null=True, blank=True)
+    first_confirmed_failure_at = models.DateTimeField(null=True, blank=True)
+    first_confirmed_recovery_at = models.DateTimeField(null=True, blank=True)
     resolved_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    cause = models.CharField(max_length=500, blank=True, help_text="error_message from the check that opened this incident.")
+    cause = models.CharField(max_length=500, blank=True)
+    status_code = models.PositiveIntegerField(null=True, blank=True)
+    response_time_ms = models.PositiveIntegerField(null=True, blank=True)
+    request_id = models.CharField(max_length=100, blank=True)
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    acknowledged_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='acknowledged_paxalia_incidents')
 
     class Meta:
         ordering = ['-started_at']
-        verbose_name = 'Uptime Incident'
-        verbose_name_plural = 'Uptime Incidents'
+        verbose_name = 'Paxalia Availability Incident'
+        verbose_name_plural = 'Paxalia Availability Incidents'
+        indexes = [
+            models.Index(fields=['monitor', 'state', '-started_at'], name='paxalia_incident_state_idx'),
+        ]
 
     def __str__(self):
-        state = 'ongoing' if self.resolved_at is None else 'resolved'
-        return f"{self.monitor.name} — {state} since {self.started_at}"
+        return f"{self.monitor.name} — {self.state} since {self.started_at}"
 
     @property
     def is_ongoing(self):
-        return self.resolved_at is None
+        return self.state in {'open', 'acknowledged'}
 
     @property
     def duration_seconds(self):
-        end = self.resolved_at or timezone.now()
-        return (end - self.started_at).total_seconds()
-
+        end = self.first_confirmed_recovery_at or self.resolved_at or timezone.now()
+        start = self.first_confirmed_failure_at or self.started_at
+        return max(0, (end - start).total_seconds())
 
 class ServerMetricSnapshot(models.Model):
     """
     One point-in-time system-metrics reading, written by
     `manage.py record_server_metrics`. This is what makes
-    api_server_history real — before Phase 13 that endpoint returned
+    api_server_history real — earlier versions of that endpoint returned
     synthetic random.randint() data because there was no persistent
     time-series store; this is that store.
 

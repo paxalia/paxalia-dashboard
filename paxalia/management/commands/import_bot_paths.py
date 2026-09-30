@@ -18,16 +18,9 @@ class Command(BaseCommand):
             action='store_true',
             help='Replace existing bot_paths instead of appending'
         )
-        parser.add_argument(
-            '--debug',
-            action='store_true',
-            help='Print search paths for debugging'
-        )
 
     def handle(self, *args, **options):
         file_path = options.get('file')
-        debug = options.get('debug')
-
         # If no file provided, search in common locations
         if not file_path:
             cwd = os.getcwd()
@@ -36,16 +29,11 @@ class Command(BaseCommand):
                 os.path.join(cwd, 'bots_paths.txt'),
                 os.path.join(settings.BASE_DIR, 'paxalia', 'bots_paths.txt'),
                 os.path.join(settings.BASE_DIR, 'bots_paths.txt'),
-                # Also check the app directory (for development)
+                # Also check the installed Paxalia app directory.
                 os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'bots_paths.txt'),
             ]
             # Remove duplicates
             candidates = list(dict.fromkeys(candidates))
-
-            if debug:
-                self.stdout.write("Searching in:")
-                for c in candidates:
-                    self.stdout.write(f"  - {c}")
 
             for cand in candidates:
                 if os.path.exists(cand):
@@ -54,23 +42,21 @@ class Command(BaseCommand):
 
             if not file_path:
                 self.stderr.write(self.style.ERROR(
-                    "No file provided and bots_paths.txt not found in the following locations:\n"
-                    f"  {chr(10).join(candidates)}"
+                    "No bot-path source file was found. Place bots_paths.txt in the Paxalia app/project root or specify --file."
                 ))
-                self.stderr.write("Please place the file at paxalia/bots_paths.txt in your project root, or specify --file.")
                 return
         else:
             if not os.path.exists(file_path):
-                self.stderr.write(self.style.ERROR(f"File not found: {file_path}"))
+                self.stderr.write(self.style.ERROR("The specified bot-path source file could not be found."))
                 return
 
-        self.stdout.write(f"Reading from: {file_path}")
+        self.stdout.write("Reading bot-path rules from the selected source file.")
 
         try:
             with open(file_path, 'r') as f:
                 raw_lines = f.readlines()
-        except Exception as e:
-            self.stderr.write(self.style.ERROR(f"Error reading file: {e}"))
+        except Exception:
+            self.stderr.write(self.style.ERROR("The bot-path source file could not be read."))
             return
 
         paths = []

@@ -1,0 +1,43 @@
+{% extends "paxalia/base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "File Preview" %} — Paxalia{% endblock %}
+{% block page_title %}{% trans "File Preview" %}{% endblock %}
+{% block page_subtitle %}{{ preview.filename }} · {% trans "Bounded, read-only preview" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'paxalia/styles/components/server-files.css' %}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="sf-page">
+    <nav class="sf-subnav" aria-label="{% trans 'Server Files sections' %}">
+        <a class="sf-subnav__item sf-subnav__item--active" href="{% url 'paxalia:server_files' %}">{% trans "Browse Files" %}</a>
+        <a class="sf-subnav__item" href="{% url 'paxalia:server_files_history' %}">{% trans "Operation History" %}</a>
+    </nav>
+
+    <section class="sf-surface sf-preview-card">
+        <header class="sf-preview-card__header">
+            <div>
+                <p class="sf-overline">{% trans "Read-only preview" %}</p>
+                <h2>{{ preview.filename }}</h2>
+                <div class="sf-preview-card__meta">
+                    <span>{{ preview.size|filesizeformat }}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{{ preview.encoding }}</span>
+                </div>
+            </div>
+            <a class="analytics-btn analytics-btn--secondary sf-button sf-button--secondary" href="{{ back_url }}">{% trans "Back to files" %}</a>
+        </header>
+
+        {% if preview.truncated %}
+        <div class="sf-notice sf-notice--warning" role="status">
+            <strong>{% trans "Preview truncated." %}</strong>
+            <span>{% trans "Only the configured byte limit was read; the original file was not loaded in full." %}</span>
+        </div>
+        {% endif %}
+
+        <pre class="sf-preview"><code>{{ preview.content }}</code></pre>
+    </section>
+</div>
+{% endblock %}

@@ -458,7 +458,12 @@ def _generate_recovery_codes(user, count: int = 10) -> list[str]:
     PaxaliaRecoveryCode.objects.filter(user=user, used_at__isnull=True, revoked_at__isnull=True).update(revoked_at=now)
     plaintext = []
     rows = []
-    count = max(1, int(get_config().get("SECURITY_RECOVERY_CODE_COUNT", count) or count))
+    configured_count = get_config().get("SECURITY_RECOVERY_CODE_COUNT", count)
+    try:
+        configured_count = int(configured_count or count)
+    except (TypeError, ValueError):
+        configured_count = count
+    count = max(1, min(configured_count, 100))
     for _ in range(count):
         code = _new_recovery_code()
         plaintext.append(code)
@@ -467,11 +472,19 @@ def _generate_recovery_codes(user, count: int = 10) -> list[str]:
     return plaintext
 
 
-def _check_recovery_code(user, submitted: str):
-    normalized = "".join(ch for ch in str(submitted or "").upper() if ch.isalnum())
+def _normalize_recovery_code(submitted: str) -> str:
+    """Normalize a recovery credential without accepting arbitrary Unicode digits/letters."""
+    raw = str(submitted or "").strip().upper()
+    normalized = "".join(ch for ch in raw if ch in (string.ascii_uppercase + string.digits))
     if len(normalized) != 16:
+        return ""
+    return "-".join(normalized[index:index + 4] for index in range(0, 16, 4))
+
+
+def _check_recovery_code(user, submitted: str):
+    formatted = _normalize_recovery_code(submitted)
+    if not formatted:
         return None
-    formatted = "-".join(normalized[index:index + 4] for index in range(0, 16, 4))
     qs = PaxaliaRecoveryCode.objects.filter(user=user, used_at__isnull=True, revoked_at__isnull=True)
     for row in qs[:50]:
         if check_password(formatted, row.code_hash):
@@ -489,7 +502,12 @@ def _render_auth(request, template, context=None, *, status=200):
     context.setdefault("auth_signup_enabled", bool(config.get("AUTH_SIGNUP_ENABLED", True)))
     context.setdefault("auth_password_reset_enabled", bool(config.get("AUTH_PASSWORD_RESET_ENABLED", True)))
     context.setdefault("auth_password_change_enabled", bool(config.get("AUTH_PASSWORD_CHANGE_ENABLED", True)))
-    return render(request, template, context, status=status)
+    context.setdefault("logging_enabled", bool(config.get("LOGGING_ENABLED", True)))
+    response = render(request, template, context, status=status)
+    response["Cache-Control"] = "no-store, no-cache, max-age=0, must-revalidate"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
 
 
 def paxalia_login(request):
@@ -824,8 +842,14 @@ def paxalia_2fa_setup(request):
     device = _totp_device(user)
     if device is None:
         device = TOTPDevice.objects.create(user=user, confirmed=False, name=PAXALIA_TOTP_DEVICE_NAME)
+    verification_error = False
     if request.method == "POST":
         token = request.POST.get("token", "").strip()
+        if not token:
+            token = "".join(
+                part.strip()
+                for part in request.POST.getlist("otp_digit")
+            )
         limit = get_config().get("SECURITY_2FA_RATE_LIMIT_ATTEMPTS", 5)
         window = get_config().get("SECURITY_2FA_RATE_LIMIT_WINDOW_SECONDS", 300)
         ok, _rate_meta = rate_allowed("2fa-setup", limit, window, _client_ip(request), user.pk)
@@ -843,8 +867,12 @@ def paxalia_2fa_setup(request):
                 paxalia_log("Administrator 2FA enrolled", level="INFO", source="Security", category="authentication", action="admin_2fa_enrolled", request=request)
                 log_action(request, "security.admin_2fa_enrolled")
             return _render_auth(request, "paxalia_auth/recovery-codes.html", {"recovery_codes": codes, "next": reverse("paxalia:auth_device_login")})
+        verification_error = True
         paxalia_log("Administrator 2FA enrollment failed", level="WARNING", source="Security", category="authentication", action="admin_2fa_failed", request=request)
-    return _render_auth(request, "paxalia_auth/two-factor-setup.html", _totp_setup_context(device))
+    context = _totp_setup_context(device)
+    if verification_error:
+        context["verification_error"] = True
+    return _render_auth(request, "paxalia_auth/two-factor-setup.html", context)
 
 
 @require_http_methods(["GET", "POST"])
@@ -860,7 +888,13 @@ def paxalia_2fa_verify(request):
     )
     if not devices.exists():
         return redirect("paxalia:auth_2fa_setup")
+    verification_error = False
     if request.method == "POST":
+        paxalia_log(
+            "Administrator 2FA verification started",
+            level="DEBUG", source="Security", category="authentication",
+            action="admin_2fa_started", request=request, metadata={"admin": True},
+        )
         limit = get_config().get("SECURITY_2FA_RATE_LIMIT_ATTEMPTS", 5)
         window = get_config().get("SECURITY_2FA_RATE_LIMIT_WINDOW_SECONDS", 300)
         ok, _rate_meta = rate_allowed("2fa", limit, window, _client_ip(request), user.pk)
@@ -868,7 +902,23 @@ def paxalia_2fa_verify(request):
             paxalia_log("Administrator 2FA rate limited", level="WARNING", source="Security", category="authentication", action="admin_2fa_rate_limited", request=request)
             return _render_auth(request, "paxalia_auth/two-factor.html", {"rate_limited": True}, status=429)
         token = request.POST.get("token", "").strip()
+        if not token:
+            token = "".join(part.strip() for part in request.POST.getlist("otp_digit"))
         recovery = request.POST.get("recovery_code", "").strip()
+        if recovery:
+            recovery = _normalize_recovery_code(recovery)
+        credential_type = "recovery" if recovery else "totp" if token else "none"
+        credential_length = len(recovery) if recovery else len(token)
+        paxalia_log(
+            "Administrator 2FA credential selected",
+            level="DEBUG", source="Security", category="authentication",
+            action="admin_2fa_credential_selected", request=request,
+            metadata={
+                "admin": True,
+                "credential_type": credential_type,
+                "credential_length": credential_length,
+            },
+        )
         verified = False
         recovery_used = False
         recovery_row = None
@@ -916,12 +966,18 @@ def paxalia_2fa_reset(request):
     if not ok:
         return _render_auth(request, "paxalia_auth/two-factor.html", {"rate_limited": True}, status=429)
     token = request.POST.get("token", "").strip()
+    if not token:
+        token = "".join(part.strip() for part in request.POST.getlist("otp_digit"))
     devices = TOTPDevice.objects.filter(
         user=request.user, confirmed=True, name__in=PAXALIA_TOTP_DEVICE_NAMES
     )
     if not token or not any(device.verify_token(token) for device in devices):
         paxalia_log("Administrator 2FA reset failed", level="WARNING", source="Security", category="authentication", action="admin_2fa_reset_failed", request=request)
-        return _render_auth(request, "paxalia_auth/two-factor.html", {"reset_requested": True, "recovery_available": False})
+        return _render_auth(request, "paxalia_auth/two-factor.html", {
+            "reset_requested": True,
+            "recovery_available": False,
+            "verification_error": True,
+        })
 
     now = timezone.now()
     TOTPDevice.objects.filter(
@@ -1113,7 +1169,12 @@ def paxalia_device_register(request):
         return redirect("paxalia:auth_login")
     if not final and request.session.get(ADMIN_STAGE_KEY) not in {STAGE_2FA, STAGE_DEVICE}:
         return redirect("paxalia:auth_2fa_verify")
-    max_devices = max(1, int(get_config().get("ADMIN_MAX_DEVICES", 5)))
+    configured_max_devices = get_config().get("ADMIN_MAX_DEVICES", 5)
+    try:
+        configured_max_devices = int(configured_max_devices or 5)
+    except (TypeError, ValueError):
+        configured_max_devices = 5
+    max_devices = max(1, min(configured_max_devices, 100))
     active_count = PaxaliaDevice.objects.filter(user=user, status="active").count()
     if active_count >= max_devices and not final:
         return redirect("paxalia:auth_device_login")
@@ -1220,4 +1281,5 @@ def paxalia_session_expired(request):
 
 def paxalia_access_denied(request):
     return _render_auth(request, "paxalia_auth/access-denied.html", status=403)
+
 
