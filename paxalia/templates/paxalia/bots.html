@@ -2,80 +2,100 @@
 {% load static i18n %}
 
 {% block page_title %}{% trans "Bot Traffic" %}{% endblock %}
-{% block page_subtitle %}{% trans "Analysis of scanner and bot requests" %}{% endblock %}
+{% block page_subtitle %}{% trans "Investigate crawlers and scanners by client, category, provider, and requested path" %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'paxalia/styles/components/bot-traffic.css' %}">{% endblock %}
+
+{% block filter_bar %}{% include 'paxalia/includes/filter_bar.html' %}{% endblock %}
 
 {% block dashboard_content %}
-<div class="bots-dashboard">
+<div class="bots-dashboard analytics-page-stack">
     <div class="stat-grid">
-        <div class="stat-card">
-            <span class="stat-label">{% trans "Total Bot Requests" %}</span>
-            <span class="stat-value">{{ total_bot_views }}</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">{% trans "Today" %}</span>
-            <span class="stat-value">{{ bot_views_today }}</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">{% trans "Unique Bot IPs" %}</span>
-            <span class="stat-value">{{ unique_bot_ips }}</span>
-        </div>
+        <div class="stat-card"><span class="stat-label">{% trans "Bot requests" %}</span><span class="stat-value">{{ total_bot_views }}</span></div>
+        <div class="stat-card"><span class="stat-label">{% trans "Today" %}</span><span class="stat-value">{{ bot_views_today }}</span></div>
+        <div class="stat-card"><span class="stat-label">{% trans "Unique IP / hash" %}</span><span class="stat-value">{{ unique_bot_ips }}</span></div>
+        <div class="stat-card"><span class="stat-label">{% trans "Categories" %}</span><span class="stat-value">{{ category_breakdown|length }}</span></div>
     </div>
+
+    <form method="get" class="bot-filter-bar" aria-label="{% trans 'Bot traffic filters' %}">
+        <input type="hidden" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+        <input type="hidden" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+        <label>{% trans "Category" %}
+            <select name="category">
+                <option value="">{% trans "All categories" %}</option>
+                {% for value,label in pageview_bot_categories %}<option value="{{ value }}"{% if active_category == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </label>
+        <label>{% trans "IP / hash" %}
+            <input type="text" name="ip" value="{{ active_ip }}" maxlength="128" autocomplete="off" placeholder="{% trans 'Exact IP or stored hash' %}">
+        </label>
+        <button type="submit" class="analytics-btn analytics-btn--secondary analytics-btn--small">{% trans "Apply" %}</button>
+        <a class="analytics-btn analytics-btn--secondary analytics-btn--small" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}">{% trans "Clear" %}</a>
+    </form>
 
     <div class="chart-grid">
-        <div class="chart-card">
-            <h2 class="chart-title">{% trans "Bot Requests per Day (last 30 days)" %}</h2>
-            <div class="chart-wrap">
-                <canvas id="botDayChart"></canvas>
-            </div>
-        </div>
-        <div class="chart-card">
-            <h2 class="chart-title">{% trans "Top Bot Paths" %}</h2>
-            <div class="chart-wrap">
-                <canvas id="topPathsChart"></canvas>
-            </div>
-        </div>
-        <div class="chart-card">
-            <h2 class="chart-title">{% trans "Bot Requests by Country" %}</h2>
-            <div class="chart-wrap">
-                <canvas id="countryChart"></canvas>
-            </div>
-        </div>
-        <div class="chart-card">
-            <h2 class="chart-title">{% trans "Bot Category Breakdown" %}</h2>
-            <p class="form-hint">
-                {% trans "Search engines, AI crawlers, and social-preview bots are now classified separately from malicious/scanner traffic — see README for the full list." %}
-            </p>
-            {% if category_breakdown %}
-                <div class="chart-wrap">
-                    <canvas id="categoryChart"></canvas>
-                </div>
-            {% else %}
-                <div class="chart-empty">{% trans "No classified bot traffic in the last 30 days." %}</div>
-            {% endif %}
-        </div>
+        <div class="chart-card"><h2 class="chart-title">{% trans "Bot requests over time" %}</h2><div class="chart-wrap"><canvas id="botDayChart"></canvas></div></div>
+        <div class="chart-card"><h2 class="chart-title">{% trans "Top requested paths" %}</h2><div class="chart-wrap"><canvas id="topPathsChart"></canvas></div></div>
+        <div class="chart-card"><h2 class="chart-title">{% trans "Bot countries" %}</h2><div class="chart-wrap"><canvas id="countryChart"></canvas></div></div>
+        <div class="chart-card"><h2 class="chart-title">{% trans "Category mix" %}</h2>{% if category_breakdown %}<div class="chart-wrap"><canvas id="categoryChart"></canvas></div>{% else %}<div class="chart-empty">{% trans "No classified bot traffic in this period." %}</div>{% endif %}</div>
     </div>
 
-    {% if category_breakdown %}
-    <div class="table-card">
-        <h3 class="card-title">{% trans "Category detail" %}</h3>
-        <table class="analytics-table">
-            <thead><tr><th>{% trans "Category" %}</th><th>{% trans "Requests (last 30 days)" %}</th></tr></thead>
-            <tbody>
-                {% for row in category_breakdown %}
-                <tr>
-                    <td>{{ row.label }}</td>
-                    <td>{{ row.count }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <section class="table-card">
+        <div class="card-title-row">
+            <div><h2 class="card-title">{% trans "Path intelligence" %}</h2><p class="form-hint">{% trans "See which paths attract automated traffic and how many different clients requested them. Use the Pages or Broken Links actions to turn a known scanner path into a persistent rule." %}</p></div>
+            <span class="bot-section-badge">{{ path_rows|length }}</span>
+        </div>
+        {% if path_rows %}<div class="table-scroll"><table class="analytics-table"><thead><tr><th>{% trans "Path" %}</th><th>{% trans "Requests" %}</th><th>{% trans "Unique IP / hash" %}</th><th>{% trans "Last seen" %}</th></tr></thead><tbody>{% for row in path_rows %}<tr><td><code>{{ row.path }}</code></td><td>{{ row.count }}</td><td>{{ row.unique_ips }}</td><td>{{ row.last_seen|date:"Y-m-d H:i" }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="security-empty">{% trans "No bot paths were recorded in this date range." %}</div>{% endif %}
+    </section>
+
+    <section class="table-card">
+        <div class="card-title-row">
+            <div><h2 class="card-title">{% trans "IP investigation" %}</h2><p class="form-hint">{% trans "Each client is grouped with the paths it requested. Provider/name comes from its User-Agent claim; scanner path rules are stronger evidence and are shown as rule-based classification." %}</p></div>
+            <span class="bot-section-badge">{{ ip_rows|length }} {% trans "top clients" %}</span>
+        </div>
+        {% if ip_rows %}
+        <div class="bot-ip-list">
+            {% for row in ip_rows %}
+            <article class="bot-ip-card">
+                <header class="bot-ip-card__header">
+                    <div class="bot-ip-card__identity">
+                        <code class="bot-ip-card__ip">{{ row.ip_hash }}</code>
+                        <span class="bot-category-pill bot-category-pill--{{ row.dominant_category }}">{{ row.dominant_category_label }}</span>
+                        <span class="bot-identity-pill">{{ row.identity_name }}{% if row.identity_provider %} · {{ row.identity_provider }}{% endif %}</span>
+                    </div>
+                    <div class="bot-ip-card__stats"><strong>{{ row.requests }}</strong> {% trans "requests" %} · <strong>{{ row.unique_paths }}</strong> {% trans "paths" %}</div>
+                </header>
+                <div class="bot-ip-card__meta">{% trans "First" %} {{ row.first_seen|date:"Y-m-d H:i" }} · {% trans "Last" %} {{ row.last_seen|date:"Y-m-d H:i" }} · {% trans "Identity evidence" %}: {{ row.identity_confidence }}</div>
+                {% if row.user_agent %}<div class="bot-ip-card__ua"><span>{% trans "Observed User-Agent" %}</span><code class="bot-ua">{{ row.user_agent }}</code></div>{% endif %}
+                <table class="analytics-table bot-ip-paths"><thead><tr><th>{% trans "Requested path" %}</th><th>{% trans "Category" %}</th><th>{% trans "Hits" %}</th><th>{% trans "Last seen" %}</th></tr></thead><tbody>{% for path in row.paths %}<tr><td><code>{{ path.path }}</code></td><td><span class="bot-category-pill bot-category-pill--{{ path.category }}">{{ path.category_label }}</span></td><td>{{ path.count }}</td><td>{{ path.last_seen|date:"Y-m-d H:i" }}</td></tr>{% endfor %}</tbody></table>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}<div class="security-empty">{% trans "No bot IPs were recorded in this date range." %}</div>{% endif %}
+    </section>
+
+    <div class="bot-investigation-grid">
+        <section class="table-card">
+            <h2 class="card-title">{% trans "Scanner activity" %}</h2>
+            <p class="form-hint">{% trans "Known malicious/scanner path matches, grouped by client and target endpoint." %}</p>
+            {% if scanner_rows %}<div class="table-scroll"><table class="analytics-table"><thead><tr><th>{% trans "IP / hash" %}</th><th>{% trans "Path" %}</th><th>{% trans "Hits" %}</th><th>{% trans "Different User-Agents" %}</th><th>{% trans "Last seen" %}</th></tr></thead><tbody>{% for row in scanner_rows %}<tr><td><code>{{ row.ip_hash|default:"Unknown" }}</code></td><td><code>{{ row.path }}</code></td><td>{{ row.count }}</td><td>{{ row.unique_agents }}</td><td>{{ row.last_seen|date:"Y-m-d H:i" }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="security-empty">{% trans "No malicious/scanner requests in this period." %}</div>{% endif %}
+        </section>
+
+        <section class="table-card">
+            <h2 class="card-title">{% trans "Crawler identity" %}</h2>
+            <p class="form-hint">{% trans "Search-engine, AI, social-preview, and SEO identities are inferred from User-Agent strings; the IP itself is not independently verified here." %}</p>
+            {% if crawler_rows %}<div class="table-scroll"><table class="analytics-table"><thead><tr><th>{% trans "Category" %}</th><th>{% trans "Provider / name" %}</th><th>{% trans "User-Agent" %}</th><th>{% trans "Hits" %}</th><th>{% trans "IPs" %}</th></tr></thead><tbody>{% for row in crawler_rows %}<tr><td><span class="bot-category-pill bot-category-pill--{{ row.category }}">{{ row.category|default:"Unclassified" }}</span></td><td>{{ row.name }}{% if row.provider %}<div class="bot-small-note">{{ row.provider }}</div>{% endif %}</td><td class="bot-ua">{{ row.user_agent }}</td><td>{{ row.count }}</td><td>{{ row.unique_ips }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="security-empty">{% trans "No crawler identity records in this period." %}</div>{% endif %}
+        </section>
     </div>
-    {% endif %}
+
+    <section class="table-card">
+        <div class="card-title-row"><div><h2 class="card-title">{% trans "Configured Bot / Scanner path prefixes" %}</h2><p class="form-hint">{% trans "These prefixes are applied at ingestion time. Pages and Broken Links can add a path and clean matching normal page-view records in one bounded action." %}</p></div><a class="analytics-btn analytics-btn--secondary analytics-btn--small" href="{% url 'paxalia:settings' %}">{% trans "Open settings" %}</a></div>
+        {% if bot_path_prefixes %}<div class="bot-prefix-list">{% for prefix in bot_path_prefixes %}<code>{{ prefix }}</code>{% endfor %}</div>{% else %}<div class="security-empty">{% trans "No explicit Bot/Scanner path prefixes are configured." %}</div>{% endif %}
+    </section>
 </div>
 {% endblock %}
 
 {% block page_scripts %}
-    {{ bot_data|json_script:"bot-chart-data" }}
-    <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/chart.umd.js' %}"></script>
-    <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/bots.js' %}"></script>
+{{ bot_data|json_script:"bot-chart-data" }}
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/chart.umd.js' %}"></script>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/bots.js' %}"></script>
 {% endblock %}

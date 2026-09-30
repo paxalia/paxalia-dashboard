@@ -297,12 +297,12 @@ def has_capability(user, codename: str) -> bool:
     admin request flows), so clear the permission caches before consulting
     Django's authoritative permission backend.
     """
-    if getattr(user, "is_superuser", False):
-        return True
     if not getattr(user, "is_authenticated", False):
         return False
     if hasattr(user, "is_active") and not user.is_active:
         return False
+    if getattr(user, "is_superuser", False):
+        return True
 
     for cache_name in ("_perm_cache", "_user_perm_cache", "_group_perm_cache"):
         try:

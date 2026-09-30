@@ -5,8 +5,10 @@ from django.contrib import messages
 from django.utils.translation import gettext as _
 
 from paxalia.models import AnalyticsSettings
+from paxalia.bot_management import can_manage_bot_paths, normalize_bot_path_prefix
 from paxalia.packages.localization import language_choices
 from paxalia.views.utils import section_enabled
+from paxalia.resource_policies import log_limits, realtime_limits, log_storage_status
 
 
 @admin_security_required
@@ -26,8 +28,28 @@ def analytics_settings(request):
             "ignored_extensions": request.POST.get("ignored_extensions", ""),
             "realtime_refresh_seconds": refresh_seconds,
             "tracked_paths": request.POST.get("tracked_paths", ""),
-            "bot_paths": request.POST.get("bot_paths", ""),
         }
+        bot_paths = request.POST.get("bot_paths", "")
+        if can_manage_bot_paths(request.user):
+            normalized_bot_paths = []
+            seen = set()
+            try:
+                for line_number, raw_line in enumerate(bot_paths.splitlines(), start=1):
+                    raw_line = raw_line.strip()
+                    if not raw_line:
+                        continue
+                    normalized = normalize_bot_path_prefix(raw_line)
+                    if normalized not in seen:
+                        seen.add(normalized)
+                        normalized_bot_paths.append(normalized)
+            except ValueError as exc:
+                messages.error(request, _("Bot/Scanner path line %(line)d is invalid: %(reason)s") % {"line": line_number, "reason": str(exc)})
+                return redirect("paxalia:settings")
+            data["bot_paths"] = "\n".join(normalized_bot_paths)
+        elif instance is not None:
+            data["bot_paths"] = instance.bot_paths
+        else:
+            data["bot_paths"] = ""
         if instance:
             for key, val in data.items():
                 setattr(instance, key, val)
@@ -40,6 +62,7 @@ def analytics_settings(request):
 
     context = {
         "settings": instance,
+        "can_manage_bot_paths": can_manage_bot_paths(request.user),
         "active_page": "settings",
         "themes": [
             {"slug": "dark", "label": _("Dark Gold")},
@@ -56,6 +79,7 @@ def analytics_settings(request):
             {"slug": "amethyst", "label": _("Amethyst Luxe")},
             {"slug": "onyx", "label": _("Onyx Pearl")},
         ],
+        "resource_policy": {"logs": log_limits(), "realtime": realtime_limits(), "storage": log_storage_status()},
         "languages": [
             {"code": code, "name": name}
             for code, name in language_choices()

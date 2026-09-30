@@ -1,133 +1,378 @@
 {% extends 'paxalia/base.html' %}
 {% load static i18n %}
 
-{% block title %}{% trans "Uptime Monitoring" %} – Paxalia Analytics{% endblock %}
-{% block page_title %}{% trans "Uptime Monitoring" %}{% endblock %}
-{% block page_subtitle %}{% trans "Scheduled checks against URLs you configure" %}{% endblock %}
+{% block title %}{% trans "Availability" %} – Paxalia Dashboard{% endblock %}
+{% block page_title %}{% trans "Availability" %}{% endblock %}
+{% block page_subtitle %}{% trans "Monitor the health, response time, and confirmed incident state of your critical endpoints" %}{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'paxalia/styles/components/security.css' %}">
+<link rel="stylesheet" href="{% static 'paxalia/styles/components/availability.css' %}">
 {% endblock %}
 
-{% block filter_bar %}
-    {% include 'paxalia/includes/filter_bar.html' %}
-{% endblock %}
+{% block filter_bar %}{% include 'paxalia/includes/filter_bar.html' %}{% endblock %}
 
 {% block dashboard_content %}
-<div class="security-page">
+<div class="availability-page analytics-page-stack">
 
-    <div class="table-card">
-        <h2 class="card-title">{% trans "Add a Monitor" %}</h2>
-        <form method="post" class="analytics-settings-form security-inline-form management-form management-form--uptime">
+    <section class="availability-overview" aria-labelledby="availability-overview-title">
+        <div class="availability-section-heading">
+            <div>
+                <span class="availability-eyebrow">{% trans "Service health" %}</span>
+                <h2 id="availability-overview-title">{% trans "At a glance" %}</h2>
+                <p>{% trans "Current monitor state is separated from historical availability so UNKNOWN observations never inflate uptime." %}</p>
+            </div>
+            <div class="availability-date-range">
+                <span>{% trans "Observation window" %}</span>
+                <strong>{{ start_date|date:"M d, Y" }} — {{ end_date|date:"M d, Y" }}</strong>
+            </div>
+        </div>
+
+        <div class="availability-summary">
+            <article class="availability-summary__card availability-summary__card--up">
+                <span class="availability-summary__label">{% trans "Operational" %}</span>
+                <strong>{{ availability_summary.up }}</strong>
+                <small>{% trans "monitors currently UP" %}</small>
+            </article>
+            <article class="availability-summary__card availability-summary__card--down">
+                <span class="availability-summary__label">{% trans "Down" %}</span>
+                <strong>{{ availability_summary.down }}</strong>
+                <small>{% trans "monitors currently DOWN" %}</small>
+            </article>
+            <article class="availability-summary__card availability-summary__card--unknown">
+                <span class="availability-summary__label">{% trans "Unknown" %}</span>
+                <strong>{{ availability_summary.unknown }}</strong>
+                <small>{% trans "not enough confirmed evidence" %}</small>
+            </article>
+            <article class="availability-summary__card availability-summary__card--incident">
+                <span class="availability-summary__label">{% trans "Open incidents" %}</span>
+                <strong>{{ availability_summary.open_incidents }}</strong>
+                <small>{% trans "transition-based incidents" %}</small>
+            </article>
+        </div>
+    </section>
+
+    {% if can_manage_availability %}
+    <section class="table-card availability-management-card" aria-labelledby="availability-add-heading">
+        <div class="availability-section-heading">
+            <div>
+                <span class="availability-eyebrow">{% trans "Monitor configuration" %}</span>
+                <h2 id="availability-add-heading" class="card-title">{% trans "Add a monitor" %}</h2>
+                <p>{% trans "Start with the endpoint and expected result, then tune scheduling and validation only when needed." %}</p>
+            </div>
+            <div class="availability-security-note">
+                <span class="availability-security-note__icon" aria-hidden="true">✓</span>
+                <span>{% trans "Protected by SSRF, redirect, response-size, and request-body bounds." %}</span>
+            </div>
+        </div>
+
+        <form method="post" class="availability-form" novalidate>
             {% csrf_token %}
             <input type="hidden" name="save_monitor" value="1">
-            <input type="text" name="name" placeholder="{% trans 'Display name (e.g. Main site)' %}" required>
-            <input type="url" name="url" placeholder="{% trans 'https://example.com/health' %}" required>
-            <select name="method">
-                <option value="GET">GET</option>
-                <option value="HEAD">HEAD</option>
-                <option value="POST">POST</option>
-            </select>
-            <input type="number" name="expected_status_code" value="200" placeholder="{% trans 'Expected status' %}" min="100" max="599">
-            <input type="number" name="timeout_seconds" value="10" placeholder="{% trans 'Timeout (s)' %}" min="1" max="120">
-            <input type="number" name="check_interval_minutes" value="5" placeholder="{% trans 'Interval (min)' %}" min="1" max="1440">
-            <button type="submit" class="btn btn-primary">{% trans "Add" %}</button>
+
+            <fieldset class="availability-fieldset">
+                <legend>{% trans "Identity & target" %}</legend>
+                <div class="availability-field-grid availability-field-grid--two">
+                    <label class="availability-field">
+                        <span>{% trans "Monitor name" %}</span>
+                        <small>{% trans "Use a clear service name your team can recognize immediately." %}</small>
+                        <input type="text" name="name" placeholder="{% trans 'Production API health' %}" autocomplete="off" required>
+                    </label>
+                    <label class="availability-field">
+                        <span>{% trans "Target URL" %}</span>
+                        <small>{% trans "HTTPS is recommended for externally reachable services." %}</small>
+                        <input type="url" name="url" placeholder="{% trans 'https://example.com/health' %}" autocomplete="url" required>
+                    </label>
+                </div>
+                <div class="availability-field-grid availability-field-grid--two">
+                    <label class="availability-field">
+                        <span>{% trans "Monitor type" %}</span>
+                        <small>{% trans "Describe what the endpoint represents." %}</small>
+                        <select name="kind">
+                            <option value="website">{% trans "Website" %}</option>
+                            <option value="api">{% trans "API" %}</option>
+                            <option value="endpoint">{% trans "Endpoint" %}</option>
+                            <option value="server">{% trans "Server" %}</option>
+                        </select>
+                    </label>
+                    <label class="availability-field">
+                        <span>{% trans "HTTP method" %}</span>
+                        <small>{% trans "Only methods enabled by this deployment are accepted." %}</small>
+                        <select name="method">
+                            <option>GET</option>
+                            <option>HEAD</option>
+                            <option>POST</option>
+                        </select>
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset class="availability-fieldset">
+                <legend>{% trans "Expected response" %}</legend>
+                <div class="availability-field-grid availability-field-grid--three">
+                    <label class="availability-field">
+                        <span>{% trans "Expected status" %}</span>
+                        <small>{% trans "The HTTP status considered healthy." %}</small>
+                        <input type="number" name="expected_status_code" value="200" min="100" max="599" inputmode="numeric">
+                    </label>
+                    <label class="availability-field">
+                        <span>{% trans "Expected content type" %}</span>
+                        <small>{% trans "Optional response content-type match." %}</small>
+                        <input type="text" name="expected_content_type" placeholder="{% trans 'application/json' %}" autocomplete="off">
+                    </label>
+                    <label class="availability-field">
+                        <span>{% trans "Timeout" %}</span>
+                        <small>{% trans "Maximum time allowed for one observation." %}</small>
+                        <div class="availability-input-with-unit">
+                            <input type="number" name="timeout_seconds" value="10" min="1" max="120" inputmode="numeric">
+                            <span>{% trans "sec" %}</span>
+                        </div>
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset class="availability-fieldset">
+                <legend>{% trans "Schedule & incident sensitivity" %}</legend>
+                <div class="availability-field-grid availability-field-grid--three">
+                    <label class="availability-field">
+                        <span>{% trans "Check interval" %}</span>
+                        <small>{% trans "How often the scheduler may run this monitor." %}</small>
+                        <div class="availability-input-with-unit">
+                            <input type="number" name="check_interval_seconds" value="{{ availability_default_interval }}" min="30" max="86400" inputmode="numeric">
+                            <span>{% trans "sec" %}</span>
+                        </div>
+                    </label>
+                    <label class="availability-field">
+                        <span>{% trans "Failure threshold" %}</span>
+                        <small>{% trans "Confirmed failures before opening an incident." %}</small>
+                        <input type="number" name="failure_threshold" value="2" min="1" max="20" inputmode="numeric">
+                    </label>
+                    <label class="availability-field">
+                        <span>{% trans "Recovery threshold" %}</span>
+                        <small>{% trans "Confirmed successes before recovery is recorded." %}</small>
+                        <input type="number" name="recovery_threshold" value="2" min="1" max="20" inputmode="numeric">
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset class="availability-fieldset availability-fieldset--advanced">
+                <legend>{% trans "Advanced validation" %}</legend>
+                <div class="availability-field-grid availability-field-grid--two">
+                    <label class="availability-field">
+                        <span>{% trans "Response assertions (JSON)" %}</span>
+                        <small>{% trans "Optional structured assertions applied to a bounded response." %}</small>
+                        <textarea name="response_assertions" rows="6" placeholder='[{"json_path":"status","equals":"ok"}]'></textarea>
+                    </label>
+                    <label class="availability-field">
+                        <span>{% trans "Request headers (JSON)" %}</span>
+                        <small>{% trans "Optional headers for authenticated or content-negotiated endpoints." %}</small>
+                        <textarea name="request_headers" rows="6" placeholder='{"Accept":"application/json"}'></textarea>
+                    </label>
+                </div>
+                <div class="availability-field-grid availability-field-grid--two">
+                    <label class="availability-field">
+                        <span>{% trans "POST body" %}</span>
+                        <small>{% trans "Used only when POST is selected; request bodies remain size-bounded." %}</small>
+                        <textarea name="request_body" rows="5" placeholder="{% trans 'Optional request body' %}"></textarea>
+                    </label>
+                    <div class="availability-option-card">
+                        <span>{% trans "Redirect handling" %}</span>
+                        <small>{% trans "Redirect destinations are revalidated against the same safety policy." %}</small>
+                        <label class="availability-check">
+                            <input type="checkbox" name="follow_redirects">
+                            <span>{% trans "Follow safe redirects" %}</span>
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="availability-form-footer">
+                <p>{% trans "Availability uses observed evidence only. Unsafe or indeterminate checks remain UNKNOWN rather than being counted as failures or successes." %}</p>
+                <button type="submit" class="btn btn-primary">{% trans "Add monitor" %}</button>
+            </div>
         </form>
-        <p class="form-hint">
-            {% trans "Checks only run once manage.py check_uptime is scheduled (cron/Celery beat, every minute is typical) — see the README." %}
-        </p>
-    </div>
+    </section>
+    {% else %}
+    <section class="table-card availability-readonly-card">
+        <div>
+            <span class="availability-eyebrow">{% trans "View only" %}</span>
+            <h2 class="card-title">{% trans "Availability monitoring" %}</h2>
+            <p>{% trans "You can inspect monitor health and incidents. Creating and changing monitors requires the Availability management permission." %}</p>
+        </div>
+    </section>
+    {% endif %}
 
-    <div class="table-card">
-        <h2 class="card-title">{% trans "Monitors" %}</h2>
+    <section class="table-card availability-table-card" aria-labelledby="availability-monitors-heading">
+        <div class="availability-section-heading">
+            <div>
+                <span class="availability-eyebrow">{% trans "Monitors" %}</span>
+                <h2 id="availability-monitors-heading" class="card-title">{% trans "Configured services" %}</h2>
+                <p>{% trans "Current state, historical availability, response timing, and controls for each monitor." %}</p>
+            </div>
+            <span class="availability-table-count">{{ monitors|length }} {% trans "monitors" %}</span>
+        </div>
+
         {% if monitors %}
-        <table class="analytics-table">
-            <thead>
-                <tr>
-                    <th>{% trans "Name" %}</th>
-                    <th>{% trans "URL" %}</th>
-                    <th>{% trans "Status" %}</th>
-                    <th>{% trans "Uptime" %} ({{ start_date }} – {{ end_date }})</th>
-                    <th>{% trans "Last checked" %}</th>
-                    <th>{% trans "Actions" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in monitors %}
-                <tr>
-                    <td>{{ row.monitor.name }}{% if not row.monitor.is_active %} <span class="form-hint">({% trans "paused" %})</span>{% endif %}</td>
-                    <td class="table-cell-truncate" title="{{ row.monitor.url }}">{{ row.monitor.url }}</td>
-                    <td>
-                        {% if row.current_status == 'up' %}
-                            <span class="security-status-badge security-status-ok">{% trans "Up" %}</span>
-                        {% elif row.current_status == 'down' %}
-                            <span class="security-status-badge security-status-bad">{% trans "Down" %}</span>
-                        {% else %}
-                            <span class="security-status-badge security-status-warn">{% trans "Unknown" %}</span>
-                        {% endif %}
-                    </td>
-                    <td>{% if row.uptime_pct is not None %}{{ row.uptime_pct }}%{% else %}—{% endif %}</td>
-                    <td>{{ row.latest_check.checked_at|date:"M d, H:i"|default:"—" }}</td>
-                    <td>
-                        <form method="post" action="{% url 'paxalia:uptime_monitor_toggle' row.monitor.id %}" style="display:inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-secondary">
-                                {% if row.monitor.is_active %}{% trans "Pause" %}{% else %}{% trans "Resume" %}{% endif %}
-                            </button>
-                        </form>
-                        <form method="post" action="{% url 'paxalia:uptime_monitor_delete' row.monitor.id %}" style="display:inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Delete this monitor and all of its history?' %}">{% trans "Delete" %}</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="security-empty">{% trans "No monitors configured yet." %}</div>
-        {% endif %}
-    </div>
-
-    <div class="table-card">
-        <h2 class="card-title">{% trans "Recent Incidents" %}</h2>
-        {% if recent_incidents %}
-        <table class="analytics-table">
-            <thead>
+        <div class="table-scroll availability-table-wrap">
+            <table class="analytics-table availability-table">
+                <thead>
                 <tr>
                     <th>{% trans "Monitor" %}</th>
-                    <th>{% trans "Started" %}</th>
-                    <th>{% trans "Resolved" %}</th>
-                    <th>{% trans "Duration" %}</th>
-                    <th>{% trans "Cause" %}</th>
+                    <th>{% trans "Target" %}</th>
+                    <th>{% trans "State" %}</th>
+                    <th>{% trans "Availability" %}</th>
+                    <th>{% trans "Response" %}</th>
+                    <th>{% trans "Last checked" %}</th>
+                    <th>{% trans "Controls" %}</th>
                 </tr>
-            </thead>
-            <tbody>
-                {% for incident in recent_incidents %}
+                </thead>
+                <tbody>
+                {% for row in monitors %}
                 <tr>
-                    <td>{{ incident.monitor.name }}</td>
-                    <td>{{ incident.started_at|date:"M d, H:i" }}</td>
                     <td>
-                        {% if incident.is_ongoing %}
-                            <span class="security-status-badge security-status-bad">{% trans "Ongoing" %}</span>
-                        {% else %}
-                            {{ incident.resolved_at|date:"M d, H:i" }}
-                        {% endif %}
+                        <div class="availability-monitor-cell">
+                            <strong>{{ row.monitor.name }}</strong>
+                            <span>{{ row.monitor.get_kind_display }} · {{ row.monitor.method }}</span>
+                            {% if not row.monitor.is_active %}<em>{% trans "Paused" %}</em>{% endif %}
+                        </div>
                     </td>
-                    <td>{{ incident.duration_seconds|floatformat:0 }}s</td>
-                    <td class="table-cell-truncate" title="{{ incident.cause }}">{{ incident.cause|default:"—" }}</td>
+                    <td>
+                        <div class="availability-target-cell">
+                            <span class="table-cell-truncate" title="{{ row.monitor.url }}">{{ row.monitor.url }}</span>
+                            <small>{% trans "Expected" %} {{ row.monitor.expected_status_code }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        {% if row.current_status == 'up' %}<span class="availability-status-badge availability-status-ok">{% trans "UP" %}</span>
+                        {% elif row.current_status == 'down' %}<span class="availability-status-badge availability-status-bad">{% trans "DOWN" %}</span>
+                        {% else %}<span class="availability-status-badge availability-status-warn">{% trans "UNKNOWN" %}</span>{% endif %}
+                    </td>
+                    <td>
+                        <div class="availability-metric-cell">
+                            <strong>{% if row.uptime_pct is not None %}{{ row.uptime_pct }}%{% else %}—{% endif %}</strong>
+                            <span>{% trans "selected window" %}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="availability-metric-cell">
+                            <strong>{% if row.latest_check and row.latest_check.response_time_ms %}{{ row.latest_check.response_time_ms }} ms{% else %}—{% endif %}</strong>
+                            {% if row.response_stats.count %}<span>avg {{ row.response_stats.average_ms }} · p95 {{ row.response_stats.p95_ms }}</span>{% else %}<span>{% trans "No timing sample" %}</span>{% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="availability-metric-cell">
+                            <strong>{% if row.latest_check %}{{ row.latest_check.checked_at|date:"M d, H:i:s" }}{% else %}—{% endif %}</strong>
+                            <span>{% if row.latest_check %}{{ row.latest_check.status|upper }}{% else %}{% trans "No observations" %}{% endif %}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="availability-actions">
+                            {% if can_manage_availability %}
+                            <details class="availability-edit-details">
+                                <summary class="btn btn-sm btn-secondary">{% trans "Edit" %}</summary>
+                                <div class="availability-edit-panel">
+                                    <form method="post" action="{% url 'paxalia:uptime_monitor_update' row.monitor.id %}" class="availability-form availability-form--edit" novalidate>
+                                        {% csrf_token %}
+                                        <fieldset class="availability-fieldset">
+                                            <legend>{% trans "Monitor settings" %}</legend>
+                                            <div class="availability-field-grid availability-field-grid--two">
+                                                <label class="availability-field"><span>{% trans "Name" %}</span><input type="text" name="name" value="{{ row.form.name|escape }}" required></label>
+                                                <label class="availability-field"><span>{% trans "URL" %}</span><input type="url" name="url" value="{{ row.form.url|escape }}" required></label>
+                                            </div>
+                                            <div class="availability-field-grid availability-field-grid--three">
+                                                <label class="availability-field"><span>{% trans "Type" %}</span><select name="kind">{% for value,label in row.form.kind_choices %}<option value="{{ value }}"{% if row.form.kind == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+                                                <label class="availability-field"><span>{% trans "Method" %}</span><select name="method">{% for value,label in row.form.method_choices %}<option value="{{ value }}"{% if row.form.method == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+                                                <label class="availability-field"><span>{% trans "Status" %}</span><input type="number" name="expected_status_code" value="{{ row.form.expected_status_code }}" min="100" max="599"></label>
+                                            </div>
+                                            <div class="availability-field-grid availability-field-grid--three">
+                                                <label class="availability-field"><span>{% trans "Timeout (sec)" %}</span><input type="number" name="timeout_seconds" value="{{ row.form.timeout_seconds }}" min="1" max="120"></label>
+                                                <label class="availability-field"><span>{% trans "Interval (sec)" %}</span><input type="number" name="check_interval_seconds" value="{{ row.form.check_interval_seconds }}" min="30" max="86400"></label>
+                                                <label class="availability-field"><span>{% trans "Content type" %}</span><input type="text" name="expected_content_type" value="{{ row.form.expected_content_type|escape }}"></label>
+                                            </div>
+                                            <div class="availability-field-grid availability-field-grid--two">
+                                                <label class="availability-field"><span>{% trans "Failure threshold" %}</span><input type="number" name="failure_threshold" value="{{ row.form.failure_threshold }}" min="1" max="20"></label>
+                                                <label class="availability-field"><span>{% trans "Recovery threshold" %}</span><input type="number" name="recovery_threshold" value="{{ row.form.recovery_threshold }}" min="1" max="20"></label>
+                                            </div>
+                                            <div class="availability-field-grid availability-field-grid--two">
+                                                <label class="availability-field"><span>{% trans "Response assertions (JSON)" %}</span><textarea name="response_assertions" rows="5">{{ row.form.response_assertions_json }}</textarea></label>
+                                                <label class="availability-field"><span>{% trans "Request headers (JSON)" %}</span><textarea name="request_headers" rows="5">{{ row.form.request_headers_json }}</textarea></label>
+                                            </div>
+                                            <div class="availability-field-grid availability-field-grid--two">
+                                                <label class="availability-field"><span>{% trans "POST body" %}</span><textarea name="request_body" rows="4">{{ row.form.request_body }}</textarea></label>
+                                                <div class="availability-option-card"><span>{% trans "Redirect handling" %}</span><small>{% trans "Redirect targets remain subject to SSRF validation." %}</small><label class="availability-check"><input type="checkbox" name="follow_redirects"{% if row.form.follow_redirects %} checked{% endif %}><span>{% trans "Follow safe redirects" %}</span></label></div>
+                                            </div>
+                                            <div class="availability-form-footer"><span></span><button type="submit" class="btn btn-primary">{% trans "Save changes" %}</button></div>
+                                        </fieldset>
+                                    </form>
+                                </div>
+                            </details>
+                            <form method="post" action="{% url 'paxalia:uptime_monitor_toggle' row.monitor.id %}">{% csrf_token %}<button type="submit" class="btn btn-sm btn-secondary">{% if row.monitor.is_active %}{% trans "Pause" %}{% else %}{% trans "Resume" %}{% endif %}</button></form>
+                            <form method="post" action="{% url 'paxalia:uptime_monitor_delete' row.monitor.id %}">{% csrf_token %}<button type="submit" class="btn btn-sm btn-danger" data-confirm="{% trans 'Delete this monitor and all of its history?' %}">{% trans "Delete" %}</button></form>
+                            {% else %}<span class="muted">{% trans "View only" %}</span>{% endif %}
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
         {% else %}
-        <div class="security-empty">{% trans "No incidents recorded." %}</div>
+        <div class="availability-empty-state">
+            <span class="availability-empty-state__icon" aria-hidden="true">○</span>
+            <strong>{% trans "No monitors configured yet" %}</strong>
+            <span>{% if can_manage_availability %}{% trans "Use Add a monitor above to begin collecting availability evidence." %}{% else %}{% trans "A dashboard administrator with Availability management permission must configure the first monitor." %}{% endif %}</span>
+        </div>
         {% endif %}
-    </div>
+    </section>
 
+    <section class="table-card availability-incidents-card" aria-labelledby="availability-incidents-heading">
+        <div class="availability-section-heading">
+            <div>
+                <span class="availability-eyebrow">{% trans "Incident history" %}</span>
+                <h2 id="availability-incidents-heading" class="card-title">{% trans "Recent incidents" %}</h2>
+                <p>{% trans "Incident boundaries are based on confirmed observations; unseen outage time is never inferred." %}</p>
+            </div>
+            <span class="availability-table-count">{% if recent_incidents %}{{ recent_incidents|length }}{% else %}0{% endif %} {% trans "records" %}</span>
+        </div>
+
+        {% if recent_incidents %}
+        <div class="table-scroll availability-table-wrap">
+            <table class="analytics-table availability-table availability-incidents-table">
+                <thead>
+                <tr>
+                    <th>{% trans "Monitor" %}</th>
+                    <th>{% trans "State" %}</th>
+                    <th>{% trans "Failure" %}</th>
+                    <th>{% trans "Recovery" %}</th>
+                    <th>{% trans "Observed duration" %}</th>
+                    <th>{% trans "Cause" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for incident in recent_incidents %}
+                <tr>
+                    <td><strong>{{ incident.monitor.name }}</strong></td>
+                    <td>{% if incident.state == 'recovered' %}<span class="availability-status-badge availability-status-ok">{% trans "RECOVERED" %}</span>{% elif incident.state == 'acknowledged' %}<span class="availability-status-badge availability-status-warn">{% trans "ACKNOWLEDGED" %}</span>{% else %}<span class="availability-status-badge availability-status-bad">{% trans "OPEN" %}</span>{% endif %}</td>
+                    <td><div class="availability-metric-cell"><strong>{{ incident.first_confirmed_failure_at|date:"M d, H:i:s"|default:"—" }}</strong><span>{% trans "first confirmed failure" %}</span></div></td>
+                    <td><div class="availability-metric-cell"><strong>{{ incident.first_confirmed_recovery_at|date:"M d, H:i:s"|default:"—" }}</strong><span>{% if incident.is_ongoing %}{% trans "Still ongoing" %}{% else %}{% trans "recovered" %}{% endif %}</span></div></td>
+                    <td>{{ incident.duration_seconds|floatformat:0 }}s</td>
+                    <td class="table-cell-truncate" title="{{ incident.cause }}">{{ incident.cause|default:"—" }}</td>
+                    <td><div class="availability-actions">{% if can_view_logs %}<a class="btn btn-sm btn-secondary" href="{{ incident.related_logs_url }}">{% trans "View logs" %}</a>{% endif %}{% if can_manage_availability and incident.is_ongoing %}<form method="post" action="{% url 'paxalia:availability_incident_acknowledge' incident.id %}">{% csrf_token %}<button type="submit" class="btn btn-sm btn-secondary">{% trans "Acknowledge" %}</button></form>{% endif %}</div></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="availability-empty-state availability-empty-state--compact">
+            <strong>{% trans "No incidents recorded" %}</strong>
+            <span>{% trans "Confirmed incident transitions will appear here once monitors begin reporting." %}</span>
+        </div>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}
 
 {% block page_scripts %}
-    <script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/security.js' %}"></script>
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/security.js' %}"></script>
 {% endblock %}

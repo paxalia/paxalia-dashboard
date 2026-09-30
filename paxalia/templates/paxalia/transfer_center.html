@@ -1,0 +1,394 @@
+{% extends 'paxalia/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Transfer Center" %} – Paxalia Dashboard{% endblock %}
+{% block page_title %}{% trans "Transfer Center" %}{% endblock %}
+{% block page_subtitle %}{% trans "A controlled exchange for releases, server delivery, and verified downloads" %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'paxalia/styles/components/transfer-center.css' %}?v=5.0.0">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="transfer-center" data-transfer-center
+     data-send-init-url="{{ init_send_url }}"
+     data-send-resume-url="{% url 'paxalia:transfer_send_resume' %}"
+     data-receive-init-url="{{ receive_init_url }}"
+     data-receive-resume-url="{% url 'paxalia:transfer_receive_resume' %}"
+     data-pause-base="{{ pause_base }}"
+     data-retry-base="{{ retry_base }}"
+     data-max-size="{{ max_transfer_bytes }}"
+     data-chunk-size="{{ chunk_size }}"
+     data-cancel-base="{% url 'paxalia:transfer_cancel' '00000000-0000-0000-0000-000000000000' %}"
+     data-status-base="{% url 'paxalia:transfer_status' '00000000-0000-0000-0000-000000000000' %}"
+     data-browser-max-receive-mb="{{ browser_max_receive_mb }}"
+     data-retry-delay-ms="{{ retry_delay_ms }}"
+     data-can-send="{% if can_send_transfer %}1{% else %}0{% endif %}"
+     data-can-receive="{% if can_receive_transfer %}1{% else %}0{% endif %}">
+
+    {% if configuration_error %}
+    <section class="transfer-alert transfer-alert--top" role="alert">
+        <div class="transfer-alert__icon" aria-hidden="true">!</div>
+        <div>
+            <strong>{% trans "Transfer exchange needs configuration" %}</strong>
+            <p>{{ configuration_error }}</p>
+            <small>{% trans "The exchange must be a real directory inside an authorized Server Files root. Private staging remains separate." %}</small>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="transfer-hero">
+        <div class="transfer-hero__main">
+            <div class="transfer-hero__heading">
+                <div class="transfer-hero__mark" aria-hidden="true">↕</div>
+                <div>
+                    <span class="transfer-eyebrow">{% trans "Operations workspace" %}</span>
+                    <h2>{% trans "Transfer files with a clear, verified workflow" %}</h2>
+                    <p>{% trans "Send local artifacts into one controlled exchange or receive files already staged there. The browser never chooses a server filesystem path, and completed transfers require SHA-256 agreement." %}</p>
+                </div>
+            </div>
+
+            <div class="transfer-hero__badges" aria-label="{% trans 'Transfer capabilities' %}">
+                <span>{% trans "Fixed exchange" %}</span>
+                <span>{% trans "Resumable" %}</span>
+                <span>{% trans "SHA-256" %}</span>
+                <span>{% trans "Bounded chunks" %}</span>
+            </div>
+        </div>
+
+        <div class="transfer-hero__limits" aria-label="{% trans 'Transfer configuration' %}">
+            <div><span>{% trans "Exchange" %}</span><strong>{{ exchange_name }}</strong></div>
+            <div><span>{% trans "Chunk" %}</span><strong>{{ chunk_size|filesizeformat }}</strong></div>
+            <div><span>{% trans "Max file" %}</span><strong>{{ max_transfer_bytes|filesizeformat }}</strong></div>
+            <div><span>{% trans "Active slots" %}</span><strong>{{ transfer_concurrency_limit }}</strong></div>
+        </div>
+    </section>
+
+    <section class="transfer-integrity-card">
+        <div class="transfer-integrity-card__title">
+            <span class="transfer-eyebrow">{% trans "Verification gate" %}</span>
+            <h2>{% trans "One pipeline, three deliberate stages" %}</h2>
+            <p>{% trans "Each operation is prepared, transferred, and independently verified before it is treated as complete." %}</p>
+        </div>
+        <div class="transfer-integrity-card__steps">
+            <div><span class="transfer-step-number">1</span><div><strong>{% trans "Prepare" %}</strong><small>{% trans "Validate the filename, size, permissions, and bounded capacity." %}</small></div></div>
+            <div><span class="transfer-step-number">2</span><div><strong>{% trans "Move" %}</strong><small>{% trans "Transfer ordered chunks through the existing upload/download engine." %}</small></div></div>
+            <div><span class="transfer-step-number">3</span><div><strong>{% trans "Verify" %}</strong><small>{% trans "Compare browser evidence with the authoritative server checksum." %}</small></div></div>
+        </div>
+    </section>
+
+    {% if transfer_enabled %}
+    <section class="transfer-actions-grid" aria-label="{% trans 'Transfer actions' %}">
+        {% if can_send_transfer and not configuration_error %}
+        <article class="table-card transfer-action-card transfer-action-card--send">
+            <div class="transfer-action-card__top">
+                <div class="transfer-card-heading">
+                    <div class="transfer-card-heading__icon transfer-card-heading__icon--send" aria-hidden="true">↑</div>
+                    <div>
+                        <span class="transfer-eyebrow">{% trans "Outbound" %}</span>
+                        <h2>{% trans "Send to server" %}</h2>
+                        <p>{% trans "Upload a release artifact into the fixed exchange without exposing server paths." %}</p>
+                    </div>
+                </div>
+                <span class="transfer-action-card__state">{% trans "Fixed destination" %}</span>
+            </div>
+
+            <div class="transfer-destination-card">
+                <span>{% trans "Exchange" %}</span>
+                <strong>{{ exchange_name }}</strong>
+                <small>{% trans "Server location" %}: <code>{{ exchange_path_display }}</code></small>
+                <small>{% trans "The server controls the destination. Existing exchange files are never overwritten." %}</small>
+            </div>
+
+            <form class="transfer-form transfer-form--single" data-send-form>
+                {% csrf_token %}
+                <div class="transfer-file-picker">
+                    <label class="transfer-file-picker__surface">
+                        <input type="file" data-send-file required>
+                        <span class="transfer-file-picker__icon" aria-hidden="true">↥</span>
+                        <span class="transfer-file-picker__copy">
+                            <strong>{% trans "Choose a file from this device" %}</strong>
+                            <small data-send-file-name>{% trans "Select one file to begin." %}</small>
+                        </span>
+                        <span class="transfer-file-picker__limit">{{ max_transfer_bytes|filesizeformat }}</span>
+                    </label>
+                </div>
+
+                <div class="transfer-form__limits">
+                    <div><span>{% trans "Chunk size" %}</span><strong>{{ chunk_size|filesizeformat }}</strong></div>
+                    <div><span>{% trans "Max file" %}</span><strong>{{ max_transfer_bytes|filesizeformat }}</strong></div>
+                    <div><span>{% trans "Retries" %}</span><strong>{{ transfer_max_retries }}</strong></div>
+                </div>
+
+                <div class="transfer-form__footer">
+                    <span>{% trans "A completed upload is not released until the server verifies the staged file." %}</span>
+                    <button type="submit" class="btn btn-primary">{% trans "Start upload" %}</button>
+                </div>
+            </form>
+            <div class="transfer-feedback" data-send-feedback hidden role="status" aria-live="polite"></div>
+        </article>
+        {% endif %}
+
+        {% if can_receive_transfer and not configuration_error %}
+        <article class="table-card transfer-action-card transfer-action-card--receive">
+            <div class="transfer-action-card__top">
+                <div class="transfer-card-heading">
+                    <div class="transfer-card-heading__icon transfer-card-heading__icon--receive" aria-hidden="true">↓</div>
+                    <div>
+                        <span class="transfer-eyebrow">{% trans "Inbound" %}</span>
+                        <h2>{% trans "Receive from server" %}</h2>
+                        <p>{% trans "Select a file already present in the controlled exchange and download only after verification." %}</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary" data-refresh-exchange>{% trans "Refresh files" %}</button>
+            </div>
+
+            <div class="transfer-exchange-picker">
+                <div class="transfer-exchange-picker__header">
+                    <div>
+                        <span class="transfer-picker-label">{% trans "Available in" %}</span>
+                        <strong>{{ exchange_name }}</strong>
+                        <small class="transfer-location"><span>{% trans "Server location" %}</span><code>{{ exchange_path_display }}</code></small>
+                    </div>
+                    <span class="transfer-exchange-picker__count">{{ exchange_files|length }} {% trans "files" %}</span>
+                </div>
+
+                <form class="transfer-receive-form" data-receive-form>
+                    {% csrf_token %}
+                    <div class="transfer-exchange-list" role="radiogroup" aria-label="{% trans 'Files available for download' %}">
+                        {% for file in exchange_files %}
+                        <label class="transfer-exchange-item">
+                            <input type="radio" name="filename" value="{{ file.name|escape }}" data-receive-file>
+                            <span class="transfer-exchange-item__icon" aria-hidden="true">▧</span>
+                            <span class="transfer-exchange-item__main">
+                                <strong>{{ file.name }}</strong>
+                                <small>{{ file.size|filesizeformat }} · {{ file.modified }}</small>
+                            </span>
+                            <span class="transfer-exchange-item__type">{{ file.content_type }}</span>
+                            <span class="transfer-exchange-item__check" aria-hidden="true">✓</span>
+                        </label>
+                        {% empty %}
+                        <div class="transfer-empty-state transfer-empty-state--compact">
+                            <span class="transfer-empty-state__icon" aria-hidden="true">□</span>
+                            <strong>{% trans "The exchange is empty" %}</strong>
+                            <span>{% trans "Completed outbound transfers will appear here when they are available." %}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="transfer-selection-summary" data-receive-selection aria-live="polite">
+                        <span>{% trans "Selected file" %}</span>
+                        <strong data-receive-selection-name>{% trans "Nothing selected" %}</strong>
+                    </div>
+
+                    <div class="transfer-form__footer">
+                        <span>{% trans "The server rechecks the source before accepting the final client checksum." %}</span>
+                        <button type="submit" class="btn btn-secondary" data-receive-submit disabled>{% trans "Download selected" %}</button>
+                    </div>
+                </form>
+            </div>
+            <div class="transfer-feedback" data-receive-feedback hidden role="status" aria-live="polite"></div>
+        </article>
+        {% endif %}
+
+        {% if configuration_error %}
+        <article class="table-card transfer-readonly-card">
+            <span class="transfer-eyebrow">{% trans "Configuration" %}</span>
+            <h2>{% trans "Transfer actions are paused" %}</h2>
+            <p>{% trans "The exchange must be a real directory inside one authorized Server Files root, while private transfer staging remains separate." %}</p>
+        </article>
+        {% elif not can_send_transfer and not can_receive_transfer %}
+        <article class="table-card transfer-readonly-card">
+            <span class="transfer-eyebrow">{% trans "Permissions" %}</span>
+            <h2>{% trans "Transfer access is read-only" %}</h2>
+            <p>{% trans "Your current Paxalia permissions allow history viewing but do not allow creating transfers." %}</p>
+        </article>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="table-card transfer-active-card transfer-panel" aria-labelledby="active-transfers-heading">
+        <div class="transfer-section-heading">
+            <div>
+                <span class="transfer-eyebrow">{% trans "Live work" %}</span>
+                <h2 id="active-transfers-heading" class="card-title">{% trans "Active transfers" %}</h2>
+                <p>{% trans "Progress and integrity state update without reloading the page." %}</p>
+            </div>
+            <span class="transfer-section-heading__badge" data-active-count>{{ active_transfers|length }} {% trans "active" %}</span>
+        </div>
+
+        <div class="transfer-list" data-active-list>
+            {% for transfer in active_transfers %}
+            <article class="transfer-row transfer-row--{{ transfer.direction }}" data-transfer-id="{{ transfer.id }}" data-transfer-direction="{{ transfer.direction }}">
+                <div class="transfer-row__top">
+                    <div class="transfer-row__identity">
+                        <span class="transfer-row__direction" data-transfer-direction>{% if transfer.direction == 'send' %}{% trans "Outbound" %}{% else %}{% trans "Inbound" %}{% endif %}</span>
+                        <strong data-transfer-filename>{{ transfer.filename }}</strong>
+                        <span data-transfer-meta>{{ transfer.size|filesizeformat }} · {{ transfer.get_status_display }}</span>
+                    </div>
+                    <div class="transfer-row__status-stack"><span class="transfer-row__live-label" data-transfer-live-label>{% if transfer.status == "verifying" %}{% trans "Server verification running" %}{% else %}{% trans "Live transfer" %}{% endif %}</span><span class="transfer-status transfer-status--{{ transfer.status }}" data-transfer-status>{{ transfer.get_status_display }}</span></div>
+                </div>
+
+                <div class="transfer-progress-block">
+                    <div class="transfer-progress-block__labels"><span>{% trans "Progress" %}</span><strong data-transfer-progress-value>{{ transfer.progress_percent }}%</strong></div>
+                    <progress class="transfer-progress" data-transfer-progress value="{{ transfer.progress_percent }}" max="100">{{ transfer.progress_percent }}%</progress>
+                </div>
+
+                <div class="transfer-row__checks" aria-label="{% trans 'Transfer integrity checks' %}">
+                    <div class="transfer-check">
+                        <span>{% trans "App SHA-256" %}</span>
+                        <small>{{ transfer.app_checksum_scope }}</small>
+                        <div class="transfer-row__hash"><code title="{{ transfer.app_checksum }}" data-transfer-app-checksum>{{ transfer.app_checksum|default:"—" }}</code>{% if transfer.app_checksum %}<button type="button" class="btn btn-sm btn-secondary transfer-copy-hash" data-copy-hash="{{ transfer.app_checksum }}">{% trans "Copy" %}</button>{% endif %}</div>
+                    </div>
+                    <div class="transfer-check">
+                        <span>{% trans "Server SHA-256" %}</span>
+                        <small>{{ transfer.server_checksum_scope }}</small>
+                        <div class="transfer-row__hash"><code title="{{ transfer.server_checksum }}" data-transfer-server-checksum>{{ transfer.server_checksum|default:"—" }}</code>{% if transfer.server_checksum %}<button type="button" class="btn btn-sm btn-secondary transfer-copy-hash" data-copy-hash="{{ transfer.server_checksum }}">{% trans "Copy" %}</button>{% endif %}</div>
+                    </div>
+                    <span class="transfer-integrity transfer-integrity--{{ transfer.checksum_status }}" data-transfer-checksum-status>{% if transfer.checksum_status == 'verified' %}{% trans "Verified" %}{% elif transfer.checksum_status == 'mismatch' %}{% trans "Mismatch" %}{% elif transfer.checksum_status == 'pending' %}{% trans "Verification pending" %}{% else %}{% trans "Not available" %}{% endif %}</span>
+                </div>
+
+                <div class="transfer-row__footer">
+                    <span data-transfer-progress-total>{{ transfer.bytes_transferred|filesizeformat }} / {{ transfer.size|filesizeformat }}</span>
+                    <div class="transfer-row__actions">
+                        {% if transfer.direction == 'send' %}
+                            {% if can_send_transfer %}
+                                {% if transfer.status == 'paused' %}<button type="button" class="btn btn-sm btn-secondary" data-resume-transfer="{{ transfer.id }}" data-resume-direction="send">{% trans "Resume" %}</button>{% elif transfer.status == 'interrupted' %}<button type="button" class="btn btn-sm btn-secondary" data-retry-transfer="{{ transfer.id }}" data-retry-direction="send">{% trans "Retry" %}</button>{% elif transfer.status != 'verifying' %}<button type="button" class="btn btn-sm btn-secondary" data-pause-transfer="{{ transfer.id }}">{% trans "Pause" %}</button>{% endif %}
+                                <button type="button" class="btn btn-sm btn-danger" data-cancel-transfer="{{ transfer.id }}">{% trans "Cancel" %}</button>
+                            {% endif %}
+                        {% else %}
+                            {% if can_receive_transfer %}
+                                {% if transfer.status == 'paused' %}<button type="button" class="btn btn-sm btn-secondary" data-resume-transfer="{{ transfer.id }}" data-resume-direction="receive">{% trans "Resume" %}</button>{% elif transfer.status == 'interrupted' %}<button type="button" class="btn btn-sm btn-secondary" data-retry-transfer="{{ transfer.id }}" data-retry-direction="receive">{% trans "Retry" %}</button>{% elif transfer.status != 'verifying' %}<button type="button" class="btn btn-sm btn-secondary" data-pause-transfer="{{ transfer.id }}">{% trans "Pause" %}</button>{% endif %}
+                                <button type="button" class="btn btn-sm btn-danger" data-cancel-transfer="{{ transfer.id }}">{% trans "Cancel" %}</button>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+            <div class="transfer-empty-state" data-active-empty {% if active_transfers %}hidden{% endif %}>
+                <span class="transfer-empty-state__icon" aria-hidden="true">◇</span>
+                <strong>{% trans "No active transfers" %}</strong>
+                <span>{% trans "New uploads and downloads will appear here while they are running." %}</span>
+            </div>
+
+            <template data-transfer-row-template="send">
+                <article class="transfer-row transfer-row--send" data-transfer-id data-transfer-direction="send">
+                    <div class="transfer-row__top">
+                        <div class="transfer-row__identity">
+                            <span class="transfer-row__direction" data-transfer-direction>Outbound</span>
+                            <strong data-transfer-filename>Unnamed file</strong>
+                            <span data-transfer-meta>0 bytes · Preparing</span>
+                        </div>
+                        <div class="transfer-row__status-stack">
+                            <span class="transfer-row__live-label" data-transfer-live-label>Live transfer</span>
+                            <span class="transfer-status transfer-status--preparing" data-transfer-status>Preparing</span>
+                        </div>
+                    </div>
+                    <div class="transfer-progress-block">
+                        <div class="transfer-progress-block__labels"><span>{% trans "Progress" %}</span><strong data-transfer-progress-value>0%</strong></div>
+                        <progress class="transfer-progress" data-transfer-progress value="0" max="100">0%</progress>
+                    </div>
+                    <div class="transfer-row__checks">
+                        <div class="transfer-check"><span>{% trans "App SHA-256" %}</span><small>{% trans "Browser checksum" %}</small><div class="transfer-row__hash"><code title="" data-transfer-app-checksum>—</code><button type="button" class="btn btn-sm btn-secondary transfer-copy-hash" data-copy-hash hidden>{% trans "Copy" %}</button></div></div>
+                        <div class="transfer-check"><span>{% trans "Server SHA-256" %}</span><small>{% trans "Authoritative destination" %}</small><div class="transfer-row__hash"><code title="" data-transfer-server-checksum>—</code><button type="button" class="btn btn-sm btn-secondary transfer-copy-hash" data-copy-hash hidden>{% trans "Copy" %}</button></div></div>
+                        <span class="transfer-integrity transfer-integrity--pending" data-transfer-checksum-status>{% trans "Verification pending" %}</span>
+                    </div>
+                    <div class="transfer-row__footer">
+                        <span data-transfer-progress-total>0 / 0 bytes</span>
+                        <span class="transfer-row__actions">
+                            <button type="button" class="btn btn-sm btn-secondary" data-resume-transfer hidden>Resume</button>
+                            <button type="button" class="btn btn-sm btn-secondary" data-retry-transfer hidden>Retry</button>
+                            <button type="button" class="btn btn-sm btn-secondary" data-pause-transfer hidden>Pause</button>
+                            <button type="button" class="btn btn-sm btn-danger" data-cancel-transfer hidden>Cancel</button>
+                        </span>
+                    </div>
+                </article>
+            </template>
+            <template data-transfer-row-template="receive">
+                <article class="transfer-row transfer-row--receive" data-transfer-id data-transfer-direction="receive">
+                    <div class="transfer-row__top">
+                        <div class="transfer-row__identity">
+                            <span class="transfer-row__direction" data-transfer-direction>Inbound</span>
+                            <strong data-transfer-filename>Unnamed file</strong>
+                            <span data-transfer-meta>0 bytes · Preparing</span>
+                        </div>
+                        <div class="transfer-row__status-stack">
+                            <span class="transfer-row__live-label" data-transfer-live-label>Live transfer</span>
+                            <span class="transfer-status transfer-status--preparing" data-transfer-status>Preparing</span>
+                        </div>
+                    </div>
+                    <div class="transfer-progress-block">
+                        <div class="transfer-progress-block__labels"><span>{% trans "Progress" %}</span><strong data-transfer-progress-value>0%</strong></div>
+                        <progress class="transfer-progress" data-transfer-progress value="0" max="100">0%</progress>
+                    </div>
+                    <div class="transfer-row__checks">
+                        <div class="transfer-check"><span>{% trans "App SHA-256" %}</span><small>{% trans "Browser checksum" %}</small><div class="transfer-row__hash"><code title="" data-transfer-app-checksum>—</code><button type="button" class="btn btn-sm btn-secondary transfer-copy-hash" data-copy-hash hidden>{% trans "Copy" %}</button></div></div>
+                        <div class="transfer-check"><span>{% trans "Server SHA-256" %}</span><small>{% trans "Authoritative source" %}</small><div class="transfer-row__hash"><code title="" data-transfer-server-checksum>—</code><button type="button" class="btn btn-sm btn-secondary transfer-copy-hash" data-copy-hash hidden>{% trans "Copy" %}</button></div></div>
+                        <span class="transfer-integrity transfer-integrity--pending" data-transfer-checksum-status>{% trans "Verification pending" %}</span>
+                    </div>
+                    <div class="transfer-row__footer">
+                        <span data-transfer-progress-total>0 / 0 bytes</span>
+                        <span class="transfer-row__actions">
+                            <button type="button" class="btn btn-sm btn-secondary" data-resume-transfer hidden>Resume</button>
+                            <button type="button" class="btn btn-sm btn-secondary" data-retry-transfer hidden>Retry</button>
+                            <button type="button" class="btn btn-sm btn-secondary" data-pause-transfer hidden>Pause</button>
+                            <button type="button" class="btn btn-sm btn-danger" data-cancel-transfer hidden>Cancel</button>
+                        </span>
+                    </div>
+                </article>
+            </template>
+        </div>
+    </section>
+
+    <section class="table-card transfer-history-card transfer-panel" aria-labelledby="transfer-history-heading">
+        <div class="transfer-section-heading">
+            <div>
+                <span class="transfer-eyebrow">{% trans "Audit trail" %}</span>
+                <h2 id="transfer-history-heading" class="card-title">{% trans "Transfer history" %}</h2>
+                <p>{% trans "Completed and terminal transfers remain available with their integrity evidence and failure reason." %}</p>
+            </div>
+        </div>
+
+        <div class="transfer-history-wrap">
+            <table class="transfer-history-table">
+                <thead>
+                    <tr>
+                        <th>{% trans "File" %}</th>
+                        <th>{% trans "Direction" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "Size" %}</th>
+                        <th>{% trans "App SHA-256" %}</th>
+                        <th>{% trans "Server SHA-256" %}</th>
+                        <th>{% trans "Created" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transfer in history %}
+                    <tr>
+                        <td>
+                            <div class="transfer-history-file">
+                                <strong>{{ transfer.filename }}</strong>
+                                {% if transfer.error_message %}<span>{{ transfer.error_message }}</span>{% endif %}
+                            </div>
+                        </td>
+                        <td>{% if transfer.direction == 'send' %}{% trans "Outbound" %}{% else %}{% trans "Inbound" %}{% endif %}</td>
+                        <td><span class="transfer-status transfer-status--{{ transfer.status }}">{{ transfer.get_status_display }}</span></td>
+                        <td>{{ transfer.size|filesizeformat }}</td>
+                        <td><div class="transfer-history-hash"><code>{{ transfer.app_checksum|default:"—" }}</code>{% if transfer.app_checksum %}<button type="button" class="btn btn-sm btn-secondary transfer-copy-hash" data-copy-hash="{{ transfer.app_checksum }}">{% trans "Copy" %}</button>{% endif %}</div></td>
+                        <td><div class="transfer-history-hash"><code>{{ transfer.server_checksum|default:"—" }}</code>{% if transfer.server_checksum %}<button type="button" class="btn btn-sm btn-secondary transfer-copy-hash" data-copy-hash="{{ transfer.server_checksum }}">{% trans "Copy" %}</button>{% endif %}</div></td>
+                        <td>{{ transfer.created_at }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7"><div class="transfer-empty-state"><span class="transfer-empty-state__icon" aria-hidden="true">□</span><strong>{% trans "No transfer history" %}</strong><span>{% trans "Completed operations will appear here." %}</span></div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/transfer-center.js' %}?v=5.0.0"></script>
+{% endblock %}

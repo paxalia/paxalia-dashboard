@@ -50,4 +50,6 @@ def analytics_config(request):
         'analytics_current_segment': current_segment,
         'analytics_all_segments': all_segments,
         'analytics_unread_notification_count': unread_notification_count,
+        'logging_enabled': bool(config.get('LOGGING_ENABLED', True)),
+        'browser_telemetry_resource_errors': bool(config.get('LOG_BROWSER_CAPTURE_RESOURCE_ERRORS', False)),
     }

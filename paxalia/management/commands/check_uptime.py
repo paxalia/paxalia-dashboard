@@ -1,12 +1,12 @@
 from django.core.management.base import BaseCommand
 
-from paxalia.uptime import monitors_due_for_check, perform_check, record_check
+from paxalia.uptime import acquire_monitor_check_lease, monitors_due_for_check, perform_check, record_check
 
 
 class Command(BaseCommand):
     help = (
-        "Runs an HTTP check for every active UptimeMonitor whose "
-        "check_interval_minutes has elapsed since its last check. "
+        "Runs an HTTP check for every active Paxalia Availability monitor whose "
+        "configured interval in seconds has elapsed since its last check. "
         "Intended to run frequently via cron/Celery beat — every "
         "minute is typical — same scheduling assumption this package "
         "already makes for aggregate_daily_stats, "
@@ -29,8 +29,15 @@ class Command(BaseCommand):
 
         up_count = 0
         down_count = 0
+        unknown_count = 0
+        checked_count = 0
+        skipped_count = 0
         for monitor in due:
+            if not options['dry_run'] and not acquire_monitor_check_lease(monitor):
+                skipped_count += 1
+                continue
             result = perform_check(monitor)
+            checked_count += 1
             if options['dry_run']:
                 self.stdout.write(
                     f"{monitor.name}: {result['status']} "
@@ -42,8 +49,13 @@ class Command(BaseCommand):
 
             if result['status'] == 'up':
                 up_count += 1
-            else:
+            elif result['status'] == 'down':
                 down_count += 1
+            else:
+                unknown_count += 1
 
         verb = 'Would check' if options['dry_run'] else 'Checked'
-        self.stdout.write(self.style.SUCCESS(f"{verb} {len(due)} monitor(s): {up_count} up, {down_count} down."))
+        self.stdout.write(self.style.SUCCESS(
+            f"{verb} {checked_count} monitor(s): {up_count} up, {down_count} down, {unknown_count} unknown"
+            + (f", {skipped_count} lease-skipped." if skipped_count else ".")
+        ))

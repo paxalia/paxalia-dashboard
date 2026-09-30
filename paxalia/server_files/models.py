@@ -57,7 +57,6 @@ class ServerFileOperation(models.Model):
         ordering = ["-created_at", "-id"]
         default_permissions = ()
         permissions = [
-            ("view_server_files", "Can view Paxalia Server Files"),
             ("download_server_files", "Can download files from Paxalia Server Files"),
             ("upload_server_files", "Can upload files through Paxalia Server Files"),
             ("modify_server_files", "Can create, rename, move, and copy files in Paxalia Server Files"),
@@ -72,3 +71,4 @@ class ServerFileOperation(models.Model):
 
     def __str__(self):
         return f"{self.operation} ({self.status}) at {self.created_at:%Y-%m-%d %H:%M}"
+

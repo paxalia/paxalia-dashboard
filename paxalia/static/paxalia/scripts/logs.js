@@ -174,7 +174,10 @@
         if (!root) return;
 
         var feedUrl = root.getAttribute('data-live-feed-url');
-        var limit = Math.max(1, Math.min(2000, parseInt(root.getAttribute('data-live-limit') || '2000', 10)));
+        var limit = Math.max(1, parseInt(root.getAttribute('data-live-limit') || '5000', 10));
+        var autoPauseThreshold = Math.max(limit, parseInt(root.getAttribute('data-live-auto-pause-threshold') || String(limit), 10));
+        var backpressure = root.querySelector('[data-live-backpressure]');
+        var autoPaused = false;
         var viewport = root.querySelector('[data-live-viewport]');
         var linesEl = root.querySelector('[data-live-lines]');
         var emptyEl = root.querySelector('[data-live-empty]');
@@ -271,6 +274,14 @@
             }
             if (payload.latest_sequence != null) latestSequence = Number(payload.latest_sequence);
             render();
+            if (backpressure) {
+                if (payload.high_event_rate || entries.length >= autoPauseThreshold) {
+                    backpressure.hidden = false;
+                    backpressure.textContent = 'High event rate detected. Live display has been limited to protect browser performance.';
+                } else {
+                    backpressure.hidden = true;
+                }
+            }
         }
 
         function fetchLogs(initial) {
@@ -292,7 +303,13 @@
                 })
                 .then(function (payload) {
                     merge(payload);
-                    setStatus('Live', 'live');
+                    if (payload.high_event_rate) {
+                        autoPaused = true;
+                        stop();
+                        setStatus('Live display limited', 'paused');
+                    } else {
+                        setStatus('Live', 'live');
+                    }
                 })
                 .catch(function () {
                     setStatus('Connection unavailable', 'error');
@@ -334,6 +351,8 @@
         });
         if (enabledEl) enabledEl.addEventListener('change', function () {
             if (enabledEl.checked) {
+                autoPaused = false;
+                if (backpressure) backpressure.hidden = true;
                 setStatus('Connecting…', 'connecting');
                 start(latestSequence == null);
             } else {

@@ -531,7 +531,7 @@ class ServerFilesPruneSchemaGuardTests(SimpleTestCase):
 
 
 class ServerFilesIntegrationRegressionTests(SimpleTestCase):
-    """Regression coverage for Phase 1 package integration."""
+    """Regression coverage for package integration."""
 
     def test_server_files_urls_are_registered(self):
         from django.urls import reverse
@@ -607,6 +607,31 @@ class ServerFilesPermissionCacheRegressionTests(TestCase):
             self.assertTrue(has_capability(user, "download_server_files"))
 
 
+class ServerFilesPermissionRegistrationTests(TestCase):
+    """Keep section visibility separate from file-operation capabilities."""
+
+    def test_view_server_files_is_a_single_dashboard_section_permission(self):
+        from django.contrib.auth.models import Permission
+
+        permissions = Permission.objects.filter(
+            content_type__app_label="paxalia",
+            codename="view_server_files",
+        )
+        self.assertEqual(permissions.count(), 1)
+        self.assertEqual(permissions.get().content_type.model, "dashboardaccess")
+
+
+    def test_server_file_operation_does_not_own_section_visibility_permission(self):
+        from django.contrib.auth.models import Permission
+
+        server_file_permissions = Permission.objects.filter(
+            content_type__app_label="paxalia",
+            content_type__model="serverfileoperation",
+            codename="view_server_files",
+        )
+        self.assertFalse(server_file_permissions.exists())
+
+
 class ServerFilesConfigurationIntegrationTests(SimpleTestCase):
     def test_package_defaults_are_fail_closed(self):
         from .settings import DEFAULTS
@@ -662,4 +687,5 @@ class ServerFilesHistoryViewRegressionTests(TestCase):
                 response = inspect.unwrap(server_files_history)(request)
 
         self.assertEqual(response.status_code, 200)
+
 

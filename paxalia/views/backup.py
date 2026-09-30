@@ -103,7 +103,7 @@ def backup_management(request):
         # Check for overlap on an unsaved instance before touching the
         # DB — a storage_path that is, contains, or sits inside a
         # backed-up path means every run would re-archive the previous
-        # archives, growing without bound (audit finding, Phase 8).
+        # archives, growing without bound (audit finding).
         candidate = BackupConfiguration(
             storage_path=data['storage_path'], backup_paths=data['backup_paths']
         )

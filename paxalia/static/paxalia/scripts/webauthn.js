@@ -123,8 +123,15 @@
             } else {
                 startRequest = fetch(optionsUrl, {
                     credentials: 'same-origin',
-                    headers: { 'Accept': 'application/json' }
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    cache: 'no-store'
                 }).then(function (response) {
+                    var contentType = response.headers.get('content-type') || '';
+                    if (response.redirected || contentType.indexOf('application/json') === -1) {
+                        throw new Error(response.redirected
+                            ? message('session-expired', 'Your administrator session has expired. Sign in again and retry the authenticator step.')
+                            : message('unexpected-response', 'The authenticator server returned an unexpected response.'));
+                    }
                     return response.json().then(function (data) {
                         if (!response.ok) {
                             var error = new Error(data.detail || 'Could not start authenticator verification.');
@@ -176,4 +183,5 @@
 
     document.querySelectorAll('[data-webauthn-mode]').forEach(start);
 }());
+
 

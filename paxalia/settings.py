@@ -4,9 +4,9 @@ from django.conf import settings
 DEFAULTS = {
     'SIDEBAR_SECTIONS': [
         'overview', 'pages', 'api', 'traffic', 'realtime', 'bots',
-        'geography', 'events', 'logs', 'billing', 'releases', 'backups', 'server_files', 'security',
+        'geography', 'events', 'logs', 'billing', 'backups', 'server_files', 'security',
         'sites', 'broken_links', 'goals', 'funnels', 'segments', 'campaigns',
-        'annotations', 'cohorts', 'api_keys', 'reports', 'share_links', 'notifications', 'rum', 'uptime', 'compliance', 'data_import', 'settings'
+        'annotations', 'cohorts', 'api_keys', 'reports', 'share_links', 'notifications', 'rum', 'uptime', 'availability', 'transfers', 'compliance', 'data_import', 'settings'
     ],
     'API_PATH_PREFIX': '/api/',
     'GEOIP_PATH': None,  # None → use paxalia/geoip/ inside the package
@@ -18,11 +18,22 @@ DEFAULTS = {
     'DEFAULT_IGNORED_EXTENSIONS': ['.css', '.js', '.png', '.jpg', '.svg', '.ico', '.woff2'],
     'DEFAULT_REALTIME_REFRESH': 30,
     'DEFAULT_SEARCH_QUERY_PARAMS': ['q', 'search', 'query'],
+    # Bot/scanner path-management safety bounds. These govern the one-click
+    # cleanup actions exposed on Pages, Bot Traffic, and Broken Links.
+    'BOT_PATH_MAX_PREFIX_LENGTH': 255,
+    'BOT_PATH_MAX_DELETE_PER_ACTION': 10000,
+    'BOT_PATH_MAX_MUTATIONS_PER_MINUTE': 30,
+    'BOT_TRAFFIC_MAX_IPS': 30,
+    'BOT_TRAFFIC_MAX_PATHS_PER_IP': 8,
+    'BOT_TRAFFIC_MAX_SCANNER_ROWS': 40,
+    'BOT_TRAFFIC_MAX_CRAWLER_ROWS': 20,
+    'BROKEN_LINKS_MAX_PATHS': 50,
+    'BROKEN_LINKS_MAX_IPS': 25,
     'UPLOADS_INCOMING_ROOT': None,
     'UPLOAD_CHUNK_SIZE_MB': 5,                                # optional, default 5
     'UPLOAD_MAX_FILE_SIZE_MB': 2048,
     'DATA_IMPORT_MAX_FILE_SIZE_MB': 100,
-    'UPLOAD_SESSION_TTL_HOURS': 24,                          # optional, default 2048 (2GB)
+    'UPLOAD_SESSION_TTL_HOURS': 24,                          # session retention in hours
     # ── Paxalia Server Files ──
     # Disabled by default. Host projects must explicitly opt in and configure
     # one or more non-root, non-overlapping filesystem directories.
@@ -45,6 +56,82 @@ DEFAULTS = {
     'FILE_MANAGER_MAX_OPERATION_RECORDS': 20000,
     'FILE_MANAGER_OPERATION_RETENTION_DAYS': 90,
     'FILE_MANAGER_CLEANUP_BATCH_SIZE': 500,
+
+    # ── Paxalia Transfer Center ──
+    # Enabled by default as a UI subsystem, but no filesystem transfer is
+    # possible until Server Files roots/capabilities are configured.
+    'TRANSFER_CENTER_ENABLED': True,
+    'TRANSFER_ROOT': None,
+    'TRANSFER_EXCHANGE_ROOT': None,
+    'TRANSFER_EXCHANGE_LIST_LIMIT': 200,
+    'TRANSFER_MAX_FILE_SIZE_MB': 2048,
+    'TRANSFER_CHUNK_SIZE_MB': 5,
+    'TRANSFER_MAX_CONCURRENT': 3,
+    'TRANSFER_MAX_RETRIES': 5,
+    'TRANSFER_RETRY_DELAY_SECONDS': 2,
+    'TRANSFER_STAGING_TTL_HOURS': 24,
+    'TRANSFER_SYNC_VERIFY_MAX_MB': 50,
+    'TRANSFER_ALLOW_SYNC_LARGE_PROMOTION': False,
+    'TRANSFER_CLEANUP_BATCH_SIZE': 100,
+    # Filesystem scan cap for stale transfer staging cleanup. This bounds the
+    # number of directory entries inspected across both staging roots in one pass.
+    'TRANSFER_STAGING_SCAN_LIMIT': 5000,
+    'TRANSFER_BROWSER_MAX_RECEIVE_MB': 512,
+    'TRANSFER_MAX_REQUESTS_PER_MINUTE': 120,
+    'TRANSFER_RATE_LIMIT_WINDOW_SECONDS': 60,
+
+    # ── Paxalia Availability ──
+    'AVAILABILITY_DEFAULT_INTERVAL_SECONDS': 300,
+    'AVAILABILITY_MIN_INTERVAL_SECONDS': 30,
+    'AVAILABILITY_MAX_INTERVAL_SECONDS': 86400,
+    'AVAILABILITY_DEFAULT_TIMEOUT_SECONDS': 10,
+    'AVAILABILITY_FAILURE_THRESHOLD': 2,
+    'AVAILABILITY_RECOVERY_THRESHOLD': 2,
+    'AVAILABILITY_MAX_RESPONSE_BYTES': 262144,
+    # Bound configured POST bodies accepted by Availability monitors.
+    'AVAILABILITY_MAX_REQUEST_BODY_BYTES': 65536,
+    'AVAILABILITY_LOG_CORRELATION_WINDOW_SECONDS': 300,
+    'AVAILABILITY_HISTORY_RETENTION_DAYS': 90,
+    'AVAILABILITY_MAX_CHECK_RECORDS': 500000,
+    'AVAILABILITY_CLEANUP_BATCH_SIZE': 500,
+    'AVAILABILITY_ALLOWED_METHODS': ['GET', 'HEAD', 'POST'],
+    'AVAILABILITY_MAX_CHECKS_PER_RUN': 100,
+    # Hard upper bound on how many active monitors a scheduler pass may scan.
+    'AVAILABILITY_MAX_SCHEDULER_SCAN': 1000,
+
+    # ── Paxalia Resource & Retention Policies ──
+    'LOG_MAX_RECORDS': 500000,
+    'LOG_MAX_STORAGE_MB': 2048,
+    'LOG_CLEANUP_BATCH_SIZE': 500,
+    'LOG_STORAGE_WARNING_THRESHOLDS': (80, 90, 95),
+    'LOG_STORAGE_WARNING_NOTIFICATIONS': True,
+    'LOG_STORAGE_WARNING_COOLDOWN_SECONDS': 21600,
+    'ALERT_DEDUPLICATION_ENABLED': True,
+    'ALERT_DEFAULT_COOLDOWN_SECONDS': 300,
+    'LOG_SEVERITY_RETENTION_DAYS': {
+        'DEBUG': 7,
+        'INFO': 30,
+        'WARNING': 60,
+        'ERROR': 180,
+        'CRITICAL': 365,
+    },
+    'LOG_BROWSER_MAX_REALTIME_EVENTS': 2000,
+    'LOG_BROWSER_MAX_REALTIME_BUFFER': 5000,
+    'LOG_BROWSER_MAX_EVENTS_PER_PAGE': 50,
+    'LOG_BROWSER_MAX_PAYLOAD_BYTES': 32768,
+    'LOG_REALTIME_BATCH_SIZE': 200,
+    'LOG_REALTIME_AUTO_PAUSE_THRESHOLD': 1000,
+    'LOG_RETAIN_CRITICAL': True,
+    'LOG_RETAIN_SECURITY': True,
+
+    # Cross-subsystem resource policy defaults. The existing subsystem-specific
+    # settings remain authoritative for backwards compatibility.
+    'RESOURCE_POLICIES': {
+        'transfer': {'retention_days': 90, 'max_records': 100000},
+        'uptime_check': {'retention_days': 90, 'max_records': 500000},
+        'uptime_incident': {'retention_days': 365, 'max_records': 10000},
+        'server_metric': {'retention_days': 7, 'max_records': 100000},
+    },
 
     # ── Security: IP resolution ──
     # Whether this deployment sits behind a reverse proxy / load balancer
@@ -76,17 +163,19 @@ DEFAULTS = {
     'LOG_CAPTURE_STANDARD_LOGGING': True,
     'LOG_MIN_LEVEL': 'INFO',
     'LOG_REQUEST_SUCCESSES': False,
+    # Development can optionally persist every request lifecycle record
+    # at DEBUG so cross-subsystem failures can be correlated without forcing
+    # verbose request logging in production.
+    'LOG_DEBUG_REQUEST_LIFECYCLE': False,
     'LOG_REQUEST_ID_RESPONSE_HEADER': 'X-Paxalia-Request-ID',
     'LOG_MAX_MESSAGE_LENGTH': 4000,
     'LOG_MAX_STACK_LENGTH': 12000,
     'LOG_MAX_METADATA_BYTES': 16384,
     'LOG_DEDUPE_WINDOW_SECONDS': 60,
     'LOG_MAX_SAMPLES_PER_GROUP': 5,
-    'LOG_BROWSER_MAX_EVENTS_PER_PAGE': 50,
     'LOG_BROWSER_MAX_REQUESTS_PER_MINUTE': 120,
-    'LOG_BROWSER_MAX_PAYLOAD_BYTES': 32768,
     'LOG_BROWSER_CAPTURE_CONSOLE': False,
-    'LOG_BROWSER_CAPTURE_RESOURCE_ERRORS': True,
+    'LOG_BROWSER_CAPTURE_RESOURCE_ERRORS': False,
     'LOG_RELEASE': None,
     'LOG_SENSITIVE_KEYS': [],
     'LOG_RETENTION_DAYS': {
@@ -128,6 +217,7 @@ DEFAULTS = {
         'credential', 'credentials', 'secret_key', 'encryption_key',
         'otp_secret', 'otp_key', 'code_hash', 'credential_id',
         'credential_public_key', 'webauthn_user_handle', 'challenge',
+        'request_headers', 'request_body',
     ],
     'ADMIN_DJANGO_FALLBACK_ENABLED': True,
     'ADMIN_LIST_EDITABLE_ENABLED': True,
@@ -217,7 +307,7 @@ DEFAULTS = {
     'ERROR_SUPPORT_URL': None,
     'SECURITY_RECOVERY_CODE_COUNT': 10,
 
-    # ── Ops/server monitoring (Phase 13) ──
+    # ── Ops/server monitoring ──────────────────────────────────────
     # How long ServerMetricSnapshot rows are kept — pruned by
     # record_server_metrics on every run, since it's typically
     # scheduled every minute and would otherwise grow unbounded.
@@ -231,7 +321,7 @@ DEFAULTS = {
     # point at one. None/unset means the Queues page shows nothing.
     'CELERY_APP_PATH': None,
 
-    # ── Compliance tooling (Phase 14) ──
+    # ── Compliance tooling ─────────────────────────────────────────
     # Off by default — existing deployments track exactly as before.
     # When True, nothing is tracked (no PageView row, no session
     # cookie, client-side beacons no-op) until a cookie named
@@ -249,7 +339,7 @@ DEFAULTS = {
     # pageview, analytics_event, js_error, uptime_check, slow_query.
     'DATA_RETENTION_DAYS': {},
 
-    # ── Slack/Discord app (Phase 16) ──
+    # ── Slack/Discord app ──────────────────────────────────────────
     # Both None by default — each platform's endpoint responds
     # "not configured" until you set its secret/key. See the README's
     # "Slack/Discord App" section.

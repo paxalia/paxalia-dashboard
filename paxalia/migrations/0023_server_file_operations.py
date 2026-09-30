@@ -14,6 +14,23 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AlterModelOptions(
+            name="dashboardaccess",
+            options={
+                "managed": False,
+                "default_permissions": (),
+                "permissions": [
+                    ("view_billing", "Can view Billing section"),
+                    ("view_security", "Can view Security Center"),
+                    ("view_backups", "Can view Backups section"),
+                    ("view_sites", "Can view Sites section"),
+                    ("view_server", "Can view Server monitoring"),
+                    ("view_compliance", "Can view Compliance tools"),
+                    ("view_logs", "Can view Paxalia Logs"),
+                    ("view_server_files", "Can view Paxalia Server Files"),
+                ],
+            },
+        ),
         migrations.CreateModel(
             name="ServerFileOperation",
             fields=[
@@ -36,7 +53,6 @@ class Migration(migrations.Migration):
                 "ordering": ["-created_at", "-id"],
                 "default_permissions": (),
                 "permissions": [
-                    ("view_server_files", "Can view Paxalia Server Files"),
                     ("download_server_files", "Can download files from Paxalia Server Files"),
                     ("upload_server_files", "Can upload files through Paxalia Server Files"),
                     ("modify_server_files", "Can create, rename, move, and copy files in Paxalia Server Files"),
@@ -55,3 +71,4 @@ class Migration(migrations.Migration):
             index=models.Index(fields=["root_id", "created_at"], name="pax_sfop_root_created_idx"),
         ),
     ]
+

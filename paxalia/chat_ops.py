@@ -30,7 +30,7 @@ and the public share-link view. Commands are answered against the
 combined (site=None) traffic; there's no per-site argument in this
 version. A fuller app (per-site selection, other metrics, actual slash
 command registration automation) is a natural follow-up, not something
-this phase tries to front-load.
+this command tries to front-load.
 """
 import hashlib
 import hmac

@@ -112,6 +112,17 @@
     </div>
 
 
+    <section class="table-card" aria-labelledby="paxalia-resource-policies-heading">
+        <div class="security-section-head">
+            <div><span class="security-eyebrow">{% trans "Paxalia Operations" %}</span><h2 id="paxalia-resource-policies-heading" class="card-title">{% trans "Resource & Retention Policies" %}</h2></div>
+        </div>
+        <p class="form-hint">{% trans "Operational limits are configuration-driven and intentionally bounded. Critical and security logs are protected from generic cleanup." %}</p>
+        <div class="setting-table-grid">
+            <div class="table-card"><strong>{% trans "Log retention" %}</strong><p class="form-hint">{% trans "Maximum records" %}: {{ resource_policy.logs.max_records|floatformat:0 }}<br>{% trans "Maximum storage" %}: {{ resource_policy.logs.max_storage_bytes|filesizeformat }}<br>{% trans "Current storage" %}: {{ resource_policy.storage.bytes|default:0|filesizeformat }}{% if resource_policy.storage.percent is not None %} ({{ resource_policy.storage.percent }}%){% endif %}<br>{% trans "Cleanup batch" %}: {{ resource_policy.logs.batch_size }}<br>{% trans "Warnings" %}: {{ resource_policy.logs.warning_thresholds|join:", " }}%</p>{% if resource_policy.storage.warning %}<span class="security-status-badge security-status-warn">{% trans "Storage warning" %}</span>{% endif %}</div>
+            <div class="table-card"><strong>{% trans "Realtime logging" %}</strong><p class="form-hint">{% trans "Display events" %}: {{ resource_policy.realtime.display_events }}<br>{% trans "Browser buffer" %}: {{ resource_policy.realtime.buffer_events }}<br>{% trans "Page size" %}: {{ resource_policy.realtime.events_per_page }}</p></div>
+        </div>
+    </section>
+
     <section class="table-card" aria-labelledby="paxalia-security-settings-heading">
         <div class="security-section-head">
             <div>

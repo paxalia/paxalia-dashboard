@@ -119,19 +119,22 @@
     <section class="live-log-console"
              data-live-log-console
              data-live-feed-url="{% url 'paxalia:live_log_feed' %}"
-             data-live-limit="2000"
+             data-live-limit="{{ live_log_limits.display_events }}"
+             data-live-buffer-limit="{{ live_log_limits.buffer_events }}"
+             data-live-auto-pause-threshold="{{ live_log_limits.auto_pause_threshold }}"
              aria-labelledby="live-log-console-title">
         <div class="live-log-console__header">
             <div class="live-log-console__heading">
                 <span class="live-log-console__status-dot" data-live-status-dot aria-hidden="true"></span>
                 <div>
                     <h2 id="live-log-console-title">{% trans "Live Console" %}</h2>
-                    <p>{% trans "Live emitted logging, including DEBUG HTTP/server traffic. Recent persisted events are merged with this process buffer; the in-memory buffer is capped at 2,000 lines." %}</p>
+                    <p>{% trans "Live emitted logging, including DEBUG HTTP/server traffic. Recent persisted events are merged with this process buffer; the in-memory buffer is capped at {{ live_log_limits.buffer_events }} lines." %}</p>
                 </div>
             </div>
             <div class="live-log-console__state" data-live-status aria-live="polite">{% trans "Connecting…" %}</div>
         </div>
-        <div class="live-log-console__toolbar">
+<div class="live-log-console__backpressure" data-live-backpressure hidden>{% trans "High event rate detected. Live display is limited to protect browser performance." %}</div>
+                <div class="live-log-console__toolbar">
             <label class="live-log-console__control">
                 <span>{% trans "Level" %}</span>
                 <select data-live-level>

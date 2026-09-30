@@ -14,6 +14,7 @@ from django.utils.translation import gettext as _
 
 from ..logging.application import queryset_for, resolve_application_sources, serialize_row, source_summary
 from ..logging.handler import get_live_log_buffer
+from ..resource_policies import log_limits, realtime_limits, storage_size_bytes
 from ..logging.redaction import redact, strip_ansi
 from ..models import PaxaliaLogEvent, PaxaliaLogGroup
 from ..permissions import require_section_permission
@@ -39,7 +40,7 @@ def _apply_filters(request, qs):
     site = get_current_site(request)
     if site is not None:
         qs = qs.filter(site=site)
-    for field in ('severity', 'source', 'category', 'logger_name', 'traffic_type', 'request_method', 'exception_type', 'fingerprint', 'release'):
+    for field in ('severity', 'source', 'category', 'logger_name', 'traffic_type', 'request_method', 'exception_type', 'fingerprint', 'release', 'request_id'):
         value = params.get(field)
         if value:
             qs = qs.filter(**{field: value[:255]})
@@ -188,7 +189,9 @@ def logs_overview(request):
         .order_by('day')
     )
     groups = group_qs.select_related().order_by('-last_seen')[:25]
-    paginator = Paginator(qs.order_by('-timestamp'), 50)
+    limits = log_limits()
+    realtime = realtime_limits()
+    paginator = Paginator(qs.order_by('-timestamp'), realtime['events_per_page'])
     page_obj = paginator.get_page(request.GET.get('page'))
     for event in page_obj.object_list:
         event.message = strip_ansi(event.message)
@@ -215,6 +218,9 @@ def logs_overview(request):
         'filters': request.GET,
         'severity_choices': ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'),
         'log_refresh_seconds': max(5, int(get_config().get('DEFAULT_REALTIME_REFRESH', 30))),
+        'log_limits': limits,
+        'live_log_limits': realtime,
+        'log_storage_bytes': storage_size_bytes(PaxaliaLogEvent),
     })
 
 
@@ -225,9 +231,9 @@ def live_log_feed(request):
         raise Http404
     raw_since = request.GET.get('since')
     try:
-        limit = max(1, min(2000, int(request.GET.get('limit', '2000') or 2000)))
+        limit = max(1, min(realtime_limits()['display_events'], int(request.GET.get('limit', str(realtime_limits()['display_events'])) or realtime_limits()['display_events'])))
     except (TypeError, ValueError):
-        limit = 2000
+        limit = realtime_limits()['display_events']
 
     local_payload = get_live_log_buffer().snapshot(since=raw_since, limit=limit)
     entries = list(local_payload.get('entries') or [])
@@ -241,12 +247,13 @@ def live_log_feed(request):
     if since_value is not None:
         since_dt = datetime.fromtimestamp(since_value / 1_000_000, tz=dt_timezone.utc)
         persistent = persistent.filter(timestamp__gte=since_dt)
-    persistent = list(persistent[:limit])
+    persistent = list(persistent[:realtime_limits()["batch_size"]])
     for event in reversed(persistent):
         timestamp = event.timestamp.timestamp()
         sequence = int(timestamp * 1_000_000)
         message = strip_ansi(event.message or '')[:4000]
-        stack_trace = strip_ansi(event.stack_trace or '')[:12000]
+        payload_bytes = realtime_limits()['payload_bytes']
+        stack_trace = strip_ansi(event.stack_trace or '')[:min(12000, payload_bytes)]
         text = f"{event.severity or 'INFO'} {message}"
         if stack_trace:
             text += f"\n{stack_trace}"
@@ -258,7 +265,7 @@ def live_log_feed(request):
             'logger': str(event.logger_name or ''),
             'message': message,
             'stack_trace': stack_trace,
-            'text': text,
+            'text': text[:payload_bytes],
         })
 
     entries.sort(key=lambda item: (int(item.get('sequence') or 0), str(item.get('id') or '')))
@@ -279,6 +286,7 @@ def live_log_feed(request):
         'oldest_sequence': min((int(item.get('sequence') or 0) for item in deduped), default=0),
         'reset': bool(local_payload.get('reset')),
         'limit': limit,
+        'high_event_rate': len(deduped) >= realtime_limits()['auto_pause_threshold'],
     }
     response = JsonResponse(payload)
     response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
@@ -323,7 +331,7 @@ def log_feed(request):
     if not section_enabled('logs'):
         raise Http404
     qs, _start, _end, _site = _apply_filters(request, PaxaliaLogEvent.objects.select_related('group'))
-    qs = qs.order_by('-timestamp')[:50]
+    qs = qs.order_by('-timestamp')[:realtime_limits()['events_per_page']]
     return JsonResponse({'events': [_serialize_event(event) for event in qs]})
 
 

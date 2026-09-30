@@ -85,7 +85,7 @@ def analytics_billing(request):
         total=Sum('amount')
     )['total'] or 0
 
-    # ── Revenue paxalia (Phase 9) — see revenue.py for the exact
+    # ── Revenue analytics — see revenue.py for the exact
     # definitions and the documented-contract constraints behind them.
     revenue_trend = compute_monthly_revenue_trend(Invoice, today=today)
     churn = compute_churn(Invoice, today=today)

@@ -72,6 +72,8 @@
 
             {% if rate_limited %}
                 <div class="paxalia-auth-callout paxalia-auth-callout--danger" role="alert">{% trans "Too many verification attempts. Please wait and try again." %}</div>
+            {% elif verification_error %}
+                <div class="paxalia-auth-callout paxalia-auth-callout--danger" role="alert">{% trans "That authenticator code was not accepted. Check the six-digit code in your authenticator app and try again." %}</div>
             {% endif %}
 
             <form method="post" class="paxalia-auth-form" novalidate>
@@ -87,5 +89,6 @@
     </div>
 </section>
 {% endblock %}
+
 
 

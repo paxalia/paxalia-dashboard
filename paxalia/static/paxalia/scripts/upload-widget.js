@@ -32,7 +32,6 @@
     // ─── API helpers ──────────────────────────────────────────────────────
 
     async function postForm(url, formData) {
-        console.log('[upload] POST to:', url);
         const resp = await fetch(url, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCsrfToken() },
@@ -40,7 +39,7 @@
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok) {
-            console.error('[upload] Error response:', data);
+            console.error('[Paxalia] Upload request failed.');
             throw new Error(data.error || `Request failed (${resp.status})`);
         }
         return data;
@@ -70,7 +69,6 @@
         initForm.append('filename', file.name);
         initForm.append('total_size', file.size);
         initForm.append('chunk_size', chunkSize);
-        console.log('[upload] Init payload:', { filename: file.name, total_size: file.size, chunk_size: chunkSize });
         const initResp = await postForm(urls.initUrl(), initForm);
         const uploadId = initResp.upload_id;
         const totalChunks = initResp.total_chunks;
@@ -154,7 +152,6 @@
 
     async function loadUploads(listElement, listUrl, deleteUrlTemplate) {
         try {
-            console.log('[upload] Loading upload list from:', listUrl);
             const resp = await fetch(listUrl);
             if (!resp.ok) throw new Error('Failed to fetch upload list');
             const data = await resp.json();
@@ -170,7 +167,7 @@
                 }
             }
         } catch (e) {
-            console.warn('Could not load upload list:', e);
+            console.warn('[Paxalia] Upload list could not be loaded.');
             listElement.innerHTML = '<p class="upload-error">Could not load upload history.</p>';
         }
     }
@@ -181,7 +178,7 @@
         const dropzone = document.querySelector(dropzoneSelector);
         const list = document.querySelector(listSelector);
         if (!dropzone || !list) {
-            console.warn('[upload] Dropzone or list not found');
+            console.warn('[Paxalia] Upload interface is unavailable.');
             return;
         }
 
@@ -211,7 +208,6 @@
             return;
         }
 
-        console.log('[upload] Init with:', { initUrl, chunkUrlTemplate, completeUrlTemplate, deleteUrlTemplate, listUrl, chunkSize });
 
         const urls = {
             initUrl: () => initUrl,

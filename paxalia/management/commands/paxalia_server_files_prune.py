@@ -156,3 +156,4 @@ class Command(BaseCommand):
                 f"{current_count} rows remain."
             )
         )
+

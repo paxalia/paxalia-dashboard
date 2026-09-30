@@ -5,11 +5,17 @@ include paxalia/*.py
 include paxalia/error_handlers.py
 include paxalia/views/*.py
 recursive-include paxalia/logging *.py
+recursive-include paxalia/transfer_center *.py
+recursive-include paxalia/server_files *.py
 recursive-include paxalia/admin_center *.py
 include paxalia/templatetags/*.py
 recursive-include paxalia/management *.py
 recursive-include paxalia/migrations *.py
 include paxalia/requirements.txt
+
+# Documentation
+include docs/operations.md
+include docs/server-files.md
 
 # Additional data file
 include paxalia/bots_paths.txt

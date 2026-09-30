@@ -11,6 +11,7 @@ from unittest import skipUnless
 from unittest.mock import MagicMock, patch
 
 from django.conf import settings
+from django.core.cache import cache
 from django.http import HttpResponse, HttpResponseRedirect
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.contrib.auth import get_user_model
@@ -1044,6 +1045,21 @@ class SecurityTemplateContractTests(SimpleTestCase):
         self.assertIn("data-webauthn-localhost-required", template)
         self.assertIn("localhost-required", script)
 
+    def test_auth_asset_is_cache_busted_and_copy_target_whitespace_is_normalized(self):
+        from pathlib import Path
+        root = Path(__file__).resolve().parent
+        base = (root / "templates/paxalia/auth_base.html").read_text(encoding="utf-8")
+        script = (root / "static/paxalia/scripts/auth.js").read_text(encoding="utf-8")
+        self.assertRegex(base, r'auth\.js["\']\s*%}\?v=5\.0\.0-auth5')
+        self.assertIn("target.textContent.replace(/\\s+/g, '')", script)
+
+    def test_webauthn_asset_is_cache_busted_on_both_authenticator_pages(self):
+        from pathlib import Path
+        root = Path(__file__).resolve().parent
+        for filename in ("device-register.html", "device-verify.html"):
+            template = (root / "templates/paxalia_auth" / filename).read_text(encoding="utf-8")
+            self.assertRegex(template, r'webauthn\.js["\']\s*%}\?v=5\.0\.0-auth4')
+
     def test_webauthn_backup_eligibility_has_single_definition(self):
         from pathlib import Path
         source = (Path(__file__).resolve().parent / "webauthn_services.py").read_text(encoding="utf-8")
@@ -1086,3 +1102,263 @@ class SecurityTemplateContractTests(SimpleTestCase):
         self.assertIn("paxalia-auth-device-stack", register)
         self.assertIn("paxalia-auth-device-stack", verify)
 
+
+
+
+class PaxaliaRecoveryCodeVerificationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.admin_user = User.objects.create_superuser(
+            username="recovery-code-admin",
+            email="recovery-code-admin@example.com",
+            password="test-password",
+        )
+
+    def _prepare_pending_session(self):
+        session = self.client.session
+        session[admin_security.ADMIN_USER_KEY] = str(self.admin_user.pk)
+        session[admin_security.ADMIN_STAGE_KEY] = admin_security.STAGE_PRIMARY
+        session[admin_security.ADMIN_INTENT_KEY] = True
+        session.save()
+
+    def test_valid_totp_can_complete_layer_two(self):
+        from django_otp.plugins.otp_totp.models import TOTPDevice
+
+        TOTPDevice.objects.create(
+            user=self.admin_user,
+            confirmed=True,
+            name=admin_security.PAXALIA_TOTP_DEVICE_NAMES[0],
+        )
+        self._prepare_pending_session()
+
+        with patch.object(TOTPDevice, "verify_token", return_value=True) as verify_token:
+            response = self.client.post(
+                reverse("paxalia:auth_2fa_verify"),
+                {"token": "123456", "recovery_code": ""},
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("paxalia:auth_device_login"))
+        self.assertEqual(
+            self.client.session.get(admin_security.ADMIN_STAGE_KEY),
+            admin_security.STAGE_DEVICE,
+        )
+        verify_token.assert_called_once_with("123456")
+
+    def test_recovery_code_can_complete_layer_two_without_otp_digits(self):
+        from django.contrib.auth.hashers import make_password
+        from django_otp.plugins.otp_totp.models import TOTPDevice
+        from .models import PaxaliaRecoveryCode
+
+        code = "ABCD-EFGH-IJKL-MNOP"
+        TOTPDevice.objects.create(
+            user=self.admin_user,
+            confirmed=True,
+            name=admin_security.PAXALIA_TOTP_DEVICE_NAMES[0],
+        )
+        recovery = PaxaliaRecoveryCode.objects.create(
+            user=self.admin_user,
+            code_hash=make_password(code),
+            created_at=timezone.now(),
+        )
+        self._prepare_pending_session()
+
+        response = self.client.post(
+            reverse("paxalia:auth_2fa_verify"),
+            {"token": "", "recovery_code": code},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            reverse("paxalia:auth_device_login"),
+        )
+        self.assertEqual(
+            self.client.session.get(admin_security.ADMIN_STAGE_KEY),
+            admin_security.STAGE_DEVICE,
+        )
+        recovery.refresh_from_db()
+        self.assertIsNotNone(recovery.used_at)
+
+    def test_used_recovery_code_is_not_reusable(self):
+        from django.contrib.auth.hashers import make_password
+        from django_otp.plugins.otp_totp.models import TOTPDevice
+        from .models import PaxaliaRecoveryCode
+
+        code = "QRST-UVWX-YZ12-3456"
+        TOTPDevice.objects.create(
+            user=self.admin_user,
+            confirmed=True,
+            name=admin_security.PAXALIA_TOTP_DEVICE_NAMES[0],
+        )
+        recovery = PaxaliaRecoveryCode.objects.create(
+            user=self.admin_user,
+            code_hash=make_password(code),
+            created_at=timezone.now(),
+            used_at=timezone.now(),
+        )
+        self._prepare_pending_session()
+
+        response = self.client.post(
+            reverse("paxalia:auth_2fa_verify"),
+            {"token": "", "recovery_code": code},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Verification failed")
+        recovery.refresh_from_db()
+        self.assertIsNotNone(recovery.used_at)
+
+    def test_normalized_recovery_code_accepts_spacing_and_hyphen_variants(self):
+        from django.contrib.auth.hashers import make_password
+        from django_otp.plugins.otp_totp.models import TOTPDevice
+        from .models import PaxaliaRecoveryCode
+
+        code = "ABCD-EFGH-IJKL-MNOP"
+        TOTPDevice.objects.create(
+            user=self.admin_user,
+            confirmed=True,
+            name=admin_security.PAXALIA_TOTP_DEVICE_NAMES[0],
+        )
+        recovery = PaxaliaRecoveryCode.objects.create(
+            user=self.admin_user,
+            code_hash=make_password(code),
+            created_at=timezone.now(),
+        )
+        self._prepare_pending_session()
+
+        response = self.client.post(
+            reverse("paxalia:auth_2fa_verify"),
+            {"token": "", "recovery_code": "abcd efgh ijkl mnop"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("paxalia:auth_device_login"))
+        recovery.refresh_from_db()
+        self.assertIsNotNone(recovery.used_at)
+
+    def test_invalid_recovery_code_does_not_consume_a_code(self):
+        from django.contrib.auth.hashers import make_password
+        from django_otp.plugins.otp_totp.models import TOTPDevice
+        from .models import PaxaliaRecoveryCode
+
+        TOTPDevice.objects.create(
+            user=self.admin_user,
+            confirmed=True,
+            name=admin_security.PAXALIA_TOTP_DEVICE_NAMES[0],
+        )
+        recovery = PaxaliaRecoveryCode.objects.create(
+            user=self.admin_user,
+            code_hash=make_password("ABCD-EFGH-IJKL-MNOP"),
+            created_at=timezone.now(),
+        )
+        self._prepare_pending_session()
+
+        response = self.client.post(
+            reverse("paxalia:auth_2fa_verify"),
+            {"token": "", "recovery_code": "ABCD-EFGH-IJKL-XXXX"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Verification failed")
+        recovery.refresh_from_db()
+        self.assertIsNone(recovery.used_at)
+
+    def test_revoked_recovery_code_is_not_accepted(self):
+        from django.contrib.auth.hashers import make_password
+        from django_otp.plugins.otp_totp.models import TOTPDevice
+        from .models import PaxaliaRecoveryCode
+
+        TOTPDevice.objects.create(
+            user=self.admin_user,
+            confirmed=True,
+            name=admin_security.PAXALIA_TOTP_DEVICE_NAMES[0],
+        )
+        recovery = PaxaliaRecoveryCode.objects.create(
+            user=self.admin_user,
+            code_hash=make_password("ABCD-EFGH-IJKL-MNOP"),
+            created_at=timezone.now(),
+            revoked_at=timezone.now(),
+        )
+        self._prepare_pending_session()
+
+        response = self.client.post(
+            reverse("paxalia:auth_2fa_verify"),
+            {"token": "", "recovery_code": "ABCD-EFGH-IJKL-MNOP"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Verification failed")
+        recovery.refresh_from_db()
+        self.assertIsNotNone(recovery.revoked_at)
+        self.assertIsNone(recovery.used_at)
+
+    def test_two_factor_rate_limit_applies_to_recovery_attempts_too(self):
+        from django.contrib.auth.hashers import make_password
+        from django_otp.plugins.otp_totp.models import TOTPDevice
+        from .models import PaxaliaRecoveryCode
+
+        TOTPDevice.objects.create(
+            user=self.admin_user,
+            confirmed=True,
+            name=admin_security.PAXALIA_TOTP_DEVICE_NAMES[0],
+        )
+        PaxaliaRecoveryCode.objects.create(
+            user=self.admin_user,
+            code_hash=make_password("ABCD-EFGH-IJKL-MNOP"),
+            created_at=timezone.now(),
+        )
+        self._prepare_pending_session()
+        cache.clear()
+        config = dict(getattr(settings, "PAXALIA_DASHBOARD", {}) or {})
+        config.update({
+            "SECURITY_2FA_RATE_LIMIT_ATTEMPTS": 2,
+            "SECURITY_2FA_RATE_LIMIT_WINDOW_SECONDS": 300,
+        })
+        with override_settings(PAXALIA_DASHBOARD=config):
+            first = self.client.post(reverse("paxalia:auth_2fa_verify"), {"token": "", "recovery_code": "bad"})
+            second = self.client.post(reverse("paxalia:auth_2fa_verify"), {"token": "", "recovery_code": "bad"})
+            third = self.client.post(reverse("paxalia:auth_2fa_verify"), {"token": "", "recovery_code": "bad"})
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(third.status_code, 429)
+
+    def test_recovery_client_rejects_more_than_16_characters_instead_of_truncating(self):
+        from pathlib import Path
+        root = Path(__file__).resolve().parent
+        script = (root / "static/paxalia/scripts/auth.js").read_text(encoding="utf-8")
+        self.assertIn("slice(0, 64)", script)
+        self.assertIn("recovery.replace(/-/g, '').length !== 16", script)
+
+    def test_recovery_client_normalizes_16_character_codes_without_forcing_totp(self):
+        from pathlib import Path
+        root = Path(__file__).resolve().parent
+        script = (root / "static/paxalia/scripts/auth.js").read_text(encoding="utf-8")
+        template = (root / "templates/paxalia_auth/two-factor.html").read_text(encoding="utf-8")
+        self.assertIn("function normalizeRecoveryCode(value)", script)
+        self.assertIn("if (recovery)", script)
+        self.assertIn('maxlength="19"', template)
+        self.assertIn('inputmode="text"', template)
+        self.assertIn("data-paxalia-telemetry-url", (root / "templates/paxalia/auth_base.html").read_text(encoding="utf-8"))
+        self.assertIn("keepalive: true", script)
+
+    def test_auth_pages_are_not_cacheable(self):
+        response = self.client.get(reverse("paxalia:auth_login"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store, no-cache, max-age=0, must-revalidate")
+        self.assertEqual(response["Pragma"], "no-cache")
+        self.assertEqual(response["Expires"], "0")
+
+    def test_two_factor_template_allows_recovery_without_client_side_otp_requirement(self):
+        from pathlib import Path
+        root = Path(__file__).resolve().parent
+        template = (root / "templates/paxalia_auth/two-factor.html").read_text(encoding="utf-8")
+        script = (root / "static/paxalia/scripts/auth.js").read_text(encoding="utf-8")
+        self.assertIn('data-recovery-code', template)
+        self.assertIn('name="otp_digit"', template)
+        recovery_block = script[script.index("if (recoveryInput)"):script.index("function copyText") if "function copyText" in script else len(script)]
+        self.assertIn("normalizeRecoveryCode", recovery_block)
+        self.assertIn("if (recovery)", recovery_block)
+        self.assertIn("hidden.value = '';", recovery_block)
+        self.assertIn("length !== 16", recovery_block)

@@ -50,7 +50,7 @@ class ServerAccessTests(TestCase):
 
 
 class BackupPathOverlapTests(TestCase):
-    """Phase 8 — audit finding #1a."""
+    """Regression coverage for the first audit finding."""
 
     def test_no_overlap_returns_none(self):
         config = BackupConfiguration(storage_path='/var/backups/paxalia', backup_paths='/srv/app\n/etc/app')
@@ -74,7 +74,7 @@ class BackupPathOverlapTests(TestCase):
 
 
 class UploadExtensionValidationTests(TestCase):
-    """Phase 8 — audit finding #2."""
+    """Regression coverage for the second audit finding."""
 
     def test_default_blocklist_rejects_php(self):
         self.assertIn('.php', get_upload_blocked_extensions())
@@ -109,7 +109,7 @@ class SecurityScorecardTests(TestCase):
 
 class RevenueDateMathTests(TestCase):
     """
-    Phase 9 — the pure date-math helpers behind MRR trend / churn.
+    The pure date-math helpers behind MRR trend and churn.
     compute_monthly_revenue_trend/compute_churn/compute_dunning
     themselves need a real Invoice model (see revenue.py's docstring on
     the documented billing contract) which only exists in a consuming
@@ -140,7 +140,7 @@ class RevenueDateMathTests(TestCase):
 
 
 class BotClassificationTests(TestCase):
-    """Phase 10."""
+    """Regression coverage for the bot analytics helpers."""
 
     def test_malicious_path_wins_regardless_of_user_agent(self):
         # A scanner spoofing Googlebot's UA while hitting a known
@@ -183,7 +183,7 @@ class BotClassificationTests(TestCase):
 
 
 class WebVitalsTests(TestCase):
-    """Phase 11."""
+    """Regression coverage for the Real User Monitoring helpers."""
 
     def test_percentile_of_empty_list_is_none(self):
         self.assertIsNone(_percentile([], 75))
@@ -214,7 +214,7 @@ class WebVitalsTests(TestCase):
 
 
 class JsErrorHelperTests(TestCase):
-    """Phase 11 — the small int-coercion helper used by the JS error API."""
+    """The small int-coercion helper used by the JS error API."""
 
     def test_clean_int_valid(self):
         self.assertEqual(_clean_int('42'), 42)
@@ -230,7 +230,7 @@ class JsErrorHelperTests(TestCase):
 
 class UptimeCheckTests(TestCase):
     """
-    Phase 12. perform_check() is mocked at the urllib layer so these
+    perform_check() is mocked at the urllib layer so these
     never make a real network call; record_check()'s incident
     state-machine is exercised against real DB rows since this
     package owns the UptimeMonitor/UptimeCheck/UptimeIncident tables
@@ -335,7 +335,7 @@ class UptimeCheckTests(TestCase):
 
 
 class ServerHistoryTests(TestCase):
-    """Phase 13 — api_server_history now reads real ServerMetricSnapshot
+    """api_server_history now reads real ServerMetricSnapshot
     rows instead of generating synthetic random.randint() data."""
 
     def setUp(self):
@@ -400,7 +400,7 @@ class ServerHistoryTests(TestCase):
 
 
 class QueueMonitorTests(TestCase):
-    """Phase 13 — Celery introspection via a dotted-path config, same
+    """Celery introspection via a dotted-path config, same
     pattern as the billing integration."""
 
     @override_settings(PAXALIA_DASHBOARD={})
@@ -415,7 +415,7 @@ class QueueMonitorTests(TestCase):
 
 
 class ConsentModeTests(TestCase):
-    """Phase 14 — server-side consent gate on the public event endpoints."""
+    """Server-side consent gating on the public event endpoints."""
 
     @override_settings(PAXALIA_DASHBOARD={'CONSENT_MODE_ENABLED': False})
     def test_event_api_works_normally_when_consent_mode_disabled(self):
@@ -457,7 +457,7 @@ class ConsentModeTests(TestCase):
 
 
 class ForgetVisitorTests(TestCase):
-    """Phase 14 — bulk deletion by session_id or IP."""
+    """Bulk deletion by session_id or IP."""
 
     def test_forget_by_session_deletes_across_models(self):
         PageView.objects.create(path='/', method='GET', status_code=200, session_id='sess-1', ip_hash='1.2.3.4')
@@ -488,7 +488,7 @@ class ForgetVisitorTests(TestCase):
 
 
 class DataImportTests(TestCase):
-    """Phase 15 — the shared GA/Plausible CSV parser and importer."""
+    """The shared GA/Plausible CSV parser and importer."""
 
     def test_parse_plausible_csv(self):
         csv_text = "date,visitors,pageviews,bounce_rate,visit_duration\n2024-01-01,120,340,55%,90\n2024-01-02,95,280,60%,80\n"
@@ -557,7 +557,7 @@ class DataImportTests(TestCase):
 
 
 class ChatOpsTests(TestCase):
-    """Phase 16 — Slack/Discord slash-command app."""
+    """Slack/Discord slash-command application."""
 
     def test_slack_signature_valid(self):
         import hashlib
@@ -637,7 +637,7 @@ class ChatOpsTests(TestCase):
 
 @override_settings(ALLOWED_HOSTS=['testserver'])
 class ChatOpsViewTests(TestCase):
-    """Phase 16 — the actual endpoints, signature-gated."""
+    """The actual signature-gated endpoints."""
 
     @override_settings(PAXALIA_DASHBOARD={'SLACK_SIGNING_SECRET': None})
     def test_slack_command_not_configured(self):
@@ -662,8 +662,8 @@ class ChatOpsViewTests(TestCase):
 
 
 
-class V3HardeningRegressionTests(TestCase):
-    """Regression coverage for the v4.0.0 stabilization and regression fixes."""
+class HardeningRegressionTests(TestCase):
+    """Regression coverage for dashboard stabilization and regressions."""
 
     def setUp(self):
         self.staff = get_user_model().objects.create_user(

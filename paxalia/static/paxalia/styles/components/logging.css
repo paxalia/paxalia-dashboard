@@ -1222,3 +1222,5 @@
     .live-log-console__control input { width: min(100%, 320px); }
     .live-log-line { grid-template-columns: 72px minmax(0, 1fr); gap: 7px; padding-inline: 9px; }
 }
+
+.live-log-console__backpressure { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--analytics-border); border-radius: 10px; font-size: 0.9rem; }

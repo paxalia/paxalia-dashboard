@@ -33,5 +33,6 @@
     </div>
 </section>
 {% endblock %}
-{% block extra_js %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/webauthn.js' %}"></script>{% endblock %}
+{% block extra_js %}<script nonce="{{ request.csp_nonce }}" src="{% static 'paxalia/scripts/webauthn.js' %}?v=5.0.0"></script>{% endblock %}
+
 

@@ -7,7 +7,7 @@ from paxalia.bot_classification import classify_bot
 class Command(BaseCommand):
     help = (
         "Backfills PageView.bot_category (and re-derives is_bot from it) "
-        "for rows created before this phase, using the current "
+        "for rows created before this migration, using the current "
         "AnalyticsSettings.bot_paths and the bot_classification.py pattern "
         "list. Safe to re-run any time bot_paths changes or the pattern "
         "list is extended — it always recomputes from scratch rather than "

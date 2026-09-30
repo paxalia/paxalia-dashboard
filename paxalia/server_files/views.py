@@ -22,6 +22,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..admin_security import admin_security_preflight
 from ..permissions import require_section_permission
+from ..alerts import send_alert
 from ..security_audit import log_action
 from ..settings import get_config
 from . import service
@@ -154,12 +155,23 @@ def _require_capability_audited(
 
 def _finish_failed(request, record, exc):
     if record is not None:
+        status = "denied" if getattr(exc, "http_status", 400) == 403 else "failed"
         finish_operation(
             request,
             record,
-            "denied" if getattr(exc, "http_status", 400) == 403 else "failed",
+            status,
             error_code=getattr(exc, "code", "internal_error"),
         )
+        if status == "failed":
+            try:
+                send_alert(
+                    f"Server Files operation failed: {record.operation}",
+                    "A Paxalia Server Files operation failed. The dashboard operation history contains the detailed audit record.",
+                    category="general",
+                    dedupe_key=f"server-files:{getattr(record, 'request_id', '')}:{record.operation}",
+                )
+            except Exception:
+                pass
 
 
 def _failure_response(request, exc):
